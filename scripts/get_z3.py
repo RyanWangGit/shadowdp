@@ -28,9 +28,11 @@ def main():
     if 'linux' in system:
         system = 'ubuntu-14.04'
         library_files.append('libz3.so')
+        library_files.append('libz3java.so')
     elif 'darwin' in system:
         system = 'osx'
         library_files.append('libz3.dylib')
+        library_files.append('libz3java.dylib')
     elif 'windows' in system:
         system = 'win'
         library_files.append('Microsoft.Z3.dll')
@@ -38,7 +40,6 @@ def main():
 
     # append java-related library files
     library_files.append('com.microsoft.z3.jar')
-    library_files.append('libz3java.dylib')
 
     # read from GitHub apis
     releases = json.loads(urlrequest.urlopen('https://api.github.com/repos/Z3Prover/z3/releases')
