@@ -1,0 +1,18 @@
+sudo: false
+
+language: python
+
+python:
+  - "3.6"
+
+cache: pip
+
+install:
+  - pip install tox-travis
+  - travis_retry ./scripts/get_cpachecker.sh
+  - travis_retry python ./scripts/get_z3.py ./cpachecker/scripts/
+  - ./cpachecker/scripts/cpa.sh -predicateAnalysis-linear ./examples/noisymax_t.c -preprocess -setprop solver.solver=smtinterpol
+  - ./cpachecker/scripts/cpa.sh -predicateAnalysis ./examples/noisymax_t.c -preprocess -setprop solver.solver=z3
+
+notifications:
+  email: false
