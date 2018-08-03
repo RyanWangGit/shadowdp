@@ -50,14 +50,6 @@ int noisymax (float epsilon, float q[]) {
     __VERIFIER_assert(v_epsilon < epsilon);
 }
 
-bool is_bounded(float *arr, int size)
-{
-  bool res = true;
-  for(int i = 0; i < size; i ++)
-    res = res & (arr[i] >= -1 && arr[i] <= 1);
-  return res;
-}
-
 int main() {
   float a[SIZE];
 
