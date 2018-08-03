@@ -44,7 +44,7 @@ int noisymax (float epsilon, float q[], float dq[]) {
     }
     i = i + 1;
   }
-    __VERIFIER_assert(v_epsilon < epsilon);
+    __VERIFIER_assert(v_epsilon <= epsilon);
 }
 
 int main() {
@@ -53,11 +53,11 @@ int main() {
 
   unsigned int i;
 
-  for(i = 0; i < SIZE; i++){
+  for(i = 0; i < SIZE; i++) {
     a[i] = __VERIFIER_nondet_float();
   }
 
-  for(i = 0; i < SIZE; i++){
+  for(i = 0; i < SIZE; i++) {
     da[i] = __VERIFIER_nondet_float();
     __VERIFIER_assume(da[i] >= -1 && da[i] <= 1);
   }
