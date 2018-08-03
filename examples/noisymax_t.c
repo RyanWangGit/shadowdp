@@ -11,9 +11,7 @@ typedef enum { false = 0, true = 1 } bool;
 
 #define SIZE 4
 
-int noisymax (float epsilon, float q[]) {
-
-  __VERIFIER_assume(epsilon > 0);
+int noisymax (float epsilon, float q[], float dq[]) {
 
   int i = 0;
   float bq = 0, s_bq = 0, dis_bq = 0, v_epsilon = 0;
@@ -21,11 +19,11 @@ int noisymax (float epsilon, float q[]) {
 
   while(i < SIZE)
   {
-    float dis_q = __VERIFIER_nondet_float();
-    __VERIFIER_assume(dis_q >= -1 && dis_q <= 1);
+    __VERIFIER_assume(dq[i] >= -1 && dq[i] <= 1);
     float eta = __VERIFIER_nondet_float();
-    float s_eta = eta; // maybe define dis_q in latex
-    v_epsilon = ((q[i] + eta > bq || i = 0) ? (abs(1 - dis_q) * (epsilon / 2.0)) : v_epsilon);
+    float s_eta = eta; // maybe define dq[i] in latex
+    //v_epsilon = (q[i] + eta > bq || i = 0) ? (abs(1 - dq[i]) * (epsilon / 2.0)) : v_epsilon;
+    v_epsilon = (q[i] + eta > bq || i = 0) ? (epsilon / 2.0) : v_epsilon;
 
     if(q[i] + eta > bq || i == 0)
     {
@@ -36,13 +34,13 @@ int noisymax (float epsilon, float q[]) {
     }
     else
     {
-      __VERIFIER_assert(q[i] + dis_q + eta <= bq + dis_bq);
+      __VERIFIER_assert(q[i] + dq[i] + eta <= bq + dis_bq);
     }
     // shadow execution
-    if(q[i] + dis_q + s_eta > s_bq || i == 0)
+    if(q[i] + dq[i] + s_eta > s_bq || i == 0)
     {
       int s_max = i;
-      s_bq = q[i] + dis_q + s_eta;
+      s_bq = q[i] + dq[i] + s_eta;
       dis_s_bq = s_bq - bq;
     }
     i = i + 1;
@@ -52,12 +50,18 @@ int noisymax (float epsilon, float q[]) {
 
 int main() {
   float a[SIZE];
+  float da[SIZE];
 
   unsigned int i;
+
   for(i = 0; i < SIZE; i++)
     a[i] = __VERIFIER_nondet_float();
 
-  float epsilon = __VERIFIER_nondet_float();
+  for(i = 0; i < SIZE; i++)
+    da[i] = __VERIFIER_nondet_int();
 
-  return noisymax(epsilon, a);
+  float epsilon = __VERIFIER_nondet_float();
+  __VERIFIER_assume(epsilon > 0);
+
+  return noisymax(epsilon, a, da);
 }
