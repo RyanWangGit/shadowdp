@@ -16,12 +16,17 @@ int noisymax (float epsilon, float q[], float dq[]) {
   int i = 0;
   float bq = 0, s_bq = 0, dis_bq = 0, v_epsilon = 0;
   float dis_s_bq = s_bq - bq;
+  __VERIFIER_assume(epsilon>0);
 
   while(i < SIZE)
   {
     float eta = __VERIFIER_nondet_float();
     float s_eta = eta; // maybe define dq[i] in latex
-    //v_epsilon = (q[i] + eta > bq || i = 0) ? (abs(1 - dq[i]) * (epsilon / 2.0)) : v_epsilon;
+    __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
+    __VERIFIER_assert(dq[i] <= 1);
+    // __VERIFIER_assert(dq[i]*epsilon <= 1*epsilon); // check why this line fails
+    // __VERIFIER_assert(abs(1 - dq[i]) / 2.0 * epsilon <= 1*epsilon);
+    //v_epsilon = (q[i] + eta > bq || i = 0) ? (abs(1 - dq[i]) * epsilon / 2.0) : v_epsilon;
     v_epsilon = (q[i] + eta > bq || i = 0) ? (epsilon / 2.0) : v_epsilon;
 
     if(q[i] + eta > bq || i == 0)
@@ -44,26 +49,14 @@ int noisymax (float epsilon, float q[], float dq[]) {
     }
     i = i + 1;
   }
-    __VERIFIER_assert(v_epsilon <= epsilon);
+  __VERIFIER_assert(v_epsilon <= epsilon);
 }
 
 int main() {
   float a[SIZE];
   float da[SIZE];
 
-  unsigned int i;
-
-  for(i = 0; i < SIZE; i++) {
-    a[i] = __VERIFIER_nondet_float();
-  }
-
-  for(i = 0; i < SIZE; i++) {
-    da[i] = __VERIFIER_nondet_float();
-    __VERIFIER_assume(da[i] >= -1 && da[i] <= 1);
-  }
-
-  float epsilon = __VERIFIER_nondet_float();
-  __VERIFIER_assume(epsilon > 0);
+  float epsilon;
 
   return noisymax(epsilon, a, da);
 }
