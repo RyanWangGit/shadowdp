@@ -15,16 +15,16 @@ int noisymax (float epsilon, float q[]) {
 
   __VERIFIER_assume(epsilon > 0);
 
-  int i = 0, bq = 0, s_bq = 0, dis_bq = 0;
-  int dis_s_bq = s_bq - bq;
-  float v_epsilon = 0;
+  int i = 0;
+  float bq = 0, s_bq = 0, dis_bq = 0, v_epsilon = 0;
+  float dis_s_bq = s_bq - bq;
 
   while(i < SIZE)
   {
     float dis_q = __VERIFIER_nondet_float();
     __VERIFIER_assume(dis_q >= -1 && dis_q <= 1);
     float eta = __VERIFIER_nondet_float();
-    float s_eta = eta; // maybe identify dis_q in latex
+    float s_eta = eta; // maybe define dis_q in latex
     v_epsilon = ((q[i] + eta > bq || i = 0) ? (abs(1 - dis_q) * (epsilon / 2.0)) : v_epsilon);
 
     if(q[i] + eta > bq || i == 0)
@@ -36,18 +36,18 @@ int noisymax (float epsilon, float q[]) {
     }
     else
     {
-      __VERIFIER_assert(q[i] + dis_q + eta <= bq + dis_bq); // CPA checker reported line of FALSE
+      __VERIFIER_assert(q[i] + dis_q + eta <= bq + dis_bq);
     }
-
     // shadow execution
     if(q[i] + dis_q + s_eta > s_bq || i == 0)
     {
-      int s_max = i; // equal in latex
+      int s_max = i;
       s_bq = q[i] + dis_q + s_eta;
       dis_s_bq = s_bq - bq;
     }
     i = i + 1;
   }
+    __VERIFIER_assert(v_epsilon < epsilon);
 }
 
 bool is_bounded(float *arr, int size)
@@ -60,7 +60,6 @@ bool is_bounded(float *arr, int size)
 
 int main() {
   float a[SIZE];
-  float da[SIZE];
 
   unsigned int i;
   for(i = 0; i < SIZE; i++)
