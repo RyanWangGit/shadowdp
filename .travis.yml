@@ -15,12 +15,7 @@ install:
   - travis_retry python ./scripts/get_z3.py ./cpachecker/scripts/
 
 script:
-  - ./cpachecker/scripts/cpa.sh -predicateAnalysis-linear ./examples/noisymax_t.c -preprocess
-  - ./cpachecker/scripts/cpa.sh -predicateAnalysis-linear ./examples/noisymax_t.c -preprocess -setprop solver.solver=smtinterpol
-  - ./cpachecker/scripts/cpa.sh -predicateAnalysis-linear ./examples/noisymax_t.c -preprocess -setprop solver.solver=z3
-  - ./cpachecker/scripts/cpa.sh -predicateAnalysis-linear ./examples/sparsevector_t.c -preprocess
-  - ./cpachecker/scripts/cpa.sh -predicateAnalysis-linear ./examples/sparsevector_t.c -preprocess -setprop solver.solver=smtinterpol
-  - ./cpachecker/scripts/cpa.sh -predicateAnalysis-linear ./examples/sparsevector_t.c -preprocess -setprop solver.solver=z3
+  - ./scripts/check.sh ./examples
 
 notifications:
   email: false
