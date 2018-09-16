@@ -7,16 +7,18 @@ extern void __assert_fail();
 typedef enum { false = 0, true = 1 } bool;
 
 #define SIZE 4
+#define EPSILON 1
 
-int sparsevector (float epsilon, float T, float N, float q[], float dq[]) {
+int sparsevector(float epsilon, float T, float N, float q[], float dq[]) {
 
-  __VERIFIER_assume(epsilon > 0);
+  __VERIFIER_assume(epsilon > 0 && epsilon < 100000);
   __VERIFIER_assume(T > 0);
+  __VERIFIER_assume(N == 1);
 
   float v_eps = 0;
   float eta_1 = __VERIFIER_nondet_float();
   float s_eta_1 = eta_1;
-  v_eps = v_eps + epsilon / 2;
+  v_eps = v_eps + EPSILON / 2;
 
   float T_bar = T + eta_1;
 
@@ -30,7 +32,7 @@ int sparsevector (float epsilon, float T, float N, float q[], float dq[]) {
   {
     float eta_2 = __VERIFIER_nondet_float();
     float s_eta_2 = eta_2;
-    float v_eps = v_eps + (((q[i] + eta_2 >= T) ? 2 : 0) * (epsilon / (4 * N)));
+    float v_eps = v_eps + (((q[i] + eta_2 >= T) ? 2 : 0) * (EPSILON / (4 * N)));
 
     if (q[i] + eta_2 >= T_bar)
     {
@@ -46,25 +48,4 @@ int sparsevector (float epsilon, float T, float N, float q[], float dq[]) {
     }
     i = i + 1;
   }
-}
-
-int main() {
-  float a[SIZE];
-  float da[SIZE];
-
-  unsigned int i;
-  for(i = 0; i < SIZE; i++)
-    a[i] = __VERIFIER_nondet_float();
-    __VERIFIER_assume(a[i] >= -1 && a[i] <= 1);
-
-  for(i = 0; i < SIZE; i++)
-    da[i] = __VERIFIER_nondet_float();
- 	__VERIFIER_assume(da[i] >= -1 && da[i] <= 1);
-
-  float epsilon = __VERIFIER_nondet_float();
-
-  float T = __VERIFIER_nondet_float();
-
-
-  return sparsevector(epsilon, T, 1, a, da);
 }

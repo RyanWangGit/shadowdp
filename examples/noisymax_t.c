@@ -10,24 +10,24 @@ extern void __assert_fail();
 typedef enum { false = 0, true = 1 } bool;
 
 #define SIZE 4
+#define EPSILON 1
 
 int noisymax (float epsilon, float q[], float dq[]) {
-
   int i = 0;
   float bq = 0, s_bq = 0, dis_bq = 0, v_epsilon = 0;
   float dis_s_bq = s_bq - bq;
-  __VERIFIER_assume(epsilon>0);
+
+  __VERIFIER_assume(epsilon > 0 && epsilon < 100000);
 
   while(i < SIZE)
   {
     float eta = __VERIFIER_nondet_float();
     float s_eta = eta; // maybe define dq[i] in latex
     __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
-    __VERIFIER_assert(dq[i] <= 1);
-    // __VERIFIER_assert(dq[i]*epsilon <= 1*epsilon); // check why this line fails
-    // __VERIFIER_assert(abs(1 - dq[i]) / 2.0 * epsilon <= 1*epsilon);
-    //v_epsilon = (q[i] + eta > bq || i = 0) ? (abs(1 - dq[i]) * epsilon / 2.0) : v_epsilon;
-    v_epsilon = (q[i] + eta > bq || i = 0) ? (epsilon / 2.0) : v_epsilon;
+    __VERIFIER_assert(dq[i] <= 1 && dq[i] >= -1);
+    __VERIFIER_assert(dq[i] * EPSILON <= 1 * EPSILON); // check why this line fails
+    v_epsilon = (q[i] + eta > bq || i = 0) ? (abs(1 - dq[i]) * EPSILON / 2.0) : v_epsilon;
+    //v_epsilon = (q[i] + eta > bq || i = 0) ? (EPSILON / 2.0) : v_epsilon;
 
     if(q[i] + eta > bq || i == 0)
     {
@@ -49,14 +49,5 @@ int noisymax (float epsilon, float q[], float dq[]) {
     }
     i = i + 1;
   }
-  __VERIFIER_assert(v_epsilon <= epsilon);
-}
-
-int main() {
-  float a[SIZE];
-  float da[SIZE];
-
-  float epsilon;
-
-  return noisymax(epsilon, a, da);
+  __VERIFIER_assert(v_epsilon <= EPSILON);
 }
