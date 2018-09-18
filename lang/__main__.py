@@ -1,5 +1,6 @@
 import argparse
-from pycparser import parse_file, c_generator
+from lang.core import LangTransformer
+from pycparser import parse_file
 
 
 def main():
@@ -13,9 +14,10 @@ def main():
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
 
     ast = parse_file(results.file, use_cpp=True)
-    generator = c_generator.CGenerator()
+    transformer = LangTransformer()
+
     with open(results.out, 'w') as f:
-        f.write(generator.visit(ast))
+        f.write(transformer.visit(ast))
 
 
 if __name__ == '__main__':
