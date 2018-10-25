@@ -15,7 +15,7 @@ install:
   - travis_retry python ./scripts/get_z3.py ./cpachecker/scripts/
 
 script:
-  - bash ./scripts/check.sh ./examples
+  - python ./scripts/check.py ./examples
 
 notifications:
   email: false
