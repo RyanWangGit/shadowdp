@@ -13,7 +13,7 @@ def main():
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
 
-    ast = parse_file(results.file, use_cpp=True)
+    ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
     transformer = LangTransformer()
 
     with open(results.out, 'w') as f:
