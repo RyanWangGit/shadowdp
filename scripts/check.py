@@ -6,15 +6,17 @@ import subprocess
 def check(path, filename, funcname):
     print('\033[92mChecking \033[0;1m{}\033[0m \033[92mwith \033[31;1mMathSat\033[0m'.format(filename))
     subprocess.call(
-        ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis-linear', path, '-preprocess', '-entryfunction', funcname])
+        ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
+         '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'solver.nonLinearArithmetic=USE'])
     print('\033[92mChecking \033[1m{}\033[0m \033[92mwith \033[31;1mSMT-Interpol\033[0m'.format(filename))
     subprocess.call(
         ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis-linear', path, '-preprocess', '-entryfunction', funcname,
          '-setprop', 'solver.solver=smtinterpol'])
     print('\033[92mChecking \033[1m{}\033[0m \033[92mwith \033[31;1mZ3\033[0m'.format(filename))
     subprocess.call(
-        ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis-linear', path, '-preprocess', '-entryfunction', funcname,
-         '-setprop', 'solver.solver=z3'])
+        ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
+         '-setprop', 'solver.solver=z3', '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL',
+         '-setprop', 'solver.nonLinearArithmetic=USE'])
 
 
 if __name__ == '__main__':
