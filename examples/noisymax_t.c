@@ -34,12 +34,14 @@ int noisymax (float epsilon, int size, float q[]) {
 
     if(q[i] + eta > bq || i == 0)
     {
+      __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
       __VERIFIER_assert(q[i] + dq[i] + eta + 2 > bq + dis_s_bq || i == 0);
       bq = q[i] + eta;
       dis_bq = dq[i] + 2;
     }
     else
     {
+      __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
       __VERIFIER_assert(q[i] + dq[i] + eta <= bq + dis_bq);
     }
 

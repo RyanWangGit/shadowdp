@@ -35,12 +35,14 @@ int sparsevector(float epsilon, float T, int N, int size, float q[])
 
     if (q[i] + eta_2 >= T_bar)
     {
+      __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
       __VERIFIER_assert(q[i] + dq[i] + eta_2 + 2 >= T_bar + 1);
       out = true;
       c_1 = c_1 + 1;
     }
     else
     {
+      __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
       __VERIFIER_assert(q[i] + dq[i] + eta_2 < T_bar + 1);
       out = false;
       c_2 = c_2 + 1;
