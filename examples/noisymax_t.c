@@ -12,45 +12,44 @@ typedef enum { false = 0, true = 1 } bool;
 
 int noisymax (float epsilon, int size, float q[]) {
   __VERIFIER_assume(epsilon > 0);
-  __VERIFIER_assume(size > 0);
-  float dq[size];
+  float __LANG_distance_q[size];
   for(int i = 0; i < size; i++)
-    dq[i] = __VERIFIER_nondet_float();
-  float v_epsilon = 0;
+    __LANG_distance_q[i] = __VERIFIER_nondet_float();
+  float __LANG_v_epsilon = 0;
 
   int i = 0;
-  float bq = 0, s_bq = 0, dis_bq = 0;
-  float dis_s_bq = s_bq - bq;
+  float bq = 0;
+  float __LANG_shadow_bq = 0, __LANG_distance_bq = 0;
+  float __LANG_distance_shadow_bq = __LANG_shadow_bq - bq;
 
   while(i < size)
   {
     float eta = __VERIFIER_nondet_float();
-    float s_eta = eta; // maybe define dq[i] in latex
-    __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
+    float __LANG_shadow_eta = eta;
     // align by 2
-    v_epsilon = (q[i] + eta > bq || i == 0) ? epsilon: v_epsilon;
+    __LANG_v_epsilon = (q[i] + eta > bq || i == 0) ? epsilon: __LANG_v_epsilon;
 
     if(q[i] + eta > bq || i == 0)
     {
-      __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
-      __VERIFIER_assert(q[i] + dq[i] + eta + 2 > bq + dis_s_bq || i == 0);
+      __VERIFIER_assume(__LANG_distance_q[i] <= 1 && -1 <= __LANG_distance_q[i]);
+      __VERIFIER_assert(q[i] + __LANG_distance_q[i] + eta + 2 > bq + __LANG_distance_shadow_bq || i == 0);
       bq = q[i] + eta;
-      dis_bq = dq[i] + 2;
+      __LANG_distance_bq = __LANG_distance_q[i] + 2;
     }
     else
     {
-      __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
-      __VERIFIER_assert(q[i] + dq[i] + eta <= bq + dis_bq);
+      __VERIFIER_assume(__LANG_distance_q[i] <= 1 && -1 <= __LANG_distance_q[i]);
+      __VERIFIER_assert(q[i] + __LANG_distance_q[i] + eta <= bq + __LANG_distance_bq);
     }
 
     // shadow execution
-    s_bq = bq + dis_s_bq;
-    if(q[i] + dq[i] + s_eta > s_bq || i == 0)
+    __LANG_shadow_bq = bq + __LANG_distance_shadow_bq;
+    if(q[i] + __LANG_distance_q[i] + __LANG_shadow_eta > __LANG_shadow_bq || i == 0)
     {
-      s_bq = q[i] + dq[i] + s_eta;
-      dis_s_bq = s_bq - bq;
+      __LANG_shadow_bq = q[i] + __LANG_distance_q[i] + __LANG_shadow_eta;
+      __LANG_distance_shadow_bq = __LANG_shadow_bq - bq;
     }
     i = i + 1;
   }
-  __VERIFIER_assert(v_epsilon <= epsilon);
+  __VERIFIER_assert(__LANG_v_epsilon <= epsilon);
 }
