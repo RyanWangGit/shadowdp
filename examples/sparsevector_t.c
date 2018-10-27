@@ -49,4 +49,5 @@ int sparsevector(float epsilon, float T, int N, int size, float q[])
     }
     i = i + 1;
   }
+  __VERIFIER_assert(v_epsilon <= EPSILON);
 }
