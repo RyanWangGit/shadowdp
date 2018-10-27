@@ -6,7 +6,7 @@ extern void __assert_fail();
 
 typedef enum { false = 0, true = 1 } bool;
 
-int sparsevector(float epsilon, float T, int N, int size, float q[])
+int sparsevector(float epsilon, int size, float q[], float T, int N)
 {
   __VERIFIER_assume(epsilon > 0);
   float __LANG_distance_q[size];
