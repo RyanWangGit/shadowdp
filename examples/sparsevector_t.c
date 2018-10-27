@@ -31,7 +31,7 @@ int sparsevector(float epsilon, float T, int N, int size, float q[])
   {
     float eta_2 = __VERIFIER_nondet_float();
     float s_eta_2 = eta_2;
-    float v_eps = v_eps + (((q[i] + eta_2 >= T) ? 2 : 0) * (EPSILON / (4 * N)));
+    v_epsilon = (q[i] + eta_2 >= T_bar) ? (0 + 2 * EPSILON / 2.0) : (v_epsilon + 0) ;
 
     if (q[i] + eta_2 >= T_bar)
     {
