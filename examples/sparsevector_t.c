@@ -6,8 +6,6 @@ extern void __assert_fail();
 
 typedef enum { false = 0, true = 1 } bool;
 
-#define EPSILON epsilon
-
 int sparsevector(float epsilon, float T, int N, int size, float q[])
 {
   __VERIFIER_assume(epsilon > 0);
@@ -20,7 +18,7 @@ int sparsevector(float epsilon, float T, int N, int size, float q[])
 
   float eta_1 = __VERIFIER_nondet_float();
   float s_eta_1 = eta_1;
-  v_epsilon = v_epsilon + EPSILON / 2;
+  v_epsilon = v_epsilon + epsilon / 2;
 
   float T_bar = T + eta_1;
   int c_1 = 0, c_2 = 0;
@@ -31,7 +29,7 @@ int sparsevector(float epsilon, float T, int N, int size, float q[])
   {
     float eta_2 = __VERIFIER_nondet_float();
     float s_eta_2 = eta_2;
-    v_epsilon = (q[i] + eta_2 >= T_bar) ? (0 + 2 * EPSILON / 2.0) : (v_epsilon + 0) ;
+    v_epsilon = (q[i] + eta_2 >= T_bar) ? (0 + 2 * epsilon / 2.0) : (v_epsilon + 0) ;
 
     if (q[i] + eta_2 >= T_bar)
     {
@@ -49,5 +47,5 @@ int sparsevector(float epsilon, float T, int N, int size, float q[])
     }
     i = i + 1;
   }
-  __VERIFIER_assert(v_epsilon <= EPSILON);
+  __VERIFIER_assert(v_epsilon <= epsilon);
 }

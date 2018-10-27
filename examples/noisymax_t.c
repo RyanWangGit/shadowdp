@@ -9,8 +9,6 @@ extern void __assert_fail();
 
 typedef enum { false = 0, true = 1 } bool;
 
-// change here to constant to test constant epsilon
-#define EPSILON epsilon
 
 int noisymax (float epsilon, int size, float q[]) {
   __VERIFIER_assume(epsilon > 0);
@@ -30,7 +28,7 @@ int noisymax (float epsilon, int size, float q[]) {
     float s_eta = eta; // maybe define dq[i] in latex
     __VERIFIER_assume(dq[i] <= 1 && -1 <= dq[i]);
     // align by 2
-    v_epsilon = (q[i] + eta > bq || i == 0) ? EPSILON: v_epsilon;
+    v_epsilon = (q[i] + eta > bq || i == 0) ? epsilon: v_epsilon;
 
     if(q[i] + eta > bq || i == 0)
     {
@@ -54,5 +52,5 @@ int noisymax (float epsilon, int size, float q[]) {
     }
     i = i + 1;
   }
-  __VERIFIER_assert(v_epsilon <= EPSILON);
+  __VERIFIER_assert(v_epsilon <= epsilon);
 }
