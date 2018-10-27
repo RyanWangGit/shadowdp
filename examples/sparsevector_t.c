@@ -6,10 +6,9 @@ extern void __assert_fail();
 
 typedef enum { false = 0, true = 1 } bool;
 
-#define SIZE 4
 #define EPSILON 1
 
-int sparsevector(float epsilon, float T, float N, float q[], float dq[]) {
+int sparsevector(float epsilon, float T, int N, int size, float q[])
 
   __VERIFIER_assume(epsilon > 0 && epsilon < 100000);
   __VERIFIER_assume(T > 0);
@@ -28,7 +27,7 @@ int sparsevector(float epsilon, float T, float N, float q[], float dq[]) {
 
   bool out = false;
 
-  while (c_1 < N && i < SIZE)
+  while (c_1 < N && i < size)
   {
     float eta_2 = __VERIFIER_nondet_float();
     float s_eta_2 = eta_2;

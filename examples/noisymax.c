@@ -1,9 +1,9 @@
-int noisymax (float epsilon, int N, float q[])
+int noisymax (float epsilon, int size, float q[])
 {
   int i = 0;
   float bq = 0;
 
-  while(i < N)
+  while(i < size)
   {
     float eta = Lap(2 / epsilon, "S_e = q[i] + eta > bq || i == 0 ? SHADOW : ALIGNED; S_eta = q[i] + eta > bq || i == 0 ? ALIGNED : SHADOW; eta : 1");
 

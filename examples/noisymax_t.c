@@ -12,14 +12,15 @@ typedef enum { false = 0, true = 1 } bool;
 // change here to constant to test constant epsilon
 #define EPSILON epsilon
 
-int noisymax (float epsilon, int N, float q[], float dq[]) {
+int noisymax (float epsilon, int size, float q[]) {
   int i = 0;
   float bq = 0, s_bq = 0, dis_bq = 0, v_epsilon = 0;
   float dis_s_bq = s_bq - bq;
   __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(N > 0);
 
-  while(i < N)
+
+  while(i < size)
   {
     float eta = __VERIFIER_nondet_float();
     float s_eta = eta; // maybe define dq[i] in latex
