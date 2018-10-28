@@ -34,6 +34,7 @@ class LangTransformer(CGenerator):
         super().__init__()
         self._types = {}
         self._code_generator = CGenerator()
+        self._reserved_params = [None, None, None]
 
     def visit_Assignment(self, n):
         #print(n.__repr__())
@@ -50,7 +51,9 @@ class LangTransformer(CGenerator):
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
             # put parameters into types dict
-            for decl in decl_type.args.params:
+            for i, decl in enumerate(decl_type.args.params):
+                if i < 3:
+                    self._reserved_params[i] = decl.name
                 # TODO: fill in the type
                 if isinstance(decl.type, c_ast.TypeDecl):
                     self._types[decl.name] = [[0, 0], decl.type.type.names[0]]
