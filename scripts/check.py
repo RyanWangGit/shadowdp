@@ -7,30 +7,39 @@ def check(path, filename, funcname):
     # check with MathSat
     mathsat = subprocess.Popen(
         ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
-         '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'solver.nonLinearArithmetic=USE'])
+         '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'solver.nonLinearArithmetic=USE'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
     # check with SMT-Interpol
     smtinterpol = subprocess.Popen(
         ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis-linear', path, '-preprocess', '-entryfunction', funcname,
-         '-setprop', 'solver.solver=smtinterpol'])
+         '-setprop', 'solver.solver=smtinterpol'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
     # check with Z3
     z3 = subprocess.Popen(
         ['./cpachecker/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
          '-setprop', 'solver.solver=z3', '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL',
-         '-setprop', 'solver.nonLinearArithmetic=USE'])
+         '-setprop', 'solver.nonLinearArithmetic=USE'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
 
     outputs = []
     is_verified = False
     for name, proc in zip(('SMT-Interpol', 'MathSat', 'Z3'), (smtinterpol, mathsat, z3)):
         out, err = proc.communicate()
         outputs.append((out, err))
-        if r'Verification result: TRUE' in out:
-            print('Verified with {}'.format(name))
+        if r'Verification result: TRUE' in str(out):
+            print('\033[0;1m{}\033[0m\033[92m verified with {}\033[0m'.format(filename, name))
             is_verified = True
             break
 
     if not is_verified:
         for name, (out, err) in zip(('SMT-Interpol', 'MathSat', 'Z3'), outputs):
-            print('Error message from {}:'.format(name))
+            print('\033[31;1mCan\'t verify \033[0;1m{}\033[0m\033[31;1m, error message from {}:\033[0m'.format(filename, name))
             print(out)
             print(err)
 
