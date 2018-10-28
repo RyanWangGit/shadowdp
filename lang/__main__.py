@@ -3,7 +3,19 @@ from lang.core import LangTransformer
 from pycparser import parse_file
 import coloredlogs
 
-coloredlogs.install(level='INFO', fmt='%(levelname)s:%(module)s: %(message)s')
+coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')
+
+__HEADER = \
+    r"""extern void __VERIFIER_error() __attribute__ ((__noreturn__));
+    extern int __VERIFIER_nondet_float(void);
+    extern void __VERIFIER_assume(int);
+    extern int __VERIFIER_nondet_int();
+    extern void __assert_fail();
+    #define __VERIFIER_assert(cond) { if(!(cond)) { __assert_fail(); } }
+    #define abs(x) ((x) < 0 ? -(x) : (x))
+    typedef enum { false = 0, true = 1 } bool;
+    
+    """
 
 
 def main():
@@ -20,6 +32,8 @@ def main():
     transformer = LangTransformer()
 
     with open(results.out, 'w') as f:
+        # write verifier headers
+        f.write(__HEADER)
         f.write(transformer.visit(ast))
 
 
