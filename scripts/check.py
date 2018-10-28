@@ -48,6 +48,8 @@ def check(path, filename, funcname):
         proc.kill()
         proc.wait()
 
+    return is_verified
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Verify the transformed programs.')
@@ -56,7 +58,13 @@ if __name__ == '__main__':
     results = parser.parse_args()
     folder = results.folder[0]
 
+    all_verified = True
     for root, _, files in os.walk(folder):
         for file in files:
             if file.endswith('_t.c'):
-                check(os.path.join(root, file), file, file[:len(file) - 4])
+                if not check(os.path.join(root, file), file, file[:len(file) - 4]):
+                    all_verified = False
+    if all_verified:
+        exit(0)
+    else:
+        exit(1)
