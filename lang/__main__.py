@@ -15,7 +15,13 @@ __HEADER = \
     #define abs(x) ((x) < 0 ? -(x) : (x))
     typedef enum { false = 0, true = 1 } bool;
     
-    """
+"""
+
+__FUNCTION_MAP = {
+    'assert': '__VERIFIER_assert',
+    'assume': '__VERIFIER_assume',
+    'havoc': '__VERIFIER_nondet_float'
+}
 
 
 def main():
@@ -29,7 +35,7 @@ def main():
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
 
     ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
-    transformer = LangTransformer()
+    transformer = LangTransformer(function_map=__FUNCTION_MAP)
 
     with open(results.out, 'w') as f:
         # write verifier headers

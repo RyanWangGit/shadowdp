@@ -30,8 +30,17 @@ class _ExpressionReplacer(CGenerator):
 
 
 class LangTransformer(CGenerator):
-    def __init__(self):
+    def __init__(self, function_map=None):
         super().__init__()
+        if not function_map:
+            self._func_map = {
+                'assert': 'assert',
+                'assume': 'assume',
+                'havoc': 'havoc',
+            }
+        else:
+            assert 'assert' in function_map and 'assume' in function_map and 'havoc' in function_map
+            self._func_map = function_map
         self._types = {}
         self._code_generator = CGenerator()
         self._reserved_params = [None, None, None]
