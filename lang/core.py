@@ -1,7 +1,32 @@
 from pycparser import c_ast
 from pycparser.c_generator import CGenerator
+from pycparser.c_ast import NodeVisitor
 import logging
 logger = logging.getLogger(__name__)
+
+
+def extract_variables(expr_node):
+    pass
+
+
+def get_distance(expr_node):
+    pass
+
+
+def replace(expr_node):
+    pass
+
+
+class _VariablesExtractor(NodeVisitor):
+    pass
+
+
+class _ExpressionDistance(NodeVisitor):
+    pass
+
+
+class _ExpressionReplacer(CGenerator):
+    pass
 
 
 class LangTransformer(CGenerator):
