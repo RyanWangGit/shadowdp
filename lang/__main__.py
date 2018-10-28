@@ -1,6 +1,9 @@
 import argparse
 from lang.core import LangTransformer
 from pycparser import parse_file
+import coloredlogs
+
+coloredlogs.install(level='INFO', fmt='%(levelname)s:%(module)s: %(message)s')
 
 
 def main():
