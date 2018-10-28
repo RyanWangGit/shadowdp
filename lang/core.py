@@ -41,7 +41,9 @@ class LangTransformer(CGenerator):
         return super().visit_Assignment(n)
 
     def visit_FuncDef(self, n):
-        #print(n.__repr__())
+        # the start of the transformation
+        self._types = {}
+        logger.info('Start transforming function {} ...'.format(n.decl.name))
         return super().visit_FuncDef(n)
 
     def visit_Decl(self, node, no_type=False):
