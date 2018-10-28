@@ -57,6 +57,10 @@ class LangTransformer(CGenerator):
         return super().visit_FuncDef(n)
 
     def visit_Decl(self, n, no_type=False):
+        code = self._code_generator.visit_Decl(n)
+        transformed_code = code
+        logger.info(code + ';')
+
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
             # put parameters into types dict
@@ -84,8 +88,6 @@ class LangTransformer(CGenerator):
             # TODO: fill in the type
             self._types[n.name] = [[0, 0], 'list ' + decl_type.type.type.names[0]]
 
-        code = self._code_generator.visit_Decl(n)
-        logger.info(code + ';')
         logger.info('types: {}'.format(self._types))
-        return code
+        return transformed_code
 
