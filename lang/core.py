@@ -109,16 +109,44 @@ class LangTransformer(CGenerator):
             # put variable declaration into type dict
             # TODO: fill in the type
             if n.init:
-                # TODO: get distance of the expression
-                self._types[n.name] = [[0, 0], decl_type.type.names[0]]
-            else:
-                self._types[n.name] = [[0, 0], decl_type.type.names[0]]
+                if isinstance(n.init, c_ast.FuncCall):
+                    if n.init.name.name == 'Lap':
+                        # random variable declaration
+                        self._random_variables.add(n.name)
+                        logger.debug('Random variables: {}'.format(self._random_variables))
+                        sample = _code_generator.visit(n.init.args.exprs[0])
+                        assert isinstance(n.init.args.exprs[1], c_ast.Constant) and \
+                               n.init.args.exprs[1].type == 'string', \
+                            'The second argument of Lap function must be string annotation'
+                        s_e, s_d, d_eta, *_ = map(lambda x: x.strip(), n.init.args.exprs[1].value[1:-1].split(';'))
+                        s_d = s_d.replace('ALIGNED', d_eta).replace('SHADOW', '0')
+                        # set the random variable distance
+                        self._types[n.name] = [(s_d, '0'), decl_type.type.names[0]]
+                        # set the normal variable distances
+                        for name in self._types.keys():
+                            if name not in self._random_variables:
+                                cur_distance = flatten_distance(name, self._types[name][0])
+                                # if the aligned distance and shadow distance are the same
+                                # then there's no need to update the distances
+                                if self._types[name][0][0] == self._types[name][0][1]:
+                                    continue
+                                else:
+                                    self._types[name][0] = s_e.replace('ALIGNED', '({})'.format(cur_distance[0]))\
+                                                           .replace('SHADOW', '({})'.format(cur_distance[1])),\
+                                                       self._types[name][0][1]
 
+                    else:
+                        # TODO: function call currently not supported
+                        raise NotImplementedError
+                else:
+                    self._types[n.name] = [get_distance(n.init, self._types), decl_type.type.names[0]]
+            else:
+                self._types[n.name] = [('0', '0'), decl_type.type.names[0]]
 
         elif isinstance(decl_type, c_ast.ArrayDecl):
             # put array variable declaration into type dict
             # TODO: fill in the type
-            self._types[n.name] = [[0, 0], 'list ' + decl_type.type.type.names[0]]
+            self._types[n.name] = [('0', '0'), 'list ' + decl_type.type.type.names[0]]
 
         logger.info('types: {}'.format(self._types))
         return transformed_code
