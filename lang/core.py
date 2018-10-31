@@ -74,7 +74,6 @@ class LangTransformer(CGenerator):
             assert 'assert' in function_map and 'assume' in function_map and 'havoc' in function_map
             self._func_map = function_map
         self._types = {}
-        self._code_generator = CGenerator()
         self._reserved_params = [None, None, None]
 
     def visit_Assignment(self, n):
@@ -89,9 +88,9 @@ class LangTransformer(CGenerator):
         return super().visit_FuncDef(n)
 
     def visit_Decl(self, n, no_type=False):
-        code = self._code_generator.visit_Decl(n)
+        code = _code_generator.visit_Decl(n)
         transformed_code = code
-        logger.info(code + ';')
+        logger.info(code)
 
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
