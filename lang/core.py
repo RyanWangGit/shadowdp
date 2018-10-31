@@ -75,6 +75,7 @@ class LangTransformer(CGenerator):
             self._func_map = function_map
         self._types = {}
         self._reserved_params = [None, None, None]
+        self._random_variables = set()
 
     def visit_Assignment(self, n):
         #print(n.__repr__())
@@ -98,11 +99,11 @@ class LangTransformer(CGenerator):
             for i, decl in enumerate(decl_type.args.params):
                 if i < 3:
                     self._reserved_params[i] = decl.name
-                # TODO: fill in the type
+                # TODO: this should be filled by annotation on the argument
                 if isinstance(decl.type, c_ast.TypeDecl):
-                    self._types[decl.name] = [[0, 0], decl.type.type.names[0]]
+                    self._types[decl.name] = [('0', '0'), decl.type.type.names[0]]
                 elif isinstance(decl.type, c_ast.ArrayDecl):
-                    self._types[decl.name] = [[0, 0], 'list ' + decl.type.type.type.names[0]]
+                    self._types[decl.name] = [('*', '*'), 'list ' + decl.type.type.type.names[0]]
             logger.debug('Reserved Params: {}'.format(self._reserved_params))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type dict
