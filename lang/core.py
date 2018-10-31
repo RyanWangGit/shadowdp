@@ -4,13 +4,17 @@ from pycparser.c_ast import NodeVisitor
 import logging
 logger = logging.getLogger(__name__)
 
+_code_generator = CGenerator()
+
+
 
 def extract_variables(expr_node):
     pass
 
 
-def get_distance(expr_node):
-    pass
+def get_distance(expr_node, types):
+    distance_generator = _DistanceGenerator(types)
+    return distance_generator.visit(expr_node)
 
 
 def replace(expr_node):
@@ -21,8 +25,27 @@ class _VariablesExtractor(NodeVisitor):
     pass
 
 
-class _ExpressionDistance(NodeVisitor):
-    pass
+class _DistanceGenerator(NodeVisitor):
+    def __init__(self, types):
+        self._types = types
+
+    def generic_visit(self, node):
+        raise NotImplementedError
+
+    def visit_Constant(self, n):
+        return '0', '0'
+
+    def visit_ID(self, n):
+        return flatten_distance(n.name, self._types[n.name])
+
+    def visit_ArrayRef(self, n):
+        aligned, shadow = flatten_distance(n.name.name, self._types[n.name.name][0])
+        aligned += '[{}]'.format(_code_generator.visit(n.subscript))
+        shadow += '[{}]'.format(_code_generator.visit(n.subscript))
+        return aligned, shadow
+
+    def visit_BinaryOp(self, n):
+        return ((left + n.op + right) for left, right in zip(self.visit(n.left), self.visit(n.right)))
 
 
 class _ExpressionReplacer(CGenerator):
