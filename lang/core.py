@@ -7,6 +7,15 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
+def flatten_distance(name, distance):
+    """ helper function to flatten the distance"""
+    new_distance = list(distance)
+    if distance[0] == '*':
+        new_distance[0] = '__LANG_distance_{}'.format(name)
+    if distance[1] == '*':
+        new_distance[1] = '__LANG_distance_shadow_{}'.format(name)
+    return new_distance
+
 
 def extract_variables(expr_node):
     pass
