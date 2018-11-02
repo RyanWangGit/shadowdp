@@ -38,7 +38,7 @@ int noisymax (float epsilon, int size, float q[]) {
     else
     {
       __VERIFIER_assume(__LANG_distance_q[i] <= 1 && -1 <= __LANG_distance_q[i]);
-      __VERIFIER_assert(q[i] + __LANG_distance_q[i] + eta + 0 <= bq + __LANG_distance_bq && i != 0);
+      __VERIFIER_assert(!(q[i] + __LANG_distance_q[i] + eta + 0 > bq + __LANG_distance_bq || i == 0));
     }
 
     // shadow execution
