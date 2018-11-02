@@ -13,7 +13,9 @@ if __name__ == '__main__':
     for root, _, files in os.walk(folder):
         for file in files:
             if file.endswith('_t.c'):
-                if not check('./cpachecker', os.path.join(root, file), file, file[:len(file) - 4]):
+                if check('./cpachecker', os.path.join(root, file), file[:len(file) - 4]):
+                    print('\033[0;1m{}\033[0m\033[92m verified\033[0m'.format(file))
+                else:
                     all_verified = False
     if all_verified:
         exit(0)

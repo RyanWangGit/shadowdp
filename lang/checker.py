@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def check(checkerpath, path, filename, funcname):
+def check(checkerpath, path, funcname):
     processes = OrderedDict()
     processes['MathSat'] = subprocess.Popen(
         [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
@@ -34,7 +34,7 @@ def check(checkerpath, path, filename, funcname):
                 out, err = proc.communicate(timeout=30)
                 outputs.append((name, out, err))
                 if r'Verification result: TRUE' in str(out):
-                    print('\033[0;1m{}\033[0m\033[92m verified with {}\033[0m'.format(filename, name))
+                    logger.info('{} verified with {}.'.format(path, name))
                     is_verified = True
                     break
         except subprocess.TimeoutExpired:
