@@ -19,9 +19,7 @@ int noisymax (float epsilon, int size, float q[]) {
   int max; float __LANG_distance_max; float __LANG_distance_shadow_max;
 
   int i = 0;
-  float bq = 0;
-  float __LANG_distance_bq = 0;
-  float __LANG_distance_shadow_bq = 0;
+  float bq = 0; float __LANG_distance_bq = 0; float __LANG_distance_shadow_bq = 0;
 
   __LANG_distance_bq = 0;
   while(i < size)
