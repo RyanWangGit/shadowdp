@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 def check(checkerpath, path, funcname):
+    logger.info('Start checking with multiple solvers(MathSat, Z3, SMT-Interpol)...')
     processes = OrderedDict()
     processes['MathSat'] = subprocess.Popen(
         [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
