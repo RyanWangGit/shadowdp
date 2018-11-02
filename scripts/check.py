@@ -1,6 +1,9 @@
 import os
 import argparse
 from lang.checker import check
+import coloredlogs
+
+coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Verify the transformed programs.')
