@@ -16,7 +16,7 @@ install:
   - python setup.py install
 
 script:
-  - travis_wait 60 python ./scripts/check.py ./examples
+  - python ./scripts/check.py ./examples
 
 notifications:
   email: false
