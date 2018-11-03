@@ -48,7 +48,7 @@ class _DistanceGenerator(NodeVisitor):
         return flatten_distance(n.name, self._types[n.name])
 
     def visit_ArrayRef(self, n):
-        aligned, shadow = flatten_distance(n.name.name, self._types[n.name.name][0])
+        aligned, shadow = flatten_distance(n.name.name, self._types[n.name.name])
         aligned += '[{}]'.format(_code_generator.visit(n.subscript))
         shadow += '[{}]'.format(_code_generator.visit(n.subscript))
         return aligned, shadow
@@ -101,9 +101,9 @@ class LangTransformer(CGenerator):
                     self._reserved_params[i] = decl.name
                 # TODO: this should be filled by annotation on the argument
                 if isinstance(decl.type, c_ast.TypeDecl):
-                    self._types[decl.name] = [('0', '0'), decl.type.type.names[0]]
+                    self._types[decl.name] = ('0', '0')
                 elif isinstance(decl.type, c_ast.ArrayDecl):
-                    self._types[decl.name] = [('*', '*'), 'list ' + decl.type.type.type.names[0]]
+                    self._types[decl.name] = ('*', '*')
             logger.debug('Reserved Params: {}'.format(self._reserved_params))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type dict
@@ -121,32 +121,32 @@ class LangTransformer(CGenerator):
                         s_e, s_d, d_eta, *_ = map(lambda x: x.strip(), n.init.args.exprs[1].value[1:-1].split(';'))
                         s_d = s_d.replace('ALIGNED', d_eta).replace('SHADOW', '0')
                         # set the random variable distance
-                        self._types[n.name] = [(s_d, '0'), decl_type.type.names[0]]
+                        self._types[n.name] = (s_d, '0')
                         # set the normal variable distances
                         for name in self._types.keys():
                             if name not in self._random_variables:
-                                cur_distance = flatten_distance(name, self._types[name][0])
+                                cur_distance = flatten_distance(name, self._types[name])
                                 # if the aligned distance and shadow distance are the same
                                 # then there's no need to update the distances
-                                if self._types[name][0][0] == self._types[name][0][1]:
+                                if self._types[name][0] == self._types[name][1]:
                                     continue
                                 else:
-                                    self._types[name][0] = s_e.replace('ALIGNED', '({})'.format(cur_distance[0]))\
-                                                           .replace('SHADOW', '({})'.format(cur_distance[1])),\
-                                                       self._types[name][0][1]
+                                    self._types[name] = s_e.replace('ALIGNED', '({})'.format(cur_distance[0]))\
+                                                            .replace('SHADOW', '({})'.format(cur_distance[1])),\
+                                                        self._types[name][1]
 
                     else:
                         # TODO: function call currently not supported
                         raise NotImplementedError
                 else:
-                    self._types[n.name] = [get_distance(n.init, self._types), decl_type.type.names[0]]
+                    self._types[n.name] = get_distance(n.init, self._types)
             else:
-                self._types[n.name] = [('0', '0'), decl_type.type.names[0]]
+                self._types[n.name] = ('0', '0')
 
         elif isinstance(decl_type, c_ast.ArrayDecl):
             # put array variable declaration into type dict
             # TODO: fill in the type
-            self._types[n.name] = [('0', '0'), 'list ' + decl_type.type.type.names[0]]
+            self._types[n.name] = ('0', '0')
 
         logger.info('types: {}'.format(self._types))
         return transformed_code
