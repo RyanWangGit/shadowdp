@@ -3,6 +3,8 @@ sudo: false
 language: python
 
 python:
+  - "3.4"
+  - "3.5"
   - "3.6"
 
 cache: pip
@@ -14,8 +16,10 @@ install:
   - travis_retry bash ./scripts/get_cpachecker.sh
   - travis_retry python ./scripts/get_z3.py ./cpachecker/scripts/
   - python setup.py install
+  - pip install tox-travis
 
 script:
+  - tox
   - python ./scripts/check.py ./examples
 
 notifications:
