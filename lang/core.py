@@ -127,8 +127,8 @@ class LangTransformer(CGenerator):
                                 if self._types[name][0] == self._types[name][1]:
                                     continue
                                 else:
-                                    self._types[name] = s_e.replace('ALIGNED', '({})'.format(cur_distance[0]))\
-                                                            .replace('SHADOW', '({})'.format(cur_distance[1])),\
+                                    self._types[name] = s_e.replace('ALIGNED', '{}'.format(cur_distance[0]))\
+                                                            .replace('SHADOW', '{}'.format(cur_distance[1])),\
                                                         self._types[name][1]
 
                     else:
