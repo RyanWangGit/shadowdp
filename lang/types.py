@@ -3,6 +3,18 @@ from pycparser.c_generator import CGenerator
 from pycparser.c_ast import Node, Constant
 
 
+def simplify_distance(expr, condition, is_true):
+    """ simplifies distance expression string, e.g. expr="e1 ? e2 ? c1 : c2 : c3", condition=e2, is_true=True
+    this function returns "e1 ? c1 : c3"
+    :param expr: The expression to simplify
+    :param condition: The condition for simplification.
+    :param is_true: Indicates the condition is true or false.
+    :return: Simplified string.
+    """
+    # TODO: implement this
+    return expr
+
+
 class TypeSystem(dict):
     _parser = CParser()
     _generator = CGenerator()
