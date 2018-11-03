@@ -42,7 +42,7 @@ class _DistanceGenerator(NodeVisitor):
         raise NotImplementedError
 
     def visit_Constant(self, n):
-        return '0', '0'
+        return ['0', '0']
 
     def visit_ID(self, n):
         return flatten_distance(n.name, self._types[n.name])
@@ -51,7 +51,7 @@ class _DistanceGenerator(NodeVisitor):
         aligned, shadow = flatten_distance(n.name.name, self._types[n.name.name])
         aligned += '[{}]'.format(_code_generator.visit(n.subscript))
         shadow += '[{}]'.format(_code_generator.visit(n.subscript))
-        return aligned, shadow
+        return [aligned, shadow]
 
     def visit_BinaryOp(self, n):
         return ['({}) {} ({})'.format(left, n.op, right) for left, right in zip(self.visit(n.left), self.visit(n.right))]
@@ -106,9 +106,9 @@ class LangTransformer(CGenerator):
                     self._reserved_params[i] = decl.name
                 # TODO: this should be filled by annotation on the argument
                 if isinstance(decl.type, c_ast.TypeDecl):
-                    self._types[decl.name] = ('0', '0')
+                    self._types[decl.name] = ['0', '0']
                 elif isinstance(decl.type, c_ast.ArrayDecl):
-                    self._types[decl.name] = ('*', '*')
+                    self._types[decl.name] = ['*', '*']
             logger.debug('Reserved Params: {}'.format(self._reserved_params))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type dict
@@ -126,7 +126,7 @@ class LangTransformer(CGenerator):
                         s_e, s_d, d_eta, *_ = map(lambda x: x.strip(), n.init.args.exprs[1].value[1:-1].split(';'))
                         s_d = s_d.replace('ALIGNED', d_eta).replace('SHADOW', '0')
                         # set the random variable distance
-                        self._types[n.name] = (s_d, '0')
+                        self._types[n.name] = [s_d, '0']
                         # set the normal variable distances
                         for name in self._types.keys():
                             if name not in self._random_variables:
