@@ -2,7 +2,7 @@ from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
 import logging
-from lang.types import TypeSystem
+from lang.types import TypeSystem, simplify_distance
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
@@ -136,4 +136,29 @@ class LangTransformer(CGenerator):
 
         logger.info('types: {}'.format(self._types))
         return transformed_code
+
+    def visit_If(self, n):
+        # TODO: this is too tricky, maybe fix with parsing to AST node
+        cond_string = _code_generator.visit(n.cond).replace('(', '').replace(')', '')
+
+        s = 'if ('
+        if n.cond:
+            s += self.visit(n.cond)
+        s += ')\n'
+        before_types = self._types.copy()
+        # simplify distances
+        for name in self._types.keys():
+            self._types[name][0] = simplify_distance(self._types[name][0], cond_string, True)
+            self._types[name][1] = simplify_distance(self._types[name][1], cond_string, True)
+        s += self._generate_stmt(n.iftrue, add_indent=True)
+        true_types = self._types
+        self._types = before_types
+        # simplify distances
+        for name in self._types.keys():
+            self._types[name][0] = simplify_distance(self._types[name][0], cond_string, False)
+            self._types[name][1] = simplify_distance(self._types[name][1], cond_string, False)
+        if n.iffalse:
+            s += self._make_indent() + 'else\n'
+            s += self._generate_stmt(n.iffalse, add_indent=True)
+        return s
 
