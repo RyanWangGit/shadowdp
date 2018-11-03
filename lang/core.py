@@ -56,7 +56,7 @@ class LangTransformer(CGenerator):
             assert 'assert' in function_map and 'assume' in function_map and 'havoc' in function_map
             self._func_map = function_map
         self._types = TypeSystem()
-        self._reserved_params = [None, None, None]
+        self._parameters = []
         self._random_variables = set()
 
     def visit_Assignment(self, n):
@@ -82,15 +82,14 @@ class LangTransformer(CGenerator):
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
             # put parameters into types dict
-            for i, decl in enumerate(decl_type.args.params):
-                if i < 3:
-                    self._reserved_params[i] = decl.name
+            for decl in decl_type.args.params:
+                self._parameters.append(decl.name)
                 # TODO: this should be filled by annotation on the argument
                 if isinstance(decl.type, c_ast.TypeDecl):
                     self._types[decl.name] = ['0', '0']
                 elif isinstance(decl.type, c_ast.ArrayDecl):
                     self._types[decl.name] = ['*', '*']
-            logger.debug('Reserved Params: {}'.format(self._reserved_params))
+            logger.debug('Params: {}'.format(self._parameters))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type dict
             # TODO: fill in the type
