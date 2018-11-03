@@ -8,23 +8,6 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
-def extract_variables(expr_node):
-    pass
-
-
-def get_distance(expr_node, types):
-    distance_generator = _DistanceGenerator(types)
-    return distance_generator.visit(expr_node)
-
-
-def replace(expr_node):
-    pass
-
-
-class _VariablesExtractor(NodeVisitor):
-    pass
-
-
 class _DistanceGenerator(NodeVisitor):
     def __init__(self, types):
         self._types = types
@@ -77,7 +60,6 @@ class LangTransformer(CGenerator):
         self._random_variables = set()
 
     def visit_Assignment(self, n):
-        #print(n.__repr__())
         code = _code_generator.visit(n)
         logger.info(code)
         distance_generator = _DistanceGenerator(self._types)
@@ -143,7 +125,8 @@ class LangTransformer(CGenerator):
                         # TODO: function call currently not supported
                         raise NotImplementedError
                 else:
-                    self._types[n.name] = get_distance(n.init, self._types)
+                    distance_generator = _DistanceGenerator(self._types)
+                    self._types[n.name] = distance_generator.visit(n.init)
             else:
                 self._types[n.name] = ('0', '0')
 
