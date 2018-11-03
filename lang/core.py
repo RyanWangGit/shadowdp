@@ -15,7 +15,7 @@ class _DistanceGenerator(NodeVisitor):
     def try_simplify(self, expr):
         from sympy import simplify
         try:
-            expr = simplify(expr)
+            expr = str(simplify(expr))
         finally:
             return expr
 
