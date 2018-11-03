@@ -28,7 +28,7 @@ setup(
     ],
     keywords='Programming Language, Differential Privacy',
     packages=find_packages(exclude=['tests']),
-    install_requires=['pycparser', 'coloredlogs'],
+    install_requires=['pycparser', 'coloredlogs', 'sympy'],
     extras_require={
         'test': ['pytest-cov', 'pytest', 'coverage'],
     },

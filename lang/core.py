@@ -29,6 +29,13 @@ class _DistanceGenerator(NodeVisitor):
     def __init__(self, types):
         self._types = types
 
+    def try_simplify(self, expr):
+        from sympy import simplify
+        try:
+            expr = simplify(expr)
+        finally:
+            return expr
+
     def generic_visit(self, node):
         raise NotImplementedError
 
@@ -45,7 +52,8 @@ class _DistanceGenerator(NodeVisitor):
         return [aligned, shadow]
 
     def visit_BinaryOp(self, n):
-        return ['({}) {} ({})'.format(left, n.op, right) for left, right in zip(self.visit(n.left), self.visit(n.right))]
+        return [self.try_simplify('{} {} {}'.format(left, n.op, right))
+                for left, right in zip(self.visit(n.left), self.visit(n.right))]
 
 
 class _ExpressionReplacer(CGenerator):
