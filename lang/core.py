@@ -2,19 +2,10 @@ from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
 import logging
+from lang.types import TypeSystem
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
-
-
-def flatten_distance(name, distance):
-    """ helper function to flatten the distance"""
-    new_distance = list(distance)
-    if distance[0] == '*':
-        new_distance[0] = '__LANG_distance_{}'.format(name)
-    if distance[1] == '*':
-        new_distance[1] = '__LANG_distance_shadow_{}'.format(name)
-    return new_distance
 
 
 def extract_variables(expr_node):
@@ -45,10 +36,10 @@ class _DistanceGenerator(NodeVisitor):
         return ['0', '0']
 
     def visit_ID(self, n):
-        return flatten_distance(n.name, self._types[n.name])
+        return self._types[n.name]
 
     def visit_ArrayRef(self, n):
-        aligned, shadow = flatten_distance(n.name.name, self._types[n.name.name])
+        aligned, shadow = self._types[n.name.name]
         aligned += '[{}]'.format(_code_generator.visit(n.subscript))
         shadow += '[{}]'.format(_code_generator.visit(n.subscript))
         return [aligned, shadow]
@@ -73,7 +64,7 @@ class LangTransformer(CGenerator):
         else:
             assert 'assert' in function_map and 'assume' in function_map and 'havoc' in function_map
             self._func_map = function_map
-        self._types = {}
+        self._types = TypeSystem()
         self._reserved_params = [None, None, None]
         self._random_variables = set()
 
@@ -89,7 +80,7 @@ class LangTransformer(CGenerator):
 
     def visit_FuncDef(self, n):
         # the start of the transformation
-        self._types = {}
+        self._types.clear()
         logger.info('Start transforming function {} ...'.format(n.decl.name))
         return super().visit_FuncDef(n)
 
@@ -130,7 +121,7 @@ class LangTransformer(CGenerator):
                         # set the normal variable distances
                         for name in self._types.keys():
                             if name not in self._random_variables:
-                                cur_distance = flatten_distance(name, self._types[name])
+                                cur_distance = self._types[name]
                                 # if the aligned distance and shadow distance are the same
                                 # then there's no need to update the distances
                                 if self._types[name][0] == self._types[name][1]:
