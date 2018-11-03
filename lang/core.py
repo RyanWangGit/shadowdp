@@ -54,7 +54,7 @@ class _DistanceGenerator(NodeVisitor):
         return aligned, shadow
 
     def visit_BinaryOp(self, n):
-        return ((left + n.op + right) for left, right in zip(self.visit(n.left), self.visit(n.right)))
+        return ['({}) {} ({})'.format(left, n.op, right) for left, right in zip(self.visit(n.left), self.visit(n.right))]
 
 
 class _ExpressionReplacer(CGenerator):
@@ -79,8 +79,13 @@ class LangTransformer(CGenerator):
 
     def visit_Assignment(self, n):
         #print(n.__repr__())
-
-        return super().visit_Assignment(n)
+        code = _code_generator.visit(n)
+        logger.info(code)
+        distance_generator = _DistanceGenerator(self._types)
+        distance = distance_generator.visit(n.rvalue)
+        self._types[n.lvalue.name] = distance
+        logger.info('types: {}'.format(self._types))
+        return code
 
     def visit_FuncDef(self, n):
         # the start of the transformation
