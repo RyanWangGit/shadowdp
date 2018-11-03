@@ -1,6 +1,5 @@
 from pycparser.c_parser import CParser
 from pycparser.c_generator import CGenerator
-from pycparser.c_ast import Node, Constant
 
 
 def simplify_distance(expr, condition, is_true):
