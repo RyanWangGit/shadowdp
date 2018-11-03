@@ -120,7 +120,7 @@ class LangTransformer(CGenerator):
                         self._types[n.name] = [s_d, '0']
                         # set the normal variable distances
                         for name in self._types.keys():
-                            if name not in self._random_variables:
+                            if name not in self._random_variables and not name in self._reserved_params:
                                 cur_distance = self._types[name]
                                 # if the aligned distance and shadow distance are the same
                                 # then there's no need to update the distances
