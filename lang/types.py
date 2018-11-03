@@ -26,18 +26,3 @@ class TypeSystem(dict):
             distance[0] = '__LANG_distance_{}'.format(item) if distance[0] == '*' else distance[0]
             distance[1] = '__LANG_distance_shadow_{}'.format(item) if distance[1] == '*' else distance[1]
         return distance
-
-    def __str__(self):
-        return '{{{}}}'.format(
-            ', '.join(
-                '\'{}\':[{}, {}]'.format(
-                    k,
-                    self._generator.visit(align) if isinstance(align, Node) else align,
-                    self._generator.visit(shadow) if isinstance(shadow, Node) else shadow
-                )
-                for k, (align, shadow) in super().items()
-            )
-        )
-
-    def __repr__(self):
-        return super().__repr__()
