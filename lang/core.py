@@ -9,8 +9,9 @@ _code_generator = CGenerator()
 
 
 class _DistanceGenerator(NodeVisitor):
-    def __init__(self, types):
+    def __init__(self, types, conditions):
         self._types = types
+        self._conditions = conditions
         assert isinstance(self._types, TypeSystem)
 
     def try_simplify(self, expr):
@@ -27,10 +28,10 @@ class _DistanceGenerator(NodeVisitor):
         return ['0', '0']
 
     def visit_ID(self, n):
-        return self._types.get_distance(n.name)
+        return self._types.get_distance(n.name, self._conditions)
 
     def visit_ArrayRef(self, n):
-        aligned, shadow = self._types.get_distance(n.name.name)
+        aligned, shadow = self._types.get_distance(n.name.name, self._conditions)
         aligned += '[{}]'.format(_code_generator.visit(n.subscript))
         shadow += '[{}]'.format(_code_generator.visit(n.subscript))
         return [aligned, shadow]
@@ -59,11 +60,12 @@ class LangTransformer(CGenerator):
         self._types = TypeSystem()
         self._parameters = []
         self._random_variables = set()
+        self._condition_stack = []
 
     def visit_Assignment(self, n):
         code = _code_generator.visit(n)
         logger.debug('{}{}'.format(self._make_indent(), code))
-        distance_generator = _DistanceGenerator(self._types)
+        distance_generator = _DistanceGenerator(self._types, self._condition_stack)
         aligned, shadow = distance_generator.visit(n.rvalue)
         self._types.update_distance(n.lvalue.name, aligned, shadow)
         logger.debug('{}types: {}'.format(self._make_indent(), self._types))
@@ -111,7 +113,7 @@ class LangTransformer(CGenerator):
                         # set the normal variable distances
                         for name in self._types.names():
                             if name not in self._random_variables and name not in self._parameters:
-                                aligned, shadow = self._types.get_distance(name)
+                                aligned, shadow = self._types.get_distance(name, self._condition_stack)
                                 # if the aligned distance and shadow distance are the same
                                 # then there's no need to update the distances
                                 if aligned == shadow:
@@ -126,7 +128,7 @@ class LangTransformer(CGenerator):
                         # TODO: function call currently not supported
                         raise NotImplementedError
                 else:
-                    distance_generator = _DistanceGenerator(self._types)
+                    distance_generator = _DistanceGenerator(self._types, self._condition_stack)
                     aligned, shadow = distance_generator.visit(n.init)
                     self._types.update_distance(n.name, aligned, shadow)
             else:
@@ -147,8 +149,8 @@ class LangTransformer(CGenerator):
         s += ')\n'
         logger.debug('{}types(before branch): {}'.format(self._make_indent(), self._types))
         logger.debug('{}{}'.format(self._make_indent(), s.strip()))
-
         before_types = self._types.copy()
+        self._condition_stack.append([n.cond, True])
         s += self._generate_stmt(n.iftrue, add_indent=True)
         true_types = self._types
         logger.debug('{}types(true branch): {}'.format(self._make_indent() + ' ' * 2, true_types))
@@ -156,7 +158,9 @@ class LangTransformer(CGenerator):
         logger.debug('{}else'.format(self._make_indent()))
         if n.iffalse:
             s += self._make_indent() + 'else\n'
+            self._condition_stack[-1][1] = False
             s += self._generate_stmt(n.iffalse, add_indent=True)
+        self._condition_stack.pop()
         false_types = self._types
         logger.debug('{}types(false branch): {}'.format(self._make_indent() + ' ' * 2, false_types))
         # TODO: merge the types
