@@ -2,7 +2,7 @@ from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
 import logging
-from lang.types import TypeSystem, simplify_distance
+from lang.types import TypeSystem
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
