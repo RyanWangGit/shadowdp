@@ -36,6 +36,10 @@ class TypeSystem:
     def names(self):
         return self._types.keys()
 
+    def _simplify_distance(self, distance, conditions):
+        # TODO: implement
+        return distance
+
     def _convert_to_ast(self, expression):
         # this is a trick since pycparser cannot parse expression directly
         ast = self._parser.parse('int placeholder(){{{};}}'.format(expression)).ext[0].body.block_items[0]
@@ -62,9 +66,21 @@ class TypeSystem:
         :return: (Aligned distance, Shadow distance) of the variable.
         """
         aligned, shadow = self._types[name]
-
-        return '__LANG_distance_{}'.format(name) if aligned == '*' else self._generator.visit(aligned), \
-               '__LANG_distance_shadow_{}'.format(name) if shadow == '*' else self._generator.visit(shadow)
+        if aligned == '*':
+            aligned = '__LANG_distance_{}'.format(name)
+        else:
+            if conditions:
+                aligned = self._generator.visit(self._simplify_distance(aligned, conditions))
+            else:
+                aligned = self._generator.visit(aligned)
+        if shadow == '*':
+            shadow = '__LANG_distance_shadow_{}'.format(name)
+        else:
+            if conditions:
+                shadow = self._generator.visit(self._simplify_distance(shadow, conditions))
+            else:
+                shadow = self._generator.visit(shadow)
+        return aligned, shadow
 
     def update_distance(self, name, aligned, shadow):
         aligned = '*' if aligned == '*' else self._convert_to_ast(aligned)
