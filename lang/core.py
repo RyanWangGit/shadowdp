@@ -149,13 +149,10 @@ class LangTransformer(CGenerator):
         logger.debug('{}{}'.format(self._make_indent(), s.strip()))
 
         before_types = self._types.copy()
-        # apply condition to all distances
-        self._types.apply(n.cond, True)
         s += self._generate_stmt(n.iftrue, add_indent=True)
         true_types = self._types
         logger.debug('{}types(true branch): {}'.format(self._make_indent() + ' ' * 2, true_types))
         self._types = before_types
-        self._types.apply(n.cond, False)
         logger.debug('{}else'.format(self._make_indent()))
         if n.iffalse:
             s += self._make_indent() + 'else\n'

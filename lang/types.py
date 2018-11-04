@@ -51,17 +51,20 @@ class TypeSystem:
         assert isinstance(node_1, self._EXPR_NODES) and isinstance(node_2, self._EXPR_NODES)
         return False
 
-    def apply(self, condition, is_true):
-        """ apply the condition to all distances
-        :param condition:
-        :param is_true:
-        :return:
-        """
         # TODO: implement this
         pass
 
-    def get_distance(self, name):
+    def get_distance(self, name, condition=None, is_true=True):
+        """ get the distance(align, shadow) of a variable. Simplifies the distance if condition and is_true is given.
+        :param name: The name of the variable.
+        :param condition: The condition to apply, can either be `str` or `c_ast.Node`
+        :param is_true: Indicates the condition is true or false.
+        :return:
+        """
         aligned, shadow = self._types[name]
+        if condition:
+            condition = self._convert_to_ast(condition) if isinstance(condition, str) else condition
+            assert isinstance(condition, c_ast.Node)
         return '__LANG_distance_{}'.format(name) if aligned == '*' else self._generator.visit(aligned), \
                '__LANG_distance_shadow_{}'.format(name) if shadow == '*' else self._generator.visit(shadow)
 
