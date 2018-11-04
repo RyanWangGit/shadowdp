@@ -154,7 +154,7 @@ class LangTransformer(CGenerator):
             self._types[name][1] = simplify_distance(self._types[name][1], cond_string, True)
         s += self._generate_stmt(n.iftrue, add_indent=True)
         true_types = self._types
-        logger.debug('{}types(true branch):{}'.format(self._make_indent() + ' ' * 2, true_types))
+        logger.debug('{}types(true branch): {}'.format(self._make_indent() + ' ' * 2, true_types))
         self._types = before_types
         # simplify distances
         for name in self._types.keys():
@@ -165,9 +165,9 @@ class LangTransformer(CGenerator):
             s += self._make_indent() + 'else\n'
             s += self._generate_stmt(n.iffalse, add_indent=True)
         false_types = self._types
-        logger.debug('{}types(false branch):{}'.format(self._make_indent() + ' ' * 2, false_types))
+        logger.debug('{}types(false branch): {}'.format(self._make_indent() + ' ' * 2, false_types))
         # TODO: merge the types
-        logger.debug('{}types(after merge):{}'.format(self._make_indent(), self._types))
+        logger.debug('{}types(after merge): {}'.format(self._make_indent(), self._types))
 
         return s
 
