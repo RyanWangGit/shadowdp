@@ -51,6 +51,7 @@ class TypeSystem:
         assert isinstance(node_1, self._EXPR_NODES) and isinstance(node_2, self._EXPR_NODES)
         return False
 
+    def merge(self, other):
         # TODO: implement this
         pass
 
