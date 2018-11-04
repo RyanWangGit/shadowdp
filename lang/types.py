@@ -1,5 +1,6 @@
 from pycparser.c_parser import CParser
 from pycparser.c_generator import CGenerator
+from pycparser.c_ast import NodeVisitor
 from pycparser import c_ast
 
 
@@ -13,6 +14,34 @@ def _is_node_equal(node_1, node_2):
     while 
     result = type(node_1) == type(node_2)
     return False
+
+
+class _Simplifier(NodeVisitor):
+    def __init__(self, conditions):
+        self._conditions = conditions
+
+    def _simplify(self, ternary_node):
+        assert isinstance(ternary_node, c_ast.TernaryOp)
+        for condition, is_true in self._conditions:
+            if _is_node_equal(ternary_node.cond, condition):
+                return ternary_node.iftrue if is_true else ternary_node.iffalse
+        return ternary_node
+
+    def visit_BinaryOp(self, node):
+        node.left = self._simplify(node.left) if isinstance(node.left, c_ast.TernaryOp) else node.left
+        node.right = self._simplify(node.right) if isinstance(node.right, c_ast.TernaryOp) else node.right
+        for c in node:
+            self.visit(c)
+
+    def visit_UnaryOp(self, node):
+        node.expr = self._simplify(node.expr) if isinstance(node.expr, c_ast.TernaryOp) else node.expr
+        self.visit(node.expr)
+
+    def simplify(self, node):
+        if isinstance(node, c_ast.TernaryOp):
+            node = self._simplify(node)
+        self.visit(node)
+        return node
 
 
 class TypeSystem:
@@ -50,7 +79,8 @@ class TypeSystem:
 
     def _simplify_distance(self, distance, conditions):
         # TODO: implement
-        return distance
+        simplifier = _Simplifier(conditions)
+        return simplifier.simplify(distance)
 
     def _convert_to_ast(self, expression):
         # this is a trick since pycparser cannot parse expression directly
