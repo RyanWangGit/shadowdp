@@ -101,14 +101,14 @@ class TypeSystem:
         if aligned == '*':
             aligned = '__LANG_distance_{}'.format(name)
         else:
-            if conditions:
+            if conditions and len(conditions) != 0:
                 aligned = self._generator.visit(self._simplify_distance(aligned, conditions))
             else:
                 aligned = self._generator.visit(aligned)
         if shadow == '*':
             shadow = '__LANG_distance_shadow_{}'.format(name)
         else:
-            if conditions:
+            if conditions and len(conditions) != 0:
                 shadow = self._generator.visit(self._simplify_distance(shadow, conditions))
             else:
                 shadow = self._generator.visit(shadow)
