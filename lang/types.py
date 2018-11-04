@@ -55,17 +55,14 @@ class TypeSystem:
         # TODO: implement this
         pass
 
-    def get_distance(self, name, condition=None, is_true=True):
+    def get_distance(self, name, conditions=None):
         """ get the distance(align, shadow) of a variable. Simplifies the distance if condition and is_true is given.
         :param name: The name of the variable.
-        :param condition: The condition to apply, can either be `str` or `c_ast.Node`
-        :param is_true: Indicates the condition is true or false.
-        :return:
+        :param conditions: The condition to apply, can either be `str` or `c_ast.Node`
+        :return: (Aligned distance, Shadow distance) of the variable.
         """
         aligned, shadow = self._types[name]
-        if condition:
-            condition = self._convert_to_ast(condition) if isinstance(condition, str) else condition
-            assert isinstance(condition, c_ast.Node)
+
         return '__LANG_distance_{}'.format(name) if aligned == '*' else self._generator.visit(aligned), \
                '__LANG_distance_shadow_{}'.format(name) if shadow == '*' else self._generator.visit(shadow)
 
