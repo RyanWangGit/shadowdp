@@ -61,23 +61,23 @@ class LangTransformer(CGenerator):
 
     def visit_Assignment(self, n):
         code = _code_generator.visit(n)
-        logger.info(code)
+        logger.debug('{}{}'.format(self._make_indent(), code))
         distance_generator = _DistanceGenerator(self._types)
         distance = distance_generator.visit(n.rvalue)
         self._types[n.lvalue.name] = distance
-        logger.info('types: {}'.format(self._types))
+        logger.debug('{}types: {}'.format(self._make_indent(), self._types))
         return code
 
     def visit_FuncDef(self, n):
         # the start of the transformation
         self._types.clear()
-        logger.info('Start transforming function {} ...'.format(n.decl.name))
+        logger.debug('Start transforming function {} ...'.format(n.decl.name))
         return super().visit_FuncDef(n)
 
     def visit_Decl(self, n, no_type=False):
         code = _code_generator.visit_Decl(n)
         transformed_code = code
-        logger.info(code)
+        logger.debug('{}{}'.format(self._make_indent(), code))
 
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
@@ -134,7 +134,7 @@ class LangTransformer(CGenerator):
             # TODO: fill in the type
             self._types[n.name] = ('0', '0')
 
-        logger.info('types: {}'.format(self._types))
+        logger.debug('{}types: {}'.format(self._make_indent(), self._types))
         return transformed_code
 
     def visit_If(self, n):
