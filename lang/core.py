@@ -11,6 +11,7 @@ _code_generator = CGenerator()
 class _DistanceGenerator(NodeVisitor):
     def __init__(self, types):
         self._types = types
+        assert isinstance(self._types, TypeSystem)
 
     def try_simplify(self, expr):
         from sympy import simplify
@@ -26,10 +27,10 @@ class _DistanceGenerator(NodeVisitor):
         return ['0', '0']
 
     def visit_ID(self, n):
-        return self._types[n.name]
+        return self._types.get_distance(n.name)
 
     def visit_ArrayRef(self, n):
-        aligned, shadow = self._types[n.name.name]
+        aligned, shadow = self._types.get_distance(n.name.name)
         aligned += '[{}]'.format(_code_generator.visit(n.subscript))
         shadow += '[{}]'.format(_code_generator.visit(n.subscript))
         return [aligned, shadow]
@@ -63,8 +64,8 @@ class LangTransformer(CGenerator):
         code = _code_generator.visit(n)
         logger.debug('{}{}'.format(self._make_indent(), code))
         distance_generator = _DistanceGenerator(self._types)
-        distance = distance_generator.visit(n.rvalue)
-        self._types[n.lvalue.name] = distance
+        aligned, shadow = distance_generator.visit(n.rvalue)
+        self._types.update_distance(n.lvalue.name, aligned, shadow)
         logger.debug('{}types: {}'.format(self._make_indent(), self._types))
         return code
 
@@ -86,9 +87,9 @@ class LangTransformer(CGenerator):
                 self._parameters.append(decl.name)
                 # TODO: this should be filled by annotation on the argument
                 if isinstance(decl.type, c_ast.TypeDecl):
-                    self._types[decl.name] = ['0', '0']
+                    self._types.update_distance(decl.name, '0', '0')
                 elif isinstance(decl.type, c_ast.ArrayDecl):
-                    self._types[decl.name] = ['*', '*']
+                    self._types.update_distance(decl.name, '*', '*')
             logger.debug('Params: {}'.format(self._parameters))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type dict
@@ -106,60 +107,55 @@ class LangTransformer(CGenerator):
                         s_e, s_d, d_eta, *_ = map(lambda x: x.strip(), n.init.args.exprs[1].value[1:-1].split(';'))
                         s_d = s_d.replace('ALIGNED', d_eta).replace('SHADOW', '0')
                         # set the random variable distance
-                        self._types[n.name] = [s_d, '0']
+                        self._types.update_distance(n.name, s_d, '0')
                         # set the normal variable distances
-                        for name in self._types.keys():
+                        for name in self._types.names():
                             if name not in self._random_variables and name not in self._parameters:
-                                cur_distance = self._types[name]
+                                aligned, shadow = self._types.get_distance(name)
                                 # if the aligned distance and shadow distance are the same
                                 # then there's no need to update the distances
-                                if self._types[name][0] == self._types[name][1]:
+                                if aligned == shadow:
                                     continue
                                 else:
-                                    self._types[name] = s_e.replace('ALIGNED', '{}'.format(cur_distance[0]))\
-                                                            .replace('SHADOW', '{}'.format(cur_distance[1])),\
-                                                        self._types[name][1]
+                                    self._types.update_distance(name,
+                                                                s_e.replace('ALIGNED', '{}'.format(aligned))
+                                                                .replace('SHADOW', '{}'.format(shadow)),
+                                                                shadow)
 
                     else:
                         # TODO: function call currently not supported
                         raise NotImplementedError
                 else:
                     distance_generator = _DistanceGenerator(self._types)
-                    self._types[n.name] = distance_generator.visit(n.init)
+                    aligned, shadow = distance_generator.visit(n.init)
+                    self._types.update_distance(n.name, aligned, shadow)
             else:
-                self._types[n.name] = ('0', '0')
+                self._types.update_distance(n.name, '0', '0')
 
         elif isinstance(decl_type, c_ast.ArrayDecl):
             # put array variable declaration into type dict
             # TODO: fill in the type
-            self._types[n.name] = ('0', '0')
+            self._types.update_distance(n.name, '0', '0')
 
         logger.debug('{}types: {}'.format(self._make_indent(), self._types))
         return transformed_code
 
     def visit_If(self, n):
-        # TODO: this is too tricky, maybe fix with parsing to AST node
-        cond_string = _code_generator.visit(n.cond).replace('(', '').replace(')', '')
-
         s = 'if ('
         if n.cond:
             s += self.visit(n.cond)
         s += ')\n'
         logger.debug('{}types(before branch): {}'.format(self._make_indent(), self._types))
         logger.debug('{}{}'.format(self._make_indent(), s.strip()))
+
         before_types = self._types.copy()
-        # simplify distances
-        for name in self._types.keys():
-            self._types[name][0] = simplify_distance(self._types[name][0], cond_string, True)
-            self._types[name][1] = simplify_distance(self._types[name][1], cond_string, True)
+        # apply condition to all distances
+        self._types.apply(n.cond, True)
         s += self._generate_stmt(n.iftrue, add_indent=True)
         true_types = self._types
         logger.debug('{}types(true branch): {}'.format(self._make_indent() + ' ' * 2, true_types))
         self._types = before_types
-        # simplify distances
-        for name in self._types.keys():
-            self._types[name][0] = simplify_distance(self._types[name][0], cond_string, False)
-            self._types[name][1] = simplify_distance(self._types[name][1], cond_string, False)
+        self._types.apply(n.cond, False)
         logger.debug('{}else'.format(self._make_indent()))
         if n.iffalse:
             s += self._make_indent() + 'else\n'
