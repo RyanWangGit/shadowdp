@@ -3,6 +3,18 @@ from pycparser.c_generator import CGenerator
 from pycparser import c_ast
 
 
+def _is_node_equal(node_1, node_2):
+    """ check if two expression AST nodes are equal since pycparser doesn't provide such property
+    :param node_1: First expression node
+    :param node_2: Second expression node
+    :return: Boolean
+    """
+    # TODO: implement this
+    while 
+    result = type(node_1) == type(node_2)
+    return False
+
+
 class TypeSystem:
     _parser = CParser()
     _generator = CGenerator()
@@ -45,16 +57,6 @@ class TypeSystem:
         ast = self._parser.parse('int placeholder(){{{};}}'.format(expression)).ext[0].body.block_items[0]
         return ast
 
-    def _is_node_equal(self, node_1, node_2):
-        """ check if two expression AST nodes are equal since pycparser doesn't provide such property
-        :param node_1: First expression node
-        :param node_2: Second expression node
-        :return: Boolean
-        """
-        # TODO: implement this
-        assert isinstance(node_1, self._EXPR_NODES) and isinstance(node_2, self._EXPR_NODES)
-        return False
-
     def merge(self, other):
         # TODO: implement this
         pass
@@ -89,7 +91,7 @@ class TypeSystem:
             self._types[name] = [aligned, shadow]
         else:
             cur_aligned, cur_shadow = self._types[name]
-            if not self._is_node_equal(cur_aligned, aligned):
+            if not _is_node_equal(cur_aligned, aligned):
                 self._types[name][0] = aligned
-            if not self._is_node_equal(cur_shadow, shadow):
+            if not _is_node_equal(cur_shadow, shadow):
                 self._types[name][1] = shadow
