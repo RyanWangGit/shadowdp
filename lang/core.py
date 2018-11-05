@@ -163,3 +163,17 @@ class LangTransformer(CGenerator):
 
         return s
 
+    def visit_While(self, node):
+        cur_types = None
+        # don't output while doing iterations
+        logger.disabled = True
+        while cur_types != self._types:
+            cur_types = self._types.copy()
+            for c in node:
+                self.visit(c)
+        logger.disabled = False
+        logger.debug('{}while({})'.format(self._make_indent(), _code_generator.visit(node.cond)))
+        logger.debug('{}types(fixed point): {}'.format(self._make_indent() + ' ' * 2, self._types))
+
+        return super().visit_While(node)
+
