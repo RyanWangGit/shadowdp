@@ -1,3 +1,4 @@
+import copy
 from pycparser.c_parser import CParser
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
@@ -67,7 +68,7 @@ class TypeSystem:
         return self._types.__repr__()
 
     def copy(self):
-        return TypeSystem(self._types.copy())
+        return TypeSystem(copy.deepcopy(self._types))
 
     def clear(self):
         self._types.clear()
