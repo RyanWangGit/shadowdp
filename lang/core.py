@@ -223,7 +223,10 @@ class LangTransformer(NodeVisitor):
             self.visit(n.iffalse)
         self._condition_stack.pop()
         logger.debug('types(false branch): {}'.format(self._types))
-        self._types.merge(true_types)
+        has_changed = self._types.merge(true_types)
+        # TODO: have to generate separate shadow branch
+        if has_changed:
+            pass
         logger.debug('types(after merge): {}'.format(self._types))
 
     def visit_While(self, node):
