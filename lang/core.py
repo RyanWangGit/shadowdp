@@ -57,6 +57,14 @@ class LangTransformer(CGenerator):
         self._parameters = []
         self._random_variables = set()
         self._condition_stack = []
+        # this is a trick to store node's parent, since we cannot dynamically add `parent` attribute
+        # to AST nodes. (pycparser uses __slots__ to fix that)
+        self._parents = {}
+
+    def visit(self, node):
+        for child in node:
+            self._parents[child] = node
+        return super().visit(node)
 
     def visit_Assignment(self, n):
         code = _code_generator.visit(n)
@@ -174,5 +182,4 @@ class LangTransformer(CGenerator):
         logger.disabled = False
         logger.debug('{}while({})'.format(self._make_indent(), _code_generator.visit(node.cond)))
         logger.debug('{}types(fixed point): {}'.format(self._make_indent() + ' ' * 2, self._types))
-
         return super().visit_While(node)
