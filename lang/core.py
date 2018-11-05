@@ -2,10 +2,29 @@ from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
 import logging
-from lang.types import TypeSystem
+from lang.types import TypeSystem, convert_to_ast
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
+
+
+class _ExpressionSimplifier(NodeVisitor):
+    """ this class simplifes Ternary operations, e.g., e?c1:c2 + e?c3:c4 -> e?(c1+c2):(c3+c4) """
+    def visit_BinaryOp(self, n):
+        # TODO
+        return n
+
+    def visit_TernaryOp(self, n):
+        # TODO
+        return n
+
+    def visit_UnaryOp(self, n):
+        # TODO
+        return n
+
+    def simplify(self, expression):
+        ast = convert_to_ast(expression)
+        return self.visit(ast)
 
 
 class _DistanceGenerator(NodeVisitor):
@@ -196,6 +215,16 @@ class LangTransformer(NodeVisitor):
                                                                 shadow)
                         if self._is_to_transform:
                             n.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
+                            assert isinstance(self._parents[n], c_ast.Compound)
+                            n_index = self._parents[n].block_items.index(n)
+                            v_epsilon = '({}) + ({})'.format(s_e.replace('ALIGNED', '__LANG_v_epsilon').replace('SHADOW', '0'),
+                                                         s_d.replace('ALIGNED', '{} * {}'.format(d_eta, sample)).replace('SHADOW', '0'))
+                            simplifier = _ExpressionSimplifier()
+                            update_v_epsilon = c_ast.Assignment(op='=',
+                                                                lvalue=c_ast.ID('__LANG_v_epsilon'),
+                                                                rvalue=simplifier.simplify(v_epsilon))
+                            self._parents[n].block_items.insert(n_index + 1, update_v_epsilon)
+                            self._inserted.add(update_v_epsilon)
 
                     else:
                         # TODO: function call currently not supported
