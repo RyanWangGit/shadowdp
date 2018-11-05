@@ -85,24 +85,63 @@ class LangTransformer(NodeVisitor):
         self.generic_visit(n)
 
         epsilon, size, q, *_ = self._parameters
-        # insert assume(epsilon >= 0)
-        n.body.block_items.insert(0, c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                                                    args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID(epsilon),
-                                                                         c_ast.Constant('int', 0))])))
-        # insert for(int __LANG_i = 0; __LANG_i < size; __LANG_i++) __LANG_distance_q[i] = havoc();
-        n.body.block_items.insert(1, c_ast.For(
-            init=c_ast.DeclList(decls=[
-                c_ast.Decl(name='__LANG_i',
-                           type=c_ast.TypeDecl(declname='__LANG_i', type=c_ast.IdentifierType(names=['int']), quals=[]),
-                           init=c_ast.Constant('int', '0'),
-                           quals=[], funcspec=[], bitsize=[], storage=[])]),
-            cond=c_ast.BinaryOp(op='<', left=c_ast.ID('__LANG_i'), right=c_ast.ID(size)),
-            next=c_ast.UnaryOp(op='p++', expr=c_ast.ID('__LANG_i')),
-            stmt=c_ast.Assignment(op='=',
-                                  lvalue=c_ast.ArrayRef(name=c_ast.ID('__LANG_distance_{}'.format(q)),
-                                                        subscript=c_ast.ID('__LANG_i')),
-                                  rvalue=c_ast.FuncCall(name=c_ast.ID(self._func_map['havoc']), args=None)))
-        )
+        inserted = [
+            # insert assume(epsilon >= 0)
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID(epsilon),
+                                                               c_ast.Constant('int', 0))])),
+            # insert float __LANG_v_epsilon = 0;
+            c_ast.Decl(name='__LANG_v_epsilon',
+                       type=c_ast.TypeDecl(declname='__LANG_v_epsilon',
+                                           type=c_ast.IdentifierType(names=['float']),
+                                           quals=[]),
+                       init=c_ast.Constant('int', '0'),
+                       quals=[], funcspec=[], bitsize=[], storage=[])
+
+        ]
+
+        for name, is_align in self._types.dynamic_variables():
+            if name not in self._parameters:
+                distance_name = '__LANG_distance_{}{}'.format('' if is_align else 'shadow_', name)
+                inserted.append(c_ast.Decl(name=distance_name,
+                                           type=c_ast.TypeDecl(declname=distance_name,
+                                                               type=c_ast.IdentifierType(names=['float']),
+                                                               quals=[]),
+                                           init=c_ast.Constant('int', '0'),
+                                           quals=[], funcspec=[], bitsize=[], storage=[]))
+            elif name == q and is_align:
+                # insert float __LANG_distance_q
+                inserted.append(c_ast.Decl(name='__LANG_distance_{}'.format(q),
+                                           type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
+                                                                                    .format(q),
+                                                                                    type=c_ast.IdentifierType(
+                                                                                        names=['float']),
+                                                                                    quals=[]),
+                                                                dim=c_ast.ID(name=size),
+                                                                dim_quals=[]),
+                                           init=None,
+                                           quals=[], funcspec=[], bitsize=[], storage=[]))
+                # insert for(int __LANG_i = 0; __LANG_i < size; __LANG_i++) __LANG_distance_q[i] = havoc();
+                inserted.append(c_ast.For(
+                    init=c_ast.DeclList(decls=[c_ast.Decl(name='__LANG_i',
+                                                          type=c_ast.TypeDecl(declname='__LANG_i',
+                                                                              type=c_ast.IdentifierType(names=['int']),
+                                                                              quals=[]),
+                                                          init=c_ast.Constant('int', '0'),
+                                                          quals=[], funcspec=[], bitsize=[], storage=[])]),
+                    cond=c_ast.BinaryOp(op='<', left=c_ast.ID('__LANG_i'), right=c_ast.ID(size)),
+                    next=c_ast.UnaryOp(op='p++', expr=c_ast.ID('__LANG_i')),
+                    stmt=c_ast.Assignment(op='=',
+                                          lvalue=c_ast.ArrayRef(name=c_ast.ID('__LANG_distance_{}'.format(q)),
+                                                                subscript=c_ast.ID('__LANG_i')),
+                                          rvalue=c_ast.FuncCall(name=c_ast.ID(self._func_map['havoc']), args=None))))
+
+        n.body.block_items[:0] = inserted
+
+        # insert assert(__LANG_v_epsilon <= epsilon);
+        n.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
+                                                 args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__LANG_v_epsilon'),
+                                                                                     c_ast.ID(epsilon))])),)
 
     def visit_Decl(self, n):
         logger.debug('{}'.format(_code_generator.visit_Decl(n)))
