@@ -60,6 +60,10 @@ class LangTransformer(NodeVisitor):
         # this is a trick to store node's parent, since we cannot dynamically add `parent` attribute
         # to AST nodes. (pycparser uses __slots__ to fix that)
         self._parents = {}
+        # indicate if the transformation should be done
+        # this is needed since in While statement we might do loop until convergence, in that case we don't need to
+        # do transformation
+        self._is_to_transform = True
 
     def visit(self, node):
         for child in node:
@@ -124,6 +128,8 @@ class LangTransformer(NodeVisitor):
                                                                 s_e.replace('ALIGNED', '{}'.format(aligned))
                                                                 .replace('SHADOW', '{}'.format(shadow)),
                                                                 shadow)
+                        if self._is_to_transform:
+                            n.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
 
                     else:
                         # TODO: function call currently not supported
@@ -165,10 +171,12 @@ class LangTransformer(NodeVisitor):
         cur_types = None
         # don't output while doing iterations
         logger.disabled = True
+        self._is_to_transform = False
         while cur_types != self._types:
             cur_types = self._types.copy()
             self.generic_visit(node)
         logger.disabled = False
+        self._is_to_transform = True
         logger.debug('while({})'.format(_code_generator.visit(node.cond)))
         logger.debug('types(fixed point): {}'.format(self._types))
         self.generic_visit(node)
