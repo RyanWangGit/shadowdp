@@ -41,10 +41,6 @@ class _DistanceGenerator(NodeVisitor):
                 for left, right in zip(self.visit(n.left), self.visit(n.right))]
 
 
-class _ExpressionReplacer(CGenerator):
-    pass
-
-
 class LangTransformer(CGenerator):
     def __init__(self, function_map=None):
         super().__init__()
