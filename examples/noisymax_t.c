@@ -1,14 +1,11 @@
 extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 extern int __VERIFIER_nondet_float(void);
-extern void __VERIFIER_assume(int);
 extern int __VERIFIER_nondet_int();
+extern void __VERIFIER_assume(int);
 extern void __assert_fail();
 #define __VERIFIER_assert(cond) { if(!(cond)) { __assert_fail(); } }
-
-#define abs(x) ((x)<0 ? -(x) : (x))
-
+#define abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
-
 
 int noisymax (float epsilon, int size, float q[]) {
   __VERIFIER_assume(epsilon >= 0);
