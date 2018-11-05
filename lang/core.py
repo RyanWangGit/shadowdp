@@ -157,9 +157,8 @@ class LangTransformer(CGenerator):
             self._condition_stack[-1][1] = False
             s += self._generate_stmt(n.iffalse, add_indent=True)
         self._condition_stack.pop()
-        false_types = self._types
-        logger.debug('{}types(false branch): {}'.format(self._make_indent() + ' ' * 2, false_types))
-        # TODO: merge the types
+        logger.debug('{}types(false branch): {}'.format(self._make_indent() + ' ' * 2, self._types))
+        self._types.merge(true_types)
         logger.debug('{}types(after merge): {}'.format(self._make_indent(), self._types))
 
         return s
