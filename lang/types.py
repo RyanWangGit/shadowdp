@@ -88,8 +88,18 @@ class TypeSystem:
         return ast
 
     def merge(self, other):
-        # TODO: implement this
-        pass
+        assert isinstance(other, TypeSystem)
+        for name in other.names():
+            if name not in self._types:
+                # TODO: break PEP8, maybe expose an interface to access internal dict
+                self._types[name] = other._types[name]
+            else:
+                cur_align, cur_shadow = self._types[name]
+                other_align, other_shadow = other._types[name]
+                if not (cur_align == other_align == '*' or _is_node_equal(cur_align, other_align)):
+                    self._types[name][0] = '*'
+                if not (cur_shadow == other_shadow == '*' or _is_node_equal(cur_shadow, other_shadow)):
+                    self._types[name][1] = '*'
 
     def get_distance(self, name, conditions=None):
         """ get the distance(align, shadow) of a variable. Simplifies the distance if condition and is_true is given.
