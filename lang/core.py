@@ -176,4 +176,3 @@ class LangTransformer(CGenerator):
         logger.debug('{}types(fixed point): {}'.format(self._make_indent() + ' ' * 2, self._types))
 
         return super().visit_While(node)
-
