@@ -64,8 +64,15 @@ class LangTransformer(NodeVisitor):
         # this is needed since in While statement we might do loop until convergence, in that case we don't need to
         # do transformation
         self._is_to_transform = True
+        # this is needed if we add some statements next to the current statement
+        # e.g. float eta = havoc(); _v_epsilon = ...;
+        # we can't visit the `_v_epsilon = ...;` statement, so we keep track of the inserted statements
+        self._inserted = set()
 
     def visit(self, node):
+        if node in self._inserted:
+            # ignore the inserted statement
+            return
         for child in node:
             self._parents[child] = node
         return super().visit(node)
