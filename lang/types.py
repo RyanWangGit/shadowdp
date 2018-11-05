@@ -1,4 +1,5 @@
 import copy
+from collections import OrderedDict
 from pycparser.c_parser import CParser
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
@@ -54,7 +55,7 @@ class TypeSystem:
         if types:
             self._types = types
         else:
-            self._types = {}
+            self._types = OrderedDict()
 
     def __str__(self):
         # convert AST representation to code representation for better human-readability
