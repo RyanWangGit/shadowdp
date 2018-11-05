@@ -87,6 +87,12 @@ class TypeSystem:
         ast = self._parser.parse('int placeholder(){{{};}}'.format(expression)).ext[0].body.block_items[0]
         return ast
 
+    def __eq__(self, other):
+        if isinstance(other, TypeSystem):
+            return self._types.__repr__() == other.__repr__()
+        else:
+            return False
+
     def merge(self, other):
         assert isinstance(other, TypeSystem)
         for name in other.names():
