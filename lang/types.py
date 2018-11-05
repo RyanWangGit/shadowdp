@@ -6,6 +6,16 @@ from pycparser.c_ast import NodeVisitor
 from pycparser import c_ast
 
 
+_parser = CParser()
+_generator = CGenerator()
+
+
+def convert_to_ast(expression):
+    # this is a trick since pycparser cannot parse expression directly
+    ast = _parser.parse('int placeholder(){{{};}}'.format(expression)).ext[0].body.block_items[0]
+    return ast
+
+
 def _is_node_equal(node_1, node_2):
     """ check if two expression AST nodes are equal since pycparser doesn't provide such property
     :param node_1: First expression node
@@ -47,8 +57,6 @@ class _Simplifier(NodeVisitor):
 
 
 class TypeSystem:
-    _parser = CParser()
-    _generator = CGenerator()
     _EXPR_NODES = (c_ast.BinaryOp, c_ast.TernaryOp, c_ast.UnaryOp, c_ast.ID, c_ast.Constant, c_ast.ArrayRef)
 
     def __init__(self, types=None):
@@ -61,8 +69,8 @@ class TypeSystem:
         # convert AST representation to code representation for better human-readability
         return '{{{}}}'.format(
             ', '.join('{}: [{}, {}]'.format(name,
-                                            aligned if aligned == '*' else self._generator.visit(aligned),
-                                            shadow if shadow == '*' else self._generator.visit(shadow))
+                                            aligned if aligned == '*' else _generator.visit(aligned),
+                                            shadow if shadow == '*' else _generator.visit(shadow))
                       for name, (aligned, shadow) in self._types.items()
                       )
         )
@@ -91,11 +99,6 @@ class TypeSystem:
     def _simplify_distance(self, distance, conditions):
         simplifier = _Simplifier(conditions)
         return simplifier.simplify(distance)
-
-    def _convert_to_ast(self, expression):
-        # this is a trick since pycparser cannot parse expression directly
-        ast = self._parser.parse('int placeholder(){{{};}}'.format(expression)).ext[0].body.block_items[0]
-        return ast
 
     def __eq__(self, other):
         if isinstance(other, TypeSystem):
@@ -132,21 +135,21 @@ class TypeSystem:
             aligned = '__LANG_distance_{}'.format(name)
         else:
             if conditions and len(conditions) != 0:
-                aligned = self._generator.visit(self._simplify_distance(aligned, conditions))
+                aligned = _generator.visit(self._simplify_distance(aligned, conditions))
             else:
-                aligned = self._generator.visit(aligned)
+                aligned = _generator.visit(aligned)
         if shadow == '*':
             shadow = '__LANG_distance_shadow_{}'.format(name)
         else:
             if conditions and len(conditions) != 0:
-                shadow = self._generator.visit(self._simplify_distance(shadow, conditions))
+                shadow = _generator.visit(self._simplify_distance(shadow, conditions))
             else:
-                shadow = self._generator.visit(shadow)
+                shadow = _generator.visit(shadow)
         return aligned, shadow
 
     def update_distance(self, name, aligned, shadow):
-        aligned = '*' if aligned == '*' else self._convert_to_ast(aligned)
-        shadow = '*' if shadow == '*' else self._convert_to_ast(shadow)
+        aligned = '*' if aligned == '*' else convert_to_ast(aligned)
+        shadow = '*' if shadow == '*' else convert_to_ast(shadow)
         if name not in self._types:
             self._types[name] = [aligned, shadow]
         else:
