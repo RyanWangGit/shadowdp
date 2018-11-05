@@ -41,7 +41,7 @@ class _DistanceGenerator(NodeVisitor):
                 for left, right in zip(self.visit(n.left), self.visit(n.right))]
 
 
-class LangTransformer(CGenerator):
+class LangTransformer(NodeVisitor):
     def __init__(self, function_map=None):
         super().__init__()
         if not function_map:
@@ -68,23 +68,20 @@ class LangTransformer(CGenerator):
 
     def visit_Assignment(self, n):
         code = _code_generator.visit(n)
-        logger.debug('{}{}'.format(self._make_indent(), code))
+        logger.debug('{}'.format(code))
         distance_generator = _DistanceGenerator(self._types, self._condition_stack)
         aligned, shadow = distance_generator.visit(n.rvalue)
         self._types.update_distance(n.lvalue.name, aligned, shadow)
-        logger.debug('{}types: {}'.format(self._make_indent(), self._types))
-        return code
+        logger.debug('types: {}'.format(self._types))
 
     def visit_FuncDef(self, n):
         # the start of the transformation
         self._types.clear()
         logger.debug('Start transforming function {} ...'.format(n.decl.name))
-        return super().visit_FuncDef(n)
+        self.generic_visit(n)
 
     def visit_Decl(self, n, no_type=False):
-        code = _code_generator.visit_Decl(n)
-        transformed_code = code
-        logger.debug('{}{}'.format(self._make_indent(), code))
+        logger.debug('{}'.format(_code_generator.visit_Decl(n)))
 
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
@@ -143,33 +140,26 @@ class LangTransformer(CGenerator):
             # TODO: fill in the type
             self._types.update_distance(n.name, '0', '0')
 
-        logger.debug('{}types: {}'.format(self._make_indent(), self._types))
-        return transformed_code
+        logger.debug('types: {}'.format(self._types))
 
     def visit_If(self, n):
-        s = 'if ('
-        if n.cond:
-            s += self.visit(n.cond)
-        s += ')\n'
-        logger.debug('{}types(before branch): {}'.format(self._make_indent(), self._types))
-        logger.debug('{}{}'.format(self._make_indent(), s.strip()))
+        self.visit(n.cond)
+        logger.debug('types(before branch): {}'.format(self._types))
+        logger.debug('if({})'.format(_code_generator.visit(n.cond)))
         before_types = self._types.copy()
         self._condition_stack.append([n.cond, True])
-        s += self._generate_stmt(n.iftrue, add_indent=True)
+        self.visit(n.iftrue)
         true_types = self._types
-        logger.debug('{}types(true branch): {}'.format(self._make_indent() + ' ' * 2, true_types))
+        logger.debug('types(true branch): {}'.format(true_types))
         self._types = before_types
-        logger.debug('{}else'.format(self._make_indent()))
+        logger.debug('else')
         if n.iffalse:
-            s += self._make_indent() + 'else\n'
             self._condition_stack[-1][1] = False
-            s += self._generate_stmt(n.iffalse, add_indent=True)
+            self.visit(n.iffalse)
         self._condition_stack.pop()
-        logger.debug('{}types(false branch): {}'.format(self._make_indent() + ' ' * 2, self._types))
+        logger.debug('types(false branch): {}'.format(self._types))
         self._types.merge(true_types)
-        logger.debug('{}types(after merge): {}'.format(self._make_indent(), self._types))
-
-        return s
+        logger.debug('types(after merge): {}'.format(self._types))
 
     def visit_While(self, node):
         cur_types = None
@@ -177,9 +167,8 @@ class LangTransformer(CGenerator):
         logger.disabled = True
         while cur_types != self._types:
             cur_types = self._types.copy()
-            for c in node:
-                self.visit(c)
+            self.generic_visit(node)
         logger.disabled = False
-        logger.debug('{}while({})'.format(self._make_indent(), _code_generator.visit(node.cond)))
-        logger.debug('{}types(fixed point): {}'.format(self._make_indent() + ' ' * 2, self._types))
-        return super().visit_While(node)
+        logger.debug('while({})'.format(_code_generator.visit(node.cond)))
+        logger.debug('types(fixed point): {}'.format(self._types))
+        self.generic_visit(node)

@@ -1,7 +1,9 @@
 import argparse
-from lang.core import LangTransformer
 from pycparser import parse_file
+from pycparser.c_generator import CGenerator
 import coloredlogs
+from lang.core import LangTransformer
+
 
 coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')
 
@@ -35,11 +37,13 @@ def main():
 
     ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
     transformer = LangTransformer(function_map=__FUNCTION_MAP)
+    c_generator = CGenerator()
 
     with open(results.out, 'w') as f:
         # write verifier headers
         f.write(__HEADER)
-        f.write(transformer.visit(ast))
+        transformer.visit(ast)
+        f.write(c_generator.visit(ast))
 
 
 if __name__ == '__main__':
