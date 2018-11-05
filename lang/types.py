@@ -37,6 +37,8 @@ class _Simplifier(NodeVisitor):
         self.visit(node.expr)
 
     def simplify(self, node):
+        # copy a node in order not to mess with parameter
+        node = copy.copy(node)
         if isinstance(node, c_ast.TernaryOp):
             node = self._simplify(node)
         self.visit(node)
@@ -77,7 +79,6 @@ class TypeSystem:
         return self._types.keys()
 
     def _simplify_distance(self, distance, conditions):
-        # TODO: implement
         simplifier = _Simplifier(conditions)
         return simplifier.simplify(distance)
 
