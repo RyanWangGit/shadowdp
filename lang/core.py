@@ -104,7 +104,7 @@ class LangTransformer(NodeVisitor):
                                   rvalue=c_ast.FuncCall(name=c_ast.ID(self._func_map['havoc']), args=None)))
         )
 
-    def visit_Decl(self, n, no_type=False):
+    def visit_Decl(self, n):
         logger.debug('{}'.format(_code_generator.visit_Decl(n)))
 
         decl_type = n.type
