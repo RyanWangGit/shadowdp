@@ -10,10 +10,8 @@ def _is_node_equal(node_1, node_2):
     :param node_2: Second expression node
     :return: Boolean
     """
-    # TODO: implement this
-    while 
-    result = type(node_1) == type(node_2)
-    return False
+    # naive comparison, can be optimized
+    return node_1.__repr__() == node_2.__repr__()
 
 
 class _Simplifier(NodeVisitor):
