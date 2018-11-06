@@ -316,23 +316,19 @@ class LangTransformer(NodeVisitor):
 
         if self._is_to_transform:
             # TODO: have to generate separate shadow branch
+            aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(copy.deepcopy(n.cond))
+            shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(copy.deepcopy(n.cond))
             if has_changed:
                 pass
-            aligned_replacer = _ExpressionReplacer(self._types, True, self._condition_stack)
-            shadow_replacer = _ExpressionReplacer(self._types, False, self._condition_stack)
             # insert assertion
             n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                                          args=c_ast.ExprList(exprs=[
-                                                              aligned_replacer.visit(
-                                                                  copy.deepcopy(n.cond))
-                                                          ])))
-
+                                                          args=c_ast.ExprList(exprs=[aligned_cond])))
+            # TODO: add aligned distance update
             # insert assertion
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
             n.iffalse.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                            args=c_ast.ExprList(exprs=[
-                                                               shadow_replacer.visit(
-                                                                   c_ast.UnaryOp(op='!', expr=copy.deepcopy(n.cond)))
+                                                               c_ast.UnaryOp(op='!', expr=shadow_cond)
                                                            ])))
 
         self._condition_stack.pop()
