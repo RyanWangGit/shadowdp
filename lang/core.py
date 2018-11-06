@@ -2,10 +2,63 @@ from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
 import logging
+import copy
 from lang.types import TypeSystem, convert_to_ast
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
+
+
+class _ExpressionReplacer(NodeVisitor):
+    def __init__(self, types, is_aligned, conditions):
+        assert isinstance(types, TypeSystem)
+        self._types = types
+        self._is_aligned = is_aligned
+        self._conditions = conditions
+
+    def _replace(self, node):
+        if isinstance(node, c_ast.ArrayRef):
+            alignd, shadow = self._types.get_distance(node.name.name, self._conditions)
+            distance = alignd if self._is_aligned else shadow
+            if distance == '0':
+                return node
+            else:
+                return c_ast.BinaryOp(op='+',
+                                      left=node,
+                                      right=c_ast.ArrayRef(name=c_ast.ID(name=distance),
+                                                           subscript=node.subscript))
+        elif isinstance(node, c_ast.ID):
+            alignd, shadow = self._types.get_distance(node.name, self._conditions)
+            distance = alignd if self._is_aligned else shadow
+            if distance == '0':
+                return node
+            else:
+                return c_ast.BinaryOp(op='+',
+                                      left=node,
+                                      right=c_ast.ID(name=alignd if self._is_aligned else shadow))
+        else:
+            raise NotImplementedError
+
+    def visit_BinaryOp(self, node):
+        if isinstance(node.left, (c_ast.ArrayRef, c_ast.ID)):
+            node.left = self._replace(node.left)
+        else:
+            self.visit(node.left)
+
+        if isinstance(node.right, (c_ast.ArrayRef, c_ast.ID)):
+            node.right = self._replace(node.right)
+        else:
+            self.visit(node.right)
+
+    def visit_UnaryOp(self, node):
+        if isinstance(node.expr, (c_ast.ArrayRef, c_ast.ID)):
+            node.expr = self._replace(node.expr)
+        else:
+            self.visit(node.expr)
+
+    def visit(self, node):
+        super().visit(node)
+        return node
 
 
 class _ExpressionSimplifier(NodeVisitor):
@@ -257,13 +310,32 @@ class LangTransformer(NodeVisitor):
         if n.iffalse:
             self._condition_stack[-1][1] = False
             self.visit(n.iffalse)
-        self._condition_stack.pop()
         logger.debug('types(false branch): {}'.format(self._types))
         has_changed = self._types.merge(true_types)
-        # TODO: have to generate separate shadow branch
-        if has_changed:
-            pass
         logger.debug('types(after merge): {}'.format(self._types))
+
+        if self._is_to_transform:
+            # TODO: have to generate separate shadow branch
+            if has_changed:
+                pass
+            aligned_replacer = _ExpressionReplacer(self._types, True, self._condition_stack)
+            shadow_replacer = _ExpressionReplacer(self._types, False, self._condition_stack)
+            # insert assertion
+            n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                                          args=c_ast.ExprList(exprs=[
+                                                              aligned_replacer.visit(
+                                                                  copy.deepcopy(n.cond))
+                                                          ])))
+
+            # insert assertion
+            n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
+            n.iffalse.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                                           args=c_ast.ExprList(exprs=[
+                                                               shadow_replacer.visit(
+                                                                   c_ast.UnaryOp(op='!', expr=copy.deepcopy(n.cond)))
+                                                           ])))
+
+        self._condition_stack.pop()
 
     def visit_While(self, node):
         cur_types = None
