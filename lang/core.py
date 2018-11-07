@@ -249,9 +249,8 @@ class LangTransformer(NodeVisitor):
                                n.init.args.exprs[1].type == 'string', \
                             'The second argument of Lap function must be string annotation'
                         s_e, s_d, d_eta, *_ = map(lambda x: x.strip(), n.init.args.exprs[1].value[1:-1].split(';'))
-                        s_d = s_d.replace('ALIGNED', d_eta).replace('SHADOW', '0')
                         # set the random variable distance
-                        self._types.update_distance(n.name, s_d, '0')
+                        self._types.update_distance(n.name, s_d.replace('ALIGNED', d_eta).replace('SHADOW', '0'), '0')
                         # set the normal variable distances
                         for name in self._types.names():
                             if name not in self._random_variables and name not in self._parameters:
@@ -270,7 +269,7 @@ class LangTransformer(NodeVisitor):
                             assert isinstance(self._parents[n], c_ast.Compound)
                             n_index = self._parents[n].block_items.index(n)
                             v_epsilon = '({}) + ({})'.format(s_e.replace('ALIGNED', '__LANG_v_epsilon').replace('SHADOW', '0'),
-                                                         s_d.replace('ALIGNED', '{} * {}'.format(d_eta, sample)).replace('SHADOW', '0'))
+                                                         s_d.replace('ALIGNED', '({} * (1/({})))'.format(d_eta, sample)).replace('SHADOW', '0'))
                             simplifier = _ExpressionSimplifier()
                             update_v_epsilon = c_ast.Assignment(op='=',
                                                                 lvalue=c_ast.ID('__LANG_v_epsilon'),
