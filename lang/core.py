@@ -9,6 +9,32 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
+class _ShadowBranchGenerator(NodeVisitor):
+    """ this class generates the shadow branch statement"""
+    def __init__(self, shadow_variables, types, conditions):
+        """
+        :param shadow_variables: the variable list whose shadow distances should be updated
+        """
+        self._shadow_variables = shadow_variables
+        self._distance_generator = _DistanceGenerator(types, conditions)
+
+    # TODO: currently doesn't support declaration in branch
+    def visit_Decl(self, node):
+        raise NotImplementedError
+
+    def visit_Compound(self, node):
+        # TODO: currently doesn't support ArrayRef
+        # remove those assignments which has no
+        node.block_items = [child for child in node.block_items
+                            if isinstance(child, c_ast.Assignment) and child.lvalue.name in self._shadow_variables]
+        for child in node:
+            if isinstance(child, c_ast.Assignment):
+                child.lvalue.name = '__LANG_distance_shadow_{}'.format(child.lvalue.name)
+                child.rvalue = convert_to_ast(self._distance_generator.visit(child.rvalue)[1])
+            else:
+                self.visit(child)
+
+
 class _ExpressionReplacer(NodeVisitor):
     def __init__(self, types, is_aligned, conditions):
         assert isinstance(types, TypeSystem)
@@ -321,11 +347,18 @@ class LangTransformer(NodeVisitor):
             if to_generate_shadow:
                 parent = self._parents[n]
                 n_index = parent.block_items.index(n)
-                shadow_if = c_ast.If(cond=aligned_cond, iftrue=c_ast.Compound(block_items=[]),
-                                     iffalse=c_ast.Compound(block_items=[]))
-                self._inserted.add(shadow_if)
-                parent.block_items.insert(n_index + 1, shadow_if)
-                # TODO: add shadow distance update
+                shadow_branch = c_ast.If(cond=shadow_cond,
+                                         iftrue=c_ast.Compound(
+                                             block_items=copy.deepcopy(n.iftrue.block_items)),
+                                         iffalse=c_ast.Compound(
+                                             block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
+                shadow_branch_generator = _ShadowBranchGenerator(
+                    {name for name, is_aligned in self._types.dynamic_variables() if not is_aligned},
+                    self._types,
+                    self._condition_stack)
+                shadow_branch_generator.visit(shadow_branch)
+                self._inserted.add(shadow_branch)
+                parent.block_items.insert(n_index + 1, shadow_branch)
 
             # insert assertion
             n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
