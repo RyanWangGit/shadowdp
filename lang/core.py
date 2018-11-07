@@ -234,7 +234,7 @@ class LangTransformer(NodeVisitor):
                 if isinstance(decl.type, c_ast.TypeDecl):
                     self._types.update_distance(decl.name, '0', '0')
                 elif isinstance(decl.type, c_ast.ArrayDecl) and i == 2:
-                    self._types.update_distance(decl.name, '*', '__LANG_distance_{}'.format(decl.name))
+                    self._types.update_distance(decl.name, '__LANG_distance_{}'.format(decl.name), '__LANG_distance_{}'.format(decl.name))
             logger.debug('Params: {}'.format(self._parameters))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type dict
