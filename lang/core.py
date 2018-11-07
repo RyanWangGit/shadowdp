@@ -363,13 +363,22 @@ class LangTransformer(NodeVisitor):
             # insert assertion
             n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                           args=c_ast.ExprList(exprs=[aligned_cond])))
-            # TODO: add aligned distance update
+            for name, is_aligned in self._types.diff(true_types):
+                if is_aligned:
+                    n.iftrue.block_items.append(c_ast.Assignment(op='=',
+                                                                 lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
+                                                                 rvalue=true_types.get_raw_distance(name)[0]))
             # insert assertion
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
             n.iffalse.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                            args=c_ast.ExprList(exprs=[
                                                                c_ast.UnaryOp(op='!', expr=shadow_cond)
                                                            ])))
+            for name, is_aligned in self._types.diff(false_types):
+                if is_aligned:
+                    n.iftrue.block_items.append(c_ast.Assignment(op='=',
+                                                                 lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
+                                                                 rvalue=false_types.get_raw_distance(name)[0]))
 
         self._condition_stack.pop()
 
