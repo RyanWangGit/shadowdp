@@ -228,13 +228,13 @@ class LangTransformer(NodeVisitor):
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
             # put parameters into types dict
-            for decl in decl_type.args.params:
+            for i, decl in enumerate(decl_type.args.params):
                 self._parameters.append(decl.name)
                 # TODO: this should be filled by annotation on the argument
                 if isinstance(decl.type, c_ast.TypeDecl):
                     self._types.update_distance(decl.name, '0', '0')
-                elif isinstance(decl.type, c_ast.ArrayDecl):
-                    self._types.update_distance(decl.name, '*', '*')
+                elif isinstance(decl.type, c_ast.ArrayDecl) and i == 2:
+                    self._types.update_distance(decl.name, '*', '__LANG_distance_{}'.format(decl.name))
             logger.debug('Params: {}'.format(self._parameters))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type dict
