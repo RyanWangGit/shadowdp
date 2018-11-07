@@ -114,11 +114,18 @@ class TypeSystem:
                 self._types[name] = other._types[name]
             else:
                 cur_align, cur_shadow = self._types[name]
-                other_align, other_shadow = other._types[name]
+                other_align, other_shadow = other.get_raw_distance(name)
                 if not (cur_align == other_align == '*' or _is_node_equal(cur_align, other_align)):
                     self._types[name][0] = '*'
                 if not (cur_shadow == other_shadow == '*' or _is_node_equal(cur_shadow, other_shadow)):
                     self._types[name][1] = '*'
+
+    def get_raw_distance(self, name):
+        """ return the raw distance, without simplification and contains '*' type.
+        :param name: The name of the variable.
+        :return: (Aligned raw distance, Shadow raw distance), both of ast node type.
+        """
+        return self._types[name]
 
     def get_distance(self, name, conditions=None):
         """ get the distance(align, shadow) of a variable. Simplifies the distance if condition and is_true is given.
