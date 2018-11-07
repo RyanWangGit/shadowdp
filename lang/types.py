@@ -106,6 +106,20 @@ class TypeSystem:
         else:
             return False
 
+    def diff(self, other):
+        assert isinstance(other, TypeSystem)
+        for name in other.names():
+            if name not in self._types:
+                yield (name, True)
+                yield (name, False)
+            else:
+                aligned, shadow = self._types[name]
+                other_aligned, other_shadow = other.get_raw_distance(name)
+                if not _is_node_equal(aligned, other_aligned):
+                    yield (name, True)
+                if not _is_node_equal(shadow, other_shadow):
+                    yield (name, False)
+
     def merge(self, other):
         assert isinstance(other, TypeSystem)
         for name in other.names():
