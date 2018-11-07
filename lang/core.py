@@ -312,14 +312,15 @@ class LangTransformer(NodeVisitor):
             self.visit(n.iffalse)
         logger.debug('types(false branch): {}'.format(self._types))
         false_types = self._types.copy()
-        has_changed = self._types.merge(true_types)
+        self._types.merge(true_types)
         logger.debug('types(after merge): {}'.format(self._types))
-
+        # TODO: use Z3 to solve constraints to decide this value
+        to_generate_shadow = True
         if self._is_to_transform:
             aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(copy.deepcopy(n.cond))
             shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(copy.deepcopy(n.cond))
             # have to generate separate shadow branch
-            if has_changed:
+            if to_generate_shadow:
                 parent = self._parents[n]
                 n_index = parent.block_items.index(n)
                 shadow_if = c_ast.If(cond=aligned_cond, iftrue=c_ast.Compound(block_items=[]),
