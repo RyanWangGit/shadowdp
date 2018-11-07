@@ -227,7 +227,7 @@ class LangTransformer(NodeVisitor):
 
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
-            # put parameters into types dict
+            # put parameters into type system
             for i, decl in enumerate(decl_type.args.params):
                 self._parameters.append(decl.name)
                 # TODO: this should be filled by annotation on the argument
@@ -237,8 +237,7 @@ class LangTransformer(NodeVisitor):
                     self._types.update_distance(decl.name, '__LANG_distance_{}'.format(decl.name), '__LANG_distance_{}'.format(decl.name))
             logger.debug('Params: {}'.format(self._parameters))
         if isinstance(decl_type, c_ast.TypeDecl):
-            # put variable declaration into type dict
-            # TODO: fill in the type
+            # put variable declaration into type system
             if n.init:
                 if isinstance(n.init, c_ast.FuncCall):
                     if n.init.name.name == 'Lap':
