@@ -1,6 +1,7 @@
 from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
+import sympy as sp
 import logging
 import copy
 from lang.types import TypeSystem, convert_to_ast, is_node_equal
@@ -298,7 +299,7 @@ class LangTransformer(NodeVisitor):
                             assert isinstance(self._parents[n], c_ast.Compound)
                             n_index = self._parents[n].block_items.index(n)
                             v_epsilon = '({}) + ({})'.format(s_e.replace('ALIGNED', '__LANG_v_epsilon').replace('SHADOW', '0'),
-                                                         s_d.replace('ALIGNED', '({} * (1/({})))'.format(d_eta, sample)).replace('SHADOW', '0'))
+                                                             s_d.replace('ALIGNED', str(sp.simplify('({} * (1/({})))'.format(d_eta, sample)))).replace('SHADOW', '0'))
                             simplifier = _ExpressionSimplifier()
                             update_v_epsilon = c_ast.Assignment(op='=',
                                                                 lvalue=c_ast.ID('__LANG_v_epsilon'),
