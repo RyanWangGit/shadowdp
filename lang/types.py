@@ -16,7 +16,7 @@ def convert_to_ast(expression):
     return ast
 
 
-def _is_node_equal(node_1, node_2):
+def is_node_equal(node_1, node_2):
     """ check if two expression AST nodes are equal since pycparser doesn't provide such property
     :param node_1: First expression node
     :param node_2: Second expression node
@@ -33,7 +33,7 @@ class _Simplifier(NodeVisitor):
     def _simplify(self, ternary_node):
         assert isinstance(ternary_node, c_ast.TernaryOp)
         for condition, is_true in self._conditions:
-            if _is_node_equal(ternary_node.cond, condition):
+            if is_node_equal(ternary_node.cond, condition):
                 return ternary_node.iftrue if is_true else ternary_node.iffalse
         return ternary_node
 
@@ -115,9 +115,9 @@ class TypeSystem:
             else:
                 aligned, shadow = self._types[name]
                 other_aligned, other_shadow = other.get_raw_distance(name)
-                if not _is_node_equal(aligned, other_aligned):
+                if not is_node_equal(aligned, other_aligned):
                     yield (name, True)
-                if not _is_node_equal(shadow, other_shadow):
+                if not is_node_equal(shadow, other_shadow):
                     yield (name, False)
 
     def merge(self, other):
@@ -129,9 +129,9 @@ class TypeSystem:
             else:
                 cur_align, cur_shadow = self._types[name]
                 other_align, other_shadow = other.get_raw_distance(name)
-                if not (cur_align == other_align == '*' or _is_node_equal(cur_align, other_align)):
+                if not (cur_align == other_align == '*' or is_node_equal(cur_align, other_align)):
                     self._types[name][0] = '*'
-                if not (cur_shadow == other_shadow == '*' or _is_node_equal(cur_shadow, other_shadow)):
+                if not (cur_shadow == other_shadow == '*' or is_node_equal(cur_shadow, other_shadow)):
                     self._types[name][1] = '*'
 
     def get_raw_distance(self, name):
@@ -171,7 +171,7 @@ class TypeSystem:
             self._types[name] = [aligned, shadow]
         else:
             cur_aligned, cur_shadow = self._types[name]
-            if not _is_node_equal(cur_aligned, aligned):
+            if not is_node_equal(cur_aligned, aligned):
                 self._types[name][0] = aligned
-            if not _is_node_equal(cur_shadow, shadow):
+            if not is_node_equal(cur_shadow, shadow):
                 self._types[name][1] = shadow
