@@ -376,7 +376,7 @@ class LangTransformer(NodeVisitor):
                                                            ])))
             for name, is_aligned in self._types.diff(false_types):
                 if is_aligned:
-                    n.iftrue.block_items.append(c_ast.Assignment(op='=',
+                    n.iffalse.block_items.append(c_ast.Assignment(op='=',
                                                                  lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
                                                                  rvalue=false_types.get_raw_distance(name)[0]))
 
