@@ -3,7 +3,7 @@ from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
 import logging
 import copy
-from lang.types import TypeSystem, convert_to_ast
+from lang.types import TypeSystem, convert_to_ast, is_node_equal
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
@@ -90,7 +90,10 @@ class _ExpressionReplacer(NodeVisitor):
 class _ExpressionSimplifier(NodeVisitor):
     """ this class simplifes Ternary operations, e.g., e?c1:c2 + e?c3:c4 -> e?(c1+c2):(c3+c4) """
     def visit_BinaryOp(self, n):
-        # TODO
+        if isinstance(n.left, c_ast.TernaryOp) and isinstance(n.right, c_ast.TernaryOp) and is_node_equal(n.left.cond, n.right.cond):
+            return c_ast.TernaryOp(cond=n.left.cond,
+                                   iftrue=c_ast.BinaryOp(op=n.op, left=n.left.iftrue, right=n.right.iftrue),
+                                   iffalse=c_ast.BinaryOp(op=n.op, left=n.left.iffalse, right=n.right.iffalse))
         return n
 
     def visit_TernaryOp(self, n):
