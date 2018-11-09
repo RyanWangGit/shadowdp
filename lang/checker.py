@@ -46,8 +46,8 @@ def check(checkerpath, path, funcname):
 
     # if no solvers can verify the program
     if not is_verified:
+        logger.debug('No solvers can verify the program, error messages shown below:')
         for name, out, err in outputs:
-            logger.debug('No solvers can verify the program, error messages shown below:')
             logger.debug('{}:\n\tout: {}\n\t{}'.format(name, out, err))
 
     return is_verified
