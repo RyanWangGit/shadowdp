@@ -10,6 +10,21 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
+class _ExpressionFinder(NodeVisitor):
+    """ this class find a specific node in the expression"""
+    def __init__(self, check_func):
+        self._check_func = check_func
+
+    def generic_visit(self, node):
+        if self._check_func(node):
+            return node
+        else:
+            for child in node:
+                node = self.generic_visit(child)
+                if node:
+                    return node
+
+
 class _ShadowBranchGenerator(NodeVisitor):
     """ this class generates the shadow branch statement"""
     def __init__(self, shadow_variables, types, conditions):
@@ -367,17 +382,55 @@ class LangTransformer(NodeVisitor):
             # insert assertion
             n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                           args=c_ast.ExprList(exprs=[aligned_cond])))
+
+            # if the expression contains `query` variable, add an assume function on dq
+            exp_checker = _ExpressionFinder(
+                lambda node: isinstance(node, c_ast.ArrayRef) and
+                             node.name.name == '__LANG_distance_{}'.format(self._parameters[2]))
+            query_distance_node = exp_checker.visit(aligned_cond)
+            if query_distance_node:
+                # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
+                # TODO: should change according to programmer
+                assume_function = \
+                    c_ast.FuncCall(name=c_ast.ID(self._func_map['assume']),
+                                   args=c_ast.ExprList(
+                                       exprs=[c_ast.BinaryOp(op='&&',
+                                                             left=c_ast.BinaryOp(op='>=',
+                                                                                 left=query_distance_node,
+                                                                                 right=c_ast.Constant('int', '-1')),
+                                                             right=c_ast.BinaryOp(op='<=',
+                                                                                  left=query_distance_node,
+                                                                                  right=c_ast.Constant('int', '1')))]))
+                n.iftrue.block_items.insert(0, assume_function)
+
             for name, is_aligned in self._types.diff(true_types):
                 if is_aligned:
                     n.iftrue.block_items.append(c_ast.Assignment(op='=',
                                                                  lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
                                                                  rvalue=true_types.get_raw_distance(name)[0]))
-            # insert assertion
+            # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
+            # add assume to else branch
+            # insert assertion
             n.iffalse.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                            args=c_ast.ExprList(exprs=[
                                                                c_ast.UnaryOp(op='!', expr=shadow_cond)
                                                            ])))
+            query_distance_node = exp_checker.visit(shadow_cond)
+            if query_distance_node:
+                # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
+                # TODO: should change according to programmer
+                assume_function = \
+                    c_ast.FuncCall(name=c_ast.ID(self._func_map['assume']),
+                                   args=c_ast.ExprList(
+                                       exprs=[c_ast.BinaryOp(op='&&',
+                                                             left=c_ast.BinaryOp(op='>=',
+                                                                                 left=query_distance_node,
+                                                                                 right=c_ast.Constant('int', '-1')),
+                                                             right=c_ast.BinaryOp(op='<=',
+                                                                                  left=query_distance_node,
+                                                                                  right=c_ast.Constant('int', '1')))]))
+                n.iffalse.block_items.insert(0, assume_function)
             for name, is_aligned in self._types.diff(false_types):
                 if is_aligned:
                     n.iffalse.block_items.append(c_ast.Assignment(op='=',
