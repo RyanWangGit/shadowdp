@@ -11,12 +11,12 @@ int noisymax(float epsilon, int size, float q[])
 {
   __VERIFIER_assume(epsilon >= 0);
   float __LANG_v_epsilon = 0;
-  float __LANG_distance_shadow_bq = 0;
   float __LANG_distance_q[size];
   for (int __LANG_i = 0; __LANG_i < size; __LANG_i++)
     __LANG_distance_q[__LANG_i] = __VERIFIER_nondet_float();
 
   float __LANG_distance_bq = 0;
+  float __LANG_distance_shadow_bq = 0;
   int max = 0;
   int i = 0;
   float bq = 0;
