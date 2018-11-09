@@ -1,11 +1,11 @@
 import argparse
-from pycparser import parse_file
-from pycparser.c_generator import CGenerator
 import coloredlogs
-from lang.core import LangTransformer
-from lang.checker import check
 import os.path
 import sys
+from pycparser import parse_file
+from pycparser.c_generator import CGenerator
+from lang.core import LangTransformer
+from lang.checker import check
 
 
 coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')

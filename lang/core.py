@@ -1,9 +1,9 @@
-from pycparser import c_ast
-from pycparser.c_generator import CGenerator
-from pycparser.c_ast import NodeVisitor
 import sympy as sp
 import logging
 import copy
+from pycparser import c_ast
+from pycparser.c_generator import CGenerator
+from pycparser.c_ast import NodeVisitor
 from lang.types import TypeSystem, convert_to_ast, is_node_equal
 logger = logging.getLogger(__name__)
 
