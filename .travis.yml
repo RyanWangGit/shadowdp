@@ -20,6 +20,7 @@ install:
 
 script:
   - tox
+  - python -m lang ./examples/noisymax.c
   - python ./scripts/check.py ./examples
 
 notifications:
