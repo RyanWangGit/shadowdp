@@ -345,14 +345,20 @@ class LangTransformer(NodeVisitor):
         logger.debug('if({})'.format(_code_generator.visit(n.cond)))
         before_types = self._types.copy()
         self._condition_stack.append([n.cond, True])
+        # to be used in if branch transformation assert(e^aligned);
+        aligned_true_cond = _ExpressionReplacer(before_types, True, self._condition_stack).visit(
+            copy.deepcopy(n.cond))
         self.visit(n.iftrue)
         true_types = self._types
         logger.debug('types(true branch): {}'.format(true_types))
-        self._types = before_types
+        self._types = before_types.copy()
         logger.debug('else')
+        self._condition_stack[-1][1] = False
         if n.iffalse:
-            self._condition_stack[-1][1] = False
             self.visit(n.iffalse)
+        # to be used in else branch transformation assert(not (e^aligned));
+        aligned_false_cond = _ExpressionReplacer(before_types, True, self._condition_stack).visit(
+            copy.deepcopy(n.cond))
         logger.debug('types(false branch): {}'.format(self._types))
         false_types = self._types.copy()
         self._types.merge(true_types)
@@ -360,10 +366,10 @@ class LangTransformer(NodeVisitor):
         # TODO: use Z3 to solve constraints to decide this value
         to_generate_shadow = True
         if self._is_to_transform:
-            aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(copy.deepcopy(n.cond))
-            shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(copy.deepcopy(n.cond))
             # have to generate separate shadow branch
             if to_generate_shadow:
+                shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
+                    copy.deepcopy(n.cond))
                 parent = self._parents[n]
                 n_index = parent.block_items.index(n)
                 shadow_branch = c_ast.If(cond=shadow_cond,
@@ -381,13 +387,13 @@ class LangTransformer(NodeVisitor):
 
             # insert assertion
             n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                                          args=c_ast.ExprList(exprs=[aligned_cond])))
+                                                          args=c_ast.ExprList(exprs=[aligned_true_cond])))
 
             # if the expression contains `query` variable, add an assume function on dq
             exp_checker = _ExpressionFinder(
                 lambda node: isinstance(node, c_ast.ArrayRef) and
                              node.name.name == '__LANG_distance_{}'.format(self._parameters[2]))
-            query_distance_node = exp_checker.visit(aligned_cond)
+            query_distance_node = exp_checker.visit(aligned_true_cond)
             if query_distance_node:
                 # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
                 # TODO: should change according to programmer
@@ -414,9 +420,9 @@ class LangTransformer(NodeVisitor):
             # insert assertion
             n.iffalse.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                            args=c_ast.ExprList(exprs=[
-                                                               c_ast.UnaryOp(op='!', expr=shadow_cond)
+                                                               c_ast.UnaryOp(op='!', expr=aligned_false_cond)
                                                            ])))
-            query_distance_node = exp_checker.visit(shadow_cond)
+            query_distance_node = exp_checker.visit(aligned_false_cond)
             if query_distance_node:
                 # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
                 # TODO: should change according to programmer
