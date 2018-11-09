@@ -88,12 +88,12 @@ class TypeSystem:
         return self._types.keys()
 
     def dynamic_variables(self):
-        dynamics = set()
+        dynamics = []
         for name, (align, shadow) in self._types.items():
             if align == '*':
-                dynamics.add((name, True))
+                dynamics.append((name, True))
             if shadow == '*':
-                dynamics.add((name, False))
+                dynamics.append((name, False))
         return dynamics
 
     def _simplify_distance(self, distance, conditions):
