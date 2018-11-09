@@ -453,6 +453,7 @@ class LangTransformer(NodeVisitor):
         while cur_types != self._types:
             cur_types = self._types.copy()
             self.generic_visit(node)
+            self._types.merge(cur_types)
         logger.disabled = False
         self._is_to_transform = True
         logger.debug('while({})'.format(_code_generator.visit(node.cond)))
