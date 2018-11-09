@@ -1,7 +1,11 @@
 import argparse
-from lang.core import LangTransformer
 from pycparser import parse_file
+from pycparser.c_generator import CGenerator
 import coloredlogs
+from lang.core import LangTransformer
+from lang.checker import check
+import os.path
+
 
 coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')
 
@@ -29,17 +33,28 @@ def main():
     arg_parser.add_argument('-o', '--out',
                             action='store', dest='out', type=str,
                             help='The output file name.', required=False)
+    arg_parser.add_argument('-c', '--checker',
+                            action='store', dest='checker', type=str, default='./cpachecker',
+                            help='The checker path.', required=False)
+    arg_parser.add_argument('-f', '--function',
+                            action='store', dest='function', type=str, default=None,
+                            help='The function to verify.', required=False)
     results = arg_parser.parse_args()
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
+    results.function = results.function if results.function else os.path.splitext(os.path.basename(results.file))[0]
 
     ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
     transformer = LangTransformer(function_map=__FUNCTION_MAP)
+    c_generator = CGenerator()
 
     with open(results.out, 'w') as f:
         # write verifier headers
         f.write(__HEADER)
-        f.write(transformer.visit(ast))
+        transformer.visit(ast)
+        f.write(c_generator.visit(ast))
+
+    check(results.checker, results.out, results.function)
 
 
 if __name__ == '__main__':
