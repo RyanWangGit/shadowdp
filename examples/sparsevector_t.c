@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-int sparsevector(float epsilon, int size, float q[], float T, int NN)
+int sparsevector(float epsilon, int size, float q[], float T)
 {
   __VERIFIER_assume(epsilon >= 0);
   float __LANG_v_epsilon = 0;
@@ -17,15 +17,16 @@ int sparsevector(float epsilon, int size, float q[], float T, int NN)
 
   int out = 0;
   float eta_1 = __VERIFIER_nondet_float();
-  __LANG_v_epsilon = __LANG_v_epsilon + (epsilon / 2);
+  __LANG_v_epsilon = __LANG_v_epsilon + (0.5 * epsilon);
   float T_bar = T + eta_1;
   int c_1 = 0;
   int c_2 = 0;
   int i = 0;
-  while ((c_1 < NN) && (i < size))
+  while ((c_1 < 1) && (i < size))
   {
+    __VERIFIER_assert((c_1 < 1) && (i < size));
     float eta_2 = __VERIFIER_nondet_float();
-    __LANG_v_epsilon = (q[i] + eta_2 >= T_bar) ? (__LANG_v_epsilon + epsilon) : (__LANG_v_epsilon + 0) ;
+    __LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (0.5 * epsilon) : (0));
     if ((q[i] + eta_2) >= T_bar)
     {
       __VERIFIER_assume((__LANG_distance_q[i] >= -1) && (__LANG_distance_q[i] <= 1));
@@ -39,6 +40,13 @@ int sparsevector(float epsilon, int size, float q[], float T, int NN)
       __VERIFIER_assert(!(((q[i] + __LANG_distance_q[i]) + eta_2) >= (T_bar + 1)));
       out = 0;
       c_2 = c_2 + 1;
+    }
+
+    if (((q[i] + __LANG_distance_q[i]) + eta_2) >= T_bar)
+    {
+    }
+    else
+    {
     }
 
     i = i + 1;
