@@ -5,6 +5,7 @@ import coloredlogs
 from lang.core import LangTransformer
 from lang.checker import check
 import os.path
+import sys
 
 
 coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')
@@ -27,7 +28,7 @@ __FUNCTION_MAP = {
 }
 
 
-def main():
+def main(argv=sys.argv[1:]):
     arg_parser = argparse.ArgumentParser(description=__doc__)
     arg_parser.add_argument('file', metavar='FILE', type=str, nargs=1)
     arg_parser.add_argument('-o', '--out',
@@ -39,7 +40,7 @@ def main():
     arg_parser.add_argument('-f', '--function',
                             action='store', dest='function', type=str, default=None,
                             help='The function to verify.', required=False)
-    results = arg_parser.parse_args()
+    results = arg_parser.parse_args(argv)
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
     results.function = results.function if results.function else os.path.splitext(os.path.basename(results.file))[0]
@@ -54,7 +55,7 @@ def main():
         transformer.visit(ast)
         f.write(c_generator.visit(ast))
 
-    check(results.checker, results.out, results.function)
+    return check(results.checker, results.out, results.function)
 
 
 if __name__ == '__main__':
