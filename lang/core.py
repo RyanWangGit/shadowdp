@@ -457,4 +457,10 @@ class LangTransformer(NodeVisitor):
         self._is_to_transform = True
         logger.debug('while({})'.format(_code_generator.visit(node.cond)))
         logger.debug('types(fixed point): {}'.format(self._types))
+        aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
+            copy.deepcopy(node.cond))
+        assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                   args=c_ast.ExprList(exprs=[aligned_cond]))
+        self._inserted.add(assertion)
+        node.stmt.block_items.insert(0, assertion)
         self.generic_visit(node)
