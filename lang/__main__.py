@@ -2,12 +2,15 @@ import argparse
 import coloredlogs
 import os.path
 import sys
+import time
+import logging
 from pycparser import parse_file
 from pycparser.c_generator import CGenerator
 from lang.core import LangTransformer
 from lang.checker import check
 
 
+logger = logging.getLogger(__name__)
 coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')
 
 __HEADER = r"""extern void __VERIFIER_error() __attribute__ ((__noreturn__));
@@ -45,6 +48,8 @@ def main(argv=sys.argv[1:]):
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
     results.function = results.function if results.function else os.path.splitext(os.path.basename(results.file))[0]
 
+    logger.info('Parsing {}'.format(results.file))
+    start = time.time()
     ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
     transformer = LangTransformer(function_map=__FUNCTION_MAP)
     c_generator = CGenerator()
@@ -54,8 +59,8 @@ def main(argv=sys.argv[1:]):
         f.write(__HEADER)
         transformer.visit(ast)
         f.write(c_generator.visit(ast))
-
-    return check(results.checker, results.out, results.function)
+    logger.info('Transformation finished in {} seconds'.format(time.time() - start))
+    #return check(results.checker, results.out, results.function)
 
 
 if __name__ == '__main__':
