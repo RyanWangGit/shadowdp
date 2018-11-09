@@ -205,7 +205,7 @@ class LangTransformer(NodeVisitor):
     def visit_FuncDef(self, n):
         # the start of the transformation
         self._types.clear()
-        logger.debug('Start transforming function {} ...'.format(n.decl.name))
+        logger.info('Start transforming function {} ...'.format(n.decl.name))
         self.generic_visit(n)
 
         epsilon, size, q, *_ = self._parameters
