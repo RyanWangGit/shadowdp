@@ -60,7 +60,7 @@ def main(argv=sys.argv[1:]):
         transformer.visit(ast)
         f.write(c_generator.visit(ast))
     logger.info('Transformation finished in {} seconds'.format(time.time() - start))
-    #return check(results.checker, results.out, results.function)
+    return check(results.checker, results.out, results.function)
 
 
 if __name__ == '__main__':
