@@ -313,8 +313,18 @@ class LangTransformer(NodeVisitor):
                             n.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
                             assert isinstance(self._parents[n], c_ast.Compound)
                             n_index = self._parents[n].block_items.index(n)
+                            print('({} * (1/({})))'.format(d_eta, sample))
+                            cost = '({} * (1/({})))'.format(d_eta, sample)
+                            # try simplify the cost expression
+                            try:
+                                cost = str(sp.simplify(cost))
+                            except:
+                                pass
+                            finally:
+                                pass
+
                             v_epsilon = '({}) + ({})'.format(s_e.replace('ALIGNED', '__LANG_v_epsilon').replace('SHADOW', '0'),
-                                                             s_d.replace('ALIGNED', str(sp.simplify('({} * (1/({})))'.format(d_eta, sample)))).replace('SHADOW', '0'))
+                                                             s_d.replace('ALIGNED', cost).replace('SHADOW', '0'))
                             simplifier = _ExpressionSimplifier()
                             update_v_epsilon = c_ast.Assignment(op='=',
                                                                 lvalue=c_ast.ID('__LANG_v_epsilon'),
