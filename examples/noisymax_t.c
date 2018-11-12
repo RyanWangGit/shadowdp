@@ -7,14 +7,11 @@ extern void __assert_fail();
 #define abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-int noisymax(float epsilon, int size, float q[])
+int noisymax(float epsilon, int size, float q[], float __LANG_distance_q[])
 {
   __VERIFIER_assume(epsilon >= 0);
+  __VERIFIER_assume(size > 0);
   float __LANG_v_epsilon = 0;
-  float __LANG_distance_q[size];
-  for (int __LANG_i = 0; __LANG_i < size; __LANG_i++)
-    __LANG_distance_q[__LANG_i] = __VERIFIER_nondet_float();
-
   float __LANG_distance_bq = 0;
   float __LANG_distance_shadow_bq = 0;
   int max = 0;
@@ -37,7 +34,7 @@ int noisymax(float epsilon, int size, float q[])
     {
       __VERIFIER_assume((__LANG_distance_q[i] >= -1) && (__LANG_distance_q[i] <= 1));
       __VERIFIER_assert(!((((q[i] + __LANG_distance_q[i]) + eta) > (bq + __LANG_distance_bq)) || (i == 0)));
-      __LANG_distance_bq = __LANG_distance_bq;
+      __LANG_distance_bq = (((q[i] + eta) > bq) || (i == 0)) ? (__LANG_distance_shadow_bq) : (__LANG_distance_bq);
     }
 
     if ((((q[i] + __LANG_distance_q[i]) + eta) > (bq + __LANG_distance_shadow_bq)) || (i == 0))
