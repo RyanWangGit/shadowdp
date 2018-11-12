@@ -19,7 +19,7 @@ def _thread_wait_for(results, process):
 
 
 def check(checkerpath, path, funcname):
-    logger.info('Start checking with multiple solvers(MathSat, Z3, SMT-Interpol)...')
+    logger.info('Start checking {} with multiple solvers(MathSat, Z3, SMT-Interpol)...'.format(path))
     processes = OrderedDict()
     processes['MathSat'] = subprocess.Popen(
         [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
