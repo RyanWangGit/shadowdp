@@ -299,8 +299,8 @@ class LangTransformer(NodeVisitor):
                                     continue
                                 else:
                                     self._types.update_distance(name,
-                                                                s_e.replace('ALIGNED', '{}'.format(aligned))
-                                                                .replace('SHADOW', '{}'.format(shadow)),
+                                                                s_e.replace('ALIGNED', '({})'.format(aligned))
+                                                                .replace('SHADOW', '({})'.format(shadow)),
                                                                 shadow)
                         if self._is_to_transform:
                             n.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
