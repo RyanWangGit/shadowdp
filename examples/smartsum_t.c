@@ -37,7 +37,7 @@ void smartsum(float epsilon, int size, float q[], float T, int M, float __LANG_d
       if (i == __LANG_index)
       {
         __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
-        __VERIFIER_assert(__LANG_distance_sum == 0);
+        __VERIFIER_assert(abs(__LANG_distance_sum + __LANG_distance_q[i]) <= 1);
         __LANG_v_epsilon = __LANG_v_epsilon + epsilon;
       }
       else
@@ -61,7 +61,7 @@ void smartsum(float epsilon, int size, float q[], float T, int M, float __LANG_d
       if (i == __LANG_index)
       {
         __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
-        __VERIFIER_assert(__LANG_distance_sum == 0);
+        __VERIFIER_assert(abs(__LANG_distance_q[i]) <= 1);
         __LANG_v_epsilon = __LANG_v_epsilon + epsilon;
       }
       else
