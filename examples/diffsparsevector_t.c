@@ -7,13 +7,10 @@ extern void __assert_fail();
 #define abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-int diffsparsevector(float epsilon, int size, float q[], float T)
+int diffsparsevector(float epsilon, int size, float q[], float T, float __LANG_distance_q)
 {
   __VERIFIER_assume(epsilon >= 0);
   float __LANG_v_epsilon = 0;
-  float __LANG_distance_q[size];
-  for (int __LANG_i = 0; __LANG_i < size; __LANG_i++)
-    __LANG_distance_q[__LANG_i] = __VERIFIER_nondet_float();
 
   float __LANG_distance_out = 0;
   float __LANG_distance_shadow_out = 0;
@@ -28,11 +25,13 @@ int diffsparsevector(float epsilon, int size, float q[], float T)
   {
     __VERIFIER_assert((c_1 < 1) && (i < size));
     float eta_2 = __VERIFIER_nondet_float();
-    __LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (1 - (__LANG_distance_q[i] * (1 / ((4.0 * 1) / epsilon)))) : (0));
+    __VERIFIER_assume((__LANG_distance_q[i] >= -1) && (__LANG_distance_q[i] <= 1));
+    __VERIFIER_assert(1 - __LANG_distance_q[i] <= 2);
+    __LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (0.5 * epsilon) : (0));
     if ((q[i] + eta_2) >= T_bar)
     {
       __VERIFIER_assume((__LANG_distance_q[i] >= -1) && (__LANG_distance_q[i] <= 1));
-      __VERIFIER_assert(((q[i] + __LANG_distance_q[i]) + (eta_2 + 1 - __LANG_distance_q[i])) >= (T_bar + 1));
+      __VERIFIER_assert((q[i] + eta_2 + 1) >= (T_bar + 1));
       out = (q[i] + eta_2) - T_bar;
       c_1 = c_1 + 1;
       __LANG_distance_out = ((__LANG_distance_q[i] + 1) - __LANG_distance_q[i]) - 1;
