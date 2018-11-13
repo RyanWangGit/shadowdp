@@ -46,7 +46,7 @@ def check(checkerpath, path, funcname):
     # start threads to wait for results
     results = Queue()
     threads = set()
-    for name, proc in processes.values():
+    for name, proc in processes.items():
         thread = threading.Thread(target=_thread_wait_for, args=(results, name, proc))
         threads.add(thread)
         thread.start()
