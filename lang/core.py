@@ -209,10 +209,15 @@ class LangTransformer(NodeVisitor):
         self.generic_visit(n)
 
         epsilon, size, q, *_ = self._parameters
+
         inserted = [
             # insert assume(epsilon >= 0)
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID(epsilon),
+                                                               c_ast.Constant('int', 0))])),
+            # insert assume(size > 0)
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
                                                                c_ast.Constant('int', 0))])),
             # insert float __LANG_v_epsilon = 0;
             c_ast.Decl(name='__LANG_v_epsilon',
@@ -234,31 +239,19 @@ class LangTransformer(NodeVisitor):
                                            init=c_ast.Constant('int', '0'),
                                            quals=[], funcspec=[], bitsize=[], storage=[]))
             elif name == q and is_align:
-                # insert float __LANG_distance_q
-                inserted.append(c_ast.Decl(name='__LANG_distance_{}'.format(q),
-                                           type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
-                                                                                    .format(q),
-                                                                                    type=c_ast.IdentifierType(
-                                                                                        names=['float']),
-                                                                                    quals=[]),
-                                                                dim=c_ast.ID(name=size),
-                                                                dim_quals=[]),
-                                           init=None,
-                                           quals=[], funcspec=[], bitsize=[], storage=[]))
-                # insert for(int __LANG_i = 0; __LANG_i < size; __LANG_i++) __LANG_distance_q[i] = havoc();
-                inserted.append(c_ast.For(
-                    init=c_ast.DeclList(decls=[c_ast.Decl(name='__LANG_i',
-                                                          type=c_ast.TypeDecl(declname='__LANG_i',
-                                                                              type=c_ast.IdentifierType(names=['int']),
-                                                                              quals=[]),
-                                                          init=c_ast.Constant('int', '0'),
-                                                          quals=[], funcspec=[], bitsize=[], storage=[])]),
-                    cond=c_ast.BinaryOp(op='<', left=c_ast.ID('__LANG_i'), right=c_ast.ID(size)),
-                    next=c_ast.UnaryOp(op='p++', expr=c_ast.ID('__LANG_i')),
-                    stmt=c_ast.Assignment(op='=',
-                                          lvalue=c_ast.ArrayRef(name=c_ast.ID('__LANG_distance_{}'.format(q)),
-                                                                subscript=c_ast.ID('__LANG_i')),
-                                          rvalue=c_ast.FuncCall(name=c_ast.ID(self._func_map['havoc']), args=None))))
+                # insert parameter __LANG_distance_q
+                n.decl.type.args.params.append(
+                    c_ast.Decl(name='__LANG_distance_{}'.format(q),
+                               type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
+                                                                        .format(q),
+                                                                        type=c_ast.IdentifierType(
+                                                                            names=['float']),
+                                                                        quals=[]),
+                                                    dim=None,
+                                                    dim_quals=[]),
+                               init=None,
+                               quals=[], funcspec=[], bitsize=[], storage=[])
+                )
 
         n.body.block_items[:0] = inserted
 
