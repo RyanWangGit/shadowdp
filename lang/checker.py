@@ -6,14 +6,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _thread_wait_for(results, process):
+def _thread_wait_for(results, name, process):
     try:
         # wait for 30 seconds
         out, err = process.communicate(timeout=30)
         if r'Verification result: TRUE' in str(out):
-            results.put((True, None, None))
+            results.put((True, name, None, None))
         else:
-            results.put((False, out, err))
+            results.put((False, name, out, err))
     except subprocess.TimeoutExpired:
         results.put((False, '30 seconds Timeout', ''))
 
@@ -46,16 +46,16 @@ def check(checkerpath, path, funcname):
     # start threads to wait for results
     results = Queue()
     threads = set()
-    for proc in processes.values():
-        thread = threading.Thread(target=_thread_wait_for, args=(results, proc))
+    for name, proc in processes.values():
+        thread = threading.Thread(target=_thread_wait_for, args=(results, name, proc))
         threads.add(thread)
         thread.start()
 
     # get the results
     errors = set()
     is_verified = False
-    for name, proc in processes.items():
-        verified, out, err = results.get()
+    for _ in range(len(processes)):
+        verified, name, out, err = results.get()
         if verified:
             logger.info('{} verified with {}.'.format(path, name))
             is_verified = True
