@@ -6,7 +6,7 @@ with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='Lang',
+    name='ShadowDP',
     version='0.1',
     description='An imperative language that enables verification and inference of the tightest privacy cost for '
                 'sophisticated privacy-preserving algorithms.',
@@ -34,7 +34,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'lang=lang.__main__:main',
+            'shadowdp=shadowdp.__main__:main',
         ],
     },
 )

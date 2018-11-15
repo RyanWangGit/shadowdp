@@ -1,6 +1,6 @@
 import os
 import argparse
-from lang.checker import check
+from shadowdp.checker import check
 import coloredlogs
 
 coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')

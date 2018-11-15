@@ -1,4 +1,4 @@
-from lang.__main__ import main
+from shadowdp.__main__ import main
 
 
 def test_main():

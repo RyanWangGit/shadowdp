@@ -6,8 +6,8 @@ import time
 import logging
 from pycparser import parse_file
 from pycparser.c_generator import CGenerator
-from lang.core import LangTransformer
-from lang.checker import check
+from shadowdp.core import LangTransformer
+from shadowdp.checker import check
 
 
 logger = logging.getLogger(__name__)

@@ -1,4 +1,4 @@
-from lang.types import TypeSystem
+from shadowdp.types import TypeSystem
 
 
 def test_type_system():

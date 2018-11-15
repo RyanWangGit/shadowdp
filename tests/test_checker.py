@@ -1,4 +1,4 @@
-from lang.checker import check
+from shadowdp.checker import check
 
 
 def test_check():
