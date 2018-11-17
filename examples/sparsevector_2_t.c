@@ -19,7 +19,7 @@ int sparsevector_2(float epsilon, int size, float q[], float T, float __LANG_dis
   int c_1 = 0;
   int c_2 = 0;
   int i = 0;
-  while ((c_1 < NN) && (i < size))
+  while ((c_1 < 1) && (i < size))
   {
     __VERIFIER_assert((c_1 < 1) && (i < size));
     float eta_2 = __VERIFIER_nondet_float();
