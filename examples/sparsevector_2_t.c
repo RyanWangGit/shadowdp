@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
 
-int sparsevector(float epsilon, int size, float q[], float T, float __LANG_distance_q[])
+int sparsevector_2(float epsilon, int size, float q[], float T, float __LANG_distance_q[])
 {
   __VERIFIER_assume(size > 0);
   float __LANG_v_epsilon = 0;
