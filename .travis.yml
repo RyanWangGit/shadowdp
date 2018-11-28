@@ -20,5 +20,13 @@ script:
   - python -m shadowdp ./examples/noisymax.c
   - python ./scripts/check.py ./examples
 
+jobs:
+  include:
+    - stage: codecov
+      python: "3.6"
+      script:
+        - tox
+        - pip install codecov && codecov
+
 notifications:
   email: false
