@@ -17,7 +17,6 @@ install:
 
 script:
   - tox
-  - python -m shadowdp ./examples/noisymax.c
   - python ./scripts/check.py ./examples
 
 jobs:
