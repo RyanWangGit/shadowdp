@@ -19,13 +19,8 @@ script:
   - tox
   - python ./scripts/check.py ./examples
 
-jobs:
-  include:
-    - stage: codecov
-      python: "3.6"
-      script:
-        - tox
-        - pip install codecov && codecov
+after_success:
+  - pip install codecov && codecov
 
 notifications:
   email: false
