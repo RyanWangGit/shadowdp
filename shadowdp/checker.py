@@ -36,7 +36,7 @@ def _thread_wait_for(results, name, process):
         else:
             results.put((False, name, out, err))
     except subprocess.TimeoutExpired:
-        results.put((False, '30 seconds Timeout', ''))
+        results.put((False, '30 seconds Timeout', '', ''))
 
 
 def check(checkerpath, path, funcname):
