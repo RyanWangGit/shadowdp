@@ -9,6 +9,8 @@ python:
 cache: pip
 
 install:
+  # trick to use Java 8 instead of default Java 11
+  - export JAVA=/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
   - java -version
   - javac -version
   - pip install tox-travis
