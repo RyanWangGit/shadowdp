@@ -9,10 +9,6 @@ python:
 cache: pip
 
 install:
-  # trick to use Java 8 instead of default Java 11
-  - export JAVA=/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
-  - java -version
-  - javac -version
   - pip install tox-travis
   - travis_retry bash ./scripts/get_cpachecker.sh
   #- travis_retry python ./scripts/get_z3.py ./cpachecker/scripts/
@@ -20,6 +16,10 @@ install:
   - pip install tox-travis
 
 script:
+  # trick to use Java 8 instead of default Java 11
+  - export JAVA=/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
+  - java -version
+  - javac -version
   - tox
   - python ./scripts/check.py ./examples
 
