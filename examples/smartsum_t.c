@@ -10,7 +10,7 @@ typedef enum { false = 0, true = 1 } bool;
 void smartsum(float epsilon, int size, float q[], float T, int M, float __LANG_distance_q[], int __LANG_index)
 {
   __VERIFIER_assume(epsilon >= 0);
-  __VERIFIER_assume(size <= 3 && size > 0);
+  __VERIFIER_assume(size > 0);
   __VERIFIER_assume(T < size && T > 0);
   __VERIFIER_assume(M > 0 && M < size);
   __VERIFIER_assume(__LANG_index > 0 && __LANG_index < size);
