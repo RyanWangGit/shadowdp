@@ -22,6 +22,10 @@
 
 FROM ubuntu:16.04
 
+# clone ShadowDP
+RUN git clone https://github.com/cmla-psu/shadowdp.git
+RUN cd shadowdp/
+
 # install CPA-Checker
 RUN bash ./scripts/get_cpachecker.sh
 
