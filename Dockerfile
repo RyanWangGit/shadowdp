@@ -46,7 +46,7 @@ RUN pip3 install virtualenv
 RUN python3 -m virtualenv shadowdp
 
 # actiavte the virtualenv
-RUN source env/bin/activate 
+RUN source shadowdp/bin/activate 
 
 # install packages
 RUN python3 setup.py install
