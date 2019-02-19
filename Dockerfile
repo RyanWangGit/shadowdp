@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2018 Ryan Wang
+# Copyright (c) 2019 Ryan Wang
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ RUN apt-get install -y git
 RUN apt-get install -y python3 python3-pip
 
 # clone ShadowDP
-RUN git clone https://github.com/cmla-psu/shadowdp.git
+RUN git clone https://github.com/RyanWangGit/shadowdp.git
 WORKDIR ./shadowdp
 
 # install CPA-Checker
