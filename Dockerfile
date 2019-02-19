@@ -22,15 +22,19 @@
 
 FROM ubuntu:16.04
 
+# install essential stuff
+RUN apt-get update -y
+RUN apt-get install -y git
+
+# install python
+RUN apt-get install -y python3 python3-pip
+
 # clone ShadowDP
 RUN git clone https://github.com/cmla-psu/shadowdp.git
 RUN cd shadowdp/
 
 # install CPA-Checker
 RUN bash ./scripts/get_cpachecker.sh
-
-# install python
-RUN apt-get update && apt-get install -y python3 python3-pip
 
 # update pip
 RUN pip3 install --upgrade pip
