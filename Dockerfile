@@ -34,6 +34,7 @@ RUN git clone https://github.com/cmla-psu/shadowdp.git
 RUN cd shadowdp/
 
 # install CPA-Checker
+RUN ls
 RUN bash ./scripts/get_cpachecker.sh
 
 # update pip
