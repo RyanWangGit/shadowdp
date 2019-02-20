@@ -12,8 +12,8 @@ setup(
                 'sophisticated privacy-preserving algorithms.',
     long_description=long_description,
     url='',
-    author='Yuin Wang/Zeyu Ding/Danfeng Zhang/Daniel Kifer',
-    author_email='{ykw5163,duk17,dbz5017,dxd437}@psu.edu',
+    author='Yuin Wang/Zeyu Ding/Guanhong Wang/Daniel Kifer/Danfeng Zhang',
+    author_email='{yxwang,zyding,gpw5092}@psu.edu, {dkifer,zhang}@cse.psu.edu',
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
