@@ -39,17 +39,8 @@ RUN bash ./scripts/get_cpachecker.sh
 # update pip
 RUN pip3 install --upgrade pip
 
-# install virtualenv
-RUN pip3 install virtualenv
-
-# create virtualenv
-RUN python3 -m virtualenv shadowdp
-
-# actiavte the virtualenv
-CMD source shadowdp/bin/activate 
-
 # install packages
-CMD python3 setup.py install
+RUN python3 setup.py install
 
 # test run
 CMD python3 -m shadowdp
