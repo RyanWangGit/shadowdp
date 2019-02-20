@@ -29,6 +29,9 @@ RUN apt-get install -y git wget
 # install python
 RUN apt-get install -y python3 python3-pip
 
+# install openjdk8
+RUN apt-get install openjdk-8-jdk
+
 # clone ShadowDP
 RUN git clone https://github.com/RyanWangGit/shadowdp.git
 WORKDIR ./shadowdp
