@@ -66,7 +66,7 @@ class _ShadowBranchGenerator(NodeVisitor):
                             if isinstance(child, c_ast.Assignment) and child.lvalue.name in self._shadow_variables]
         for child in node:
             if isinstance(child, c_ast.Assignment):
-                child.lvalue.name = '__LANG_distance_shadow_{}'.format(child.lvalue.name)
+                child.lvalue.name = '__SHADOWDP_distance_shadow_{}'.format(child.lvalue.name)
                 child.rvalue = convert_to_ast(self._distance_generator.visit(child.rvalue)[1])
             else:
                 self.visit(child)
@@ -240,9 +240,9 @@ class LangTransformer(NodeVisitor):
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
                                                                c_ast.Constant('int', 0))])),
-            # insert float __LANG_v_epsilon = 0;
-            c_ast.Decl(name='__LANG_v_epsilon',
-                       type=c_ast.TypeDecl(declname='__LANG_v_epsilon',
+            # insert float __SHADOWDP_v_epsilon = 0;
+            c_ast.Decl(name='__SHADOWDP_v_epsilon',
+                       type=c_ast.TypeDecl(declname='__SHADOWDP_v_epsilon',
                                            type=c_ast.IdentifierType(names=['float']),
                                            quals=[]),
                        init=c_ast.Constant('int', '0'),
@@ -252,7 +252,7 @@ class LangTransformer(NodeVisitor):
 
         for name, is_align in self._types.dynamic_variables():
             if name not in self._parameters:
-                distance_name = '__LANG_distance_{}{}'.format('' if is_align else 'shadow_', name)
+                distance_name = '__SHADOWDP_distance_{}{}'.format('' if is_align else 'shadow_', name)
                 inserted.append(c_ast.Decl(name=distance_name,
                                            type=c_ast.TypeDecl(declname=distance_name,
                                                                type=c_ast.IdentifierType(names=['float']),
@@ -260,10 +260,10 @@ class LangTransformer(NodeVisitor):
                                            init=c_ast.Constant('int', '0'),
                                            quals=[], funcspec=[], bitsize=[], storage=[]))
             elif name == q and is_align:
-                # insert parameter __LANG_distance_q
+                # insert parameter __SHADOWDP_distance_q
                 n.decl.type.args.params.append(
-                    c_ast.Decl(name='__LANG_distance_{}'.format(q),
-                               type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
+                    c_ast.Decl(name='__SHADOWDP_distance_{}'.format(q),
+                               type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__SHADOWDP_distance_{}'
                                                                         .format(q),
                                                                         type=c_ast.IdentifierType(
                                                                             names=['float']),
@@ -276,9 +276,9 @@ class LangTransformer(NodeVisitor):
 
         n.body.block_items[:0] = inserted
 
-        # insert assert(__LANG_v_epsilon <= epsilon);
+        # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         n.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
-                                                 args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__LANG_v_epsilon'),
+                                                 args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
                                                                                      c_ast.ID(epsilon))])),)
 
     def visit_Decl(self, n):
@@ -293,7 +293,7 @@ class LangTransformer(NodeVisitor):
                 if isinstance(decl.type, c_ast.TypeDecl):
                     self._types.update_distance(decl.name, '0', '0')
                 elif isinstance(decl.type, c_ast.ArrayDecl) and i == 2:
-                    self._types.update_distance(decl.name, '*'.format(decl.name), '__LANG_distance_{}'.format(decl.name))
+                    self._types.update_distance(decl.name, '*'.format(decl.name), '__SHADOWDP_distance_{}'.format(decl.name))
             logger.debug('Params: {}'.format(self._parameters))
         if isinstance(decl_type, c_ast.TypeDecl):
             # put variable declaration into type system
@@ -337,11 +337,11 @@ class LangTransformer(NodeVisitor):
                             finally:
                                 pass
 
-                            v_epsilon = '({}) + ({})'.format(s_e.replace('ALIGNED', '__LANG_v_epsilon').replace('SHADOW', '0'),
+                            v_epsilon = '({}) + ({})'.format(s_e.replace('ALIGNED', '__SHADOWDP_v_epsilon').replace('SHADOW', '0'),
                                                              s_d.replace('ALIGNED', cost).replace('SHADOW', '0'))
                             simplifier = _ExpressionSimplifier()
                             update_v_epsilon = c_ast.Assignment(op='=',
-                                                                lvalue=c_ast.ID('__LANG_v_epsilon'),
+                                                                lvalue=c_ast.ID('__SHADOWDP_v_epsilon'),
                                                                 rvalue=simplifier.simplify(v_epsilon))
                             self._parents[n].block_items.insert(n_index + 1, update_v_epsilon)
                             self._inserted.add(update_v_epsilon)
@@ -416,10 +416,10 @@ class LangTransformer(NodeVisitor):
             # if the expression contains `query` variable, add an assume function on dq
             exp_checker = _ExpressionFinder(
                 lambda node: isinstance(node, c_ast.ArrayRef) and
-                             node.name.name == '__LANG_distance_{}'.format(self._parameters[2]))
+                             node.name.name == '__SHADOWDP_distance_{}'.format(self._parameters[2]))
             query_distance_node = exp_checker.visit(aligned_true_cond)
             if query_distance_node:
-                # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
+                # insert assume(__SHADOWDP_distance_q[i] >= -1 && __SHADOWDP_distance_q[i] <= 1)
                 # TODO: should change according to programmer
                 assume_function = \
                     c_ast.FuncCall(name=c_ast.ID(self._func_map['assume']),
@@ -436,7 +436,7 @@ class LangTransformer(NodeVisitor):
             for name, is_aligned in self._types.diff(true_types):
                 if is_aligned:
                     n.iftrue.block_items.append(c_ast.Assignment(op='=',
-                                                                 lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
+                                                                 lvalue=c_ast.ID('__SHADOWDP_distance_{}'.format(name)),
                                                                  rvalue=true_types.get_raw_distance(name)[0]))
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
@@ -448,7 +448,7 @@ class LangTransformer(NodeVisitor):
                                                            ])))
             query_distance_node = exp_checker.visit(aligned_false_cond)
             if query_distance_node:
-                # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
+                # insert assume(__SHADOWDP_distance_q[i] >= -1 && __SHADOWDP_distance_q[i] <= 1)
                 # TODO: should change according to programmer
                 assume_function = \
                     c_ast.FuncCall(name=c_ast.ID(self._func_map['assume']),
@@ -464,7 +464,7 @@ class LangTransformer(NodeVisitor):
             for name, is_aligned in self._types.diff(false_types):
                 if is_aligned:
                     n.iffalse.block_items.append(c_ast.Assignment(op='=',
-                                                                  lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
+                                                                  lvalue=c_ast.ID('__SHADOWDP_distance_{}'.format(name)),
                                                                   rvalue=false_types.get_raw_distance(name)[0]))
 
         self._condition_stack.pop()
