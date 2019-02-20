@@ -24,7 +24,7 @@ FROM ubuntu:16.04
 
 # install essential stuff
 RUN apt-get update -y
-RUN apt-get install -y git
+RUN apt-get install -y git wget
 
 # install python
 RUN apt-get install -y python3 python3-pip
