@@ -170,14 +170,14 @@ class TypeSystem:
         """
         aligned, shadow = self._types[name]
         if aligned == '*':
-            aligned = '__SHADOWDP_distance_{}'.format(name)
+            aligned = '__LANG_distance_{}'.format(name)
         else:
             if conditions and len(conditions) != 0:
                 aligned = _generator.visit(self._simplify_distance(aligned, conditions))
             else:
                 aligned = _generator.visit(aligned)
         if shadow == '*':
-            shadow = '__SHADOWDP_distance_shadow_{}'.format(name)
+            shadow = '__LANG_distance_shadow_{}'.format(name)
         else:
             if conditions and len(conditions) != 0:
                 shadow = _generator.visit(self._simplify_distance(shadow, conditions))
