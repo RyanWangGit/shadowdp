@@ -17,14 +17,14 @@ docker pull cmlapsu/shadowdp
 docker run --it cmlapsu/shadowdp bash
 ```
 
-Then you'll be in a shell inside a docker container.
+Then you'll be in a shell inside a docker container with ShadowDP ready to use.
 
 ### Install Manually
 
-If Docker isn't an available option for you, you can install ShadowDP manually following the steps below. Safely skip this section if you used docker.
+If Docker isn't an available option for you, you can install ShadowDP manually following the steps below.
 
 **System Requirements**.
-Python 3.5 / 3.6 / 3.7 on Linux is required, specifically we tested in Python 3.5 / 3.6 / 3.7 on Ubuntu 16.04 LTS. This is due to the requirements from the verification tool we use (i.e., [CPA-Checker](https://cpachecker.sosy-lab.org/)), which lacks many pre-compiled solver backends on other operating systems (e.g. MathSAT5 and z3 on macOS). 
+Python 3.5 / 3.6 / 3.7 on Linux is required, Ubuntu 16.04 LTS is tested and recommended, though other Linux distributions should also work. This is due to the requirements from the verification tool we use (i.e., [CPA-Checker](https://cpachecker.sosy-lab.org/)), which lacks many pre-compiled solver backends on other operating systems (e.g. MathSAT5 and z3 on macOS). 
 
 In addition, `wget` package and JAVA 1.8 (exact version, CPA-Checker v1.7 won't work properly with JAVA 10 or 11) are required. Install them via
 ```bash
@@ -49,9 +49,10 @@ python3 setup.py install
 
 For example, in order to verify `noisymax.c`, simply run `shadowdp noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
 
-All the case-studied algorithms are implemented in plain C in `examples/` folder with names `noisymax.c` / `svt.c` / `partiasum.c` / `smartsum.c` / `diffsvt.c`.
+All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `partiasum.c` / `smartsum.c` / `diffsparsevector.c`.
 
-We also provide a script `scripts/benchmark.py` to verify all programs included in our paper at once, simply run `python ./scripts/benchmark.py ./examples` and the script will type check / transform / verify all provided examples in `examples/` folder.
+### Non-linear rewrite
+Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Difference Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. All transformed source code including the re-written ones are in `examples/transformed` folder, to verify them all at once, run `python3 ./scripts/check.py ./examples/transformed`.
 
 
 ## License
