@@ -46,10 +46,10 @@ RUN pip3 install virtualenv
 RUN python3 -m virtualenv shadowdp
 
 # actiavte the virtualenv
-RUN source shadowdp/bin/activate 
+CMD source shadowdp/bin/activate 
 
 # install packages
-RUN python3 setup.py install
+CMD python3 setup.py install
 
 # test run
-RUN python3 -m shadowdp
+CMD python3 -m shadowdp
