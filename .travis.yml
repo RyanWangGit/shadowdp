@@ -21,7 +21,7 @@ script:
   - java -version
   - javac -version
   - tox
-  - python ./scripts/check.py ./examples
+  - python ./scripts/check.py ./examples/transformed
 
 after_success:
   - pip install codecov && codecov
