@@ -23,7 +23,7 @@ from shadowdp.checker import check
 
 
 def test_check():
-    assert check('./cpachecker', './examples/noisymax_t.c', 'noisymax')
-    assert check('./cpachecker', './examples/sparsevector_t.c', 'sparsevector')
-    assert check('./cpachecker', './examples/partialsum_t.c', 'partialsum')
-    assert check('./cpachecker', './examples/smartsum_t.c', 'smartsum')
+    assert check('./cpachecker', './examples/transformed/noisymax_t.c', 'noisymax')
+    assert check('./cpachecker', './examples/transformed/sparsevector_t.c', 'sparsevector')
+    assert check('./cpachecker', './examples/transformed/partialsum_t.c', 'partialsum')
+    assert check('./cpachecker', './examples/transformed/smartsum_t.c', 'smartsum')
