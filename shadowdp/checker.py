@@ -96,6 +96,6 @@ def check(checkerpath, path, funcname):
     if not is_verified:
         logger.warning('No solvers can verify the program, error messages shown below:')
         for name, out, err in errors:
-            logger.warning('{}:\n\tout: {}\n\t{}'.format(name, out, err))
+            logger.warning('{}:\n\tout: {}\n\terr:{}'.format(name, out.decode('ascii'), err.decode('ascii')))
 
     return is_verified
