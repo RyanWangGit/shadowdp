@@ -26,21 +26,17 @@ script:
   - python ./scripts/check.py ./examples/transformed
 
 after_success:
-  - if [ "$TRAVIS_BRANCH" == "master" ]; then
-      pip install codecov && codecov;
-      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD;
-      docker push cmlapsu/shadowdp:latest;
-    fi
+  pip install codecov && codecov
+
 
 jobs:
   include:
     - stage: deploy
+      if: branch = master
       script:
-        - if [ "$TRAVIS_BRANCH" == "master" ]; then
-            docker build . -t cmlapsu/shadowdp;
-            docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD;
-            docker push cmlapsu/shadowdp:latest;
-          fi
+        - docker build . -t cmlapsu/shadowdp
+        - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+        - docker push cmlapsu/shadowdp:latest
 
 notifications:
   email: false
