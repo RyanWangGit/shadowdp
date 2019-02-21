@@ -23,7 +23,11 @@ from shadowdp.checker import check
 
 
 def test_check():
-    assert check('./cpachecker', './examples/transformed/noisymax_t.c', 'noisymax')
-    assert check('./cpachecker', './examples/transformed/sparsevector_t.c', 'sparsevector')
-    assert check('./cpachecker', './examples/transformed/partialsum_t.c', 'partialsum')
-    assert check('./cpachecker', './examples/transformed/smartsum_t.c', 'smartsum')
+    assert check('./cpachecker', './examples/transformed/noisymax.c', 'noisymax')
+    assert check('./cpachecker', './examples/transformed/sparsevector.c', 'sparsevector')
+    assert check('./cpachecker', './examples/transformed/diffsparsevector_rewrite.c', 'diffsparsevector_rewrite')
+    assert check('./cpachecker', './examples/transformed/partialsum_rewrite.c', 'partialsum_rewrite')
+    assert check('./cpachecker', './examples/transformed/smartsum_rewrite.c', 'smartsum_rewrite')
+    assert check('./cpachecker', './examples/transformed/diffsparsevector_epsilon_1.c', 'diffsparsevector_epsilon_1')
+    assert check('./cpachecker', './examples/transformed/partialsum_epsilon_1.c', 'partialsum_epsilon_1')
+    assert check('./cpachecker', './examples/transformed/smartsum_epsilon_1.c', 'smartsum_epsilon_1')

@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
 
-int partialsum(float epsilon, int size, float q[], float __LANG_distance_q[], int __LANG_index)
+int partialsum_rewrite(float epsilon, int size, float q[], float __LANG_distance_q[], int __LANG_index)
 {
   __VERIFIER_assume(epsilon >= 0);
   __VERIFIER_assume(size > 0);

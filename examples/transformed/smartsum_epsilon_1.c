@@ -7,9 +7,8 @@ extern void __assert_fail();
 #define abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
 
-void smartsum(float epsilon, int size, float q[], float T, int M, float __LANG_distance_q[], int __LANG_index)
+void smartsum_epsilon_1(float epsilon, int size, float q[], float T, int M, float __LANG_distance_q[], int __LANG_index)
 {
-  __VERIFIER_assume(epsilon >= 0);
   __VERIFIER_assume(size > 0);
   __VERIFIER_assume(T < size && T > 0);
   __VERIFIER_assume(M > 0 && M < size);
@@ -37,19 +36,12 @@ void smartsum(float epsilon, int size, float q[], float T, int M, float __LANG_d
       if (i == __LANG_index)
       {
         __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
-        __VERIFIER_assert(abs(__LANG_distance_sum + __LANG_distance_q[i]) <= 1);
-        __LANG_v_epsilon = __LANG_v_epsilon + epsilon;
+        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_sum + __LANG_distance_q[i]);
       }
       else
       {
         __VERIFIER_assume(__LANG_distance_q[i] == 0);
-        if (__LANG_distance_sum == 0)
-          __LANG_v_epsilon = __LANG_v_epsilon;
-        else
-        {
-          __VERIFIER_assert(__LANG_distance_sum <= 1);
-          __LANG_v_epsilon = __LANG_v_epsilon + epsilon;
-        }
+        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_sum;
 
       }
       n = ((n + sum) + q[i]) + eta_1;
@@ -68,14 +60,12 @@ void smartsum(float epsilon, int size, float q[], float T, int M, float __LANG_d
       if (i == __LANG_index)
       {
         __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
-        __VERIFIER_assert(abs(__LANG_distance_q[i]) <= 1);
-        __VERIFIER_assert(__LANG_distance_sum == 0);
-        __LANG_v_epsilon = __LANG_v_epsilon + epsilon;
+        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_q[i]);
       }
       else
       {
         __VERIFIER_assume(__LANG_distance_q[i] == 0);
-        __LANG_v_epsilon = __LANG_v_epsilon;
+        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_q[i];
       }
       next = (next + q[i]) + eta_2;
       sum = sum + q[i];
@@ -88,5 +78,5 @@ void smartsum(float epsilon, int size, float q[], float T, int M, float __LANG_d
     i = i + 1;
   }
 
-  __VERIFIER_assert(__LANG_v_epsilon <= 2 * epsilon);
+  __VERIFIER_assert(__LANG_v_epsilon <= 2);
 }
