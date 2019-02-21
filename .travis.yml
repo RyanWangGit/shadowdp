@@ -1,5 +1,7 @@
 language: python
 dist: xenial
+services:
+  - docker
 
 python:
   - 3.5
@@ -22,9 +24,14 @@ script:
   - javac -version
   - tox
   - python ./scripts/check.py ./examples/transformed
+  - docker build . -t cmlapsu/shadowdp
 
 after_success:
-  - pip install codecov && codecov
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+      pip install codecov && codecov;
+      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD;
+      docker push cmlapsu/shadowdp:latest;
+    fi
 
 notifications:
   email: false
