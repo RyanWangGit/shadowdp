@@ -37,10 +37,10 @@ jobs:
     - stage: deploy
       script:
         - if [ "$TRAVIS_BRANCH" == "master" ]; then
-            docker build . -t cmlapsu/shadowdp
+            docker build . -t cmlapsu/shadowdp;
             docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD;
             docker push cmlapsu/shadowdp:latest;
-        fi
+          fi
 
 notifications:
   email: false
