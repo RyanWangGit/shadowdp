@@ -21,6 +21,7 @@
 # SOFTWARE.
 from collections import OrderedDict
 from queue import Queue
+import os
 import subprocess
 import threading
 import logging
@@ -39,7 +40,9 @@ def _thread_wait_for(results, name, process):
         results.put((False, '30 seconds Timeout', '', ''))
 
 
-def check(checkerpath, path, funcname):
+def check(checkerpath, path, funcname=None):
+    funcname = os.path.splitext(os.path.basename(path))[0] if funcname is None else funcname
+
     logger.info('Start checking {} with multiple solvers(MathSat, Z3, SMT-Interpol)...'.format(path))
     processes = OrderedDict()
     processes['MathSat'] = subprocess.Popen(
