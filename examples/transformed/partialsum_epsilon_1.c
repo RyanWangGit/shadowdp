@@ -9,7 +9,6 @@ typedef enum { false = 0, true = 1 } bool;
 
 int partialsum_epsilon_1(float epsilon, int size, float q[], float __LANG_distance_q[], int __LANG_index)
 {
-  //__VERIFIER_assume(epsilon >= 0);
   __VERIFIER_assume(size > 0);
   __VERIFIER_assume(__LANG_index >= 0 && __LANG_index < size);
 

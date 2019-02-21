@@ -9,7 +9,7 @@ typedef enum { false = 0, true = 1 } bool;
     
 int noisymax(float epsilon, int size, float q[], float __LANG_distance_q[])
 {
-  __VERIFIER_assume(epsilon >= 0);
+  __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(size > 0);
   float __LANG_v_epsilon = 0;
   float __LANG_distance_bq = 0;
