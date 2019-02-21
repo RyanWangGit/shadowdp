@@ -36,11 +36,10 @@ if __name__ == '__main__':
     all_verified = True
     for root, _, files in os.walk(folder):
         for file in files:
-            if file.endswith('_t.c'):
-                if check('./cpachecker', os.path.join(root, file), file[:len(file) - 4]):
-                    print('\033[0;1m{}\033[0m\033[92m verified\033[0m'.format(file))
-                else:
-                    all_verified = False
+            if check('./cpachecker', os.path.join(root, file)):
+                print('\033[0;1m{}\033[0m\033[92m verified\033[0m'.format(file))
+            else:
+                all_verified = False
     if all_verified:
         exit(0)
     else:
