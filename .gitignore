@@ -53,3 +53,6 @@ runo.py
 # cpachecker folder
 cpachecker*/
 output*/
+
+# virtual environment
+venv/
