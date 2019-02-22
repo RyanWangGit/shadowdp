@@ -133,6 +133,21 @@ def main(argv=sys.argv[1:]):
             content = content.replace('__VERIFIER_assume(size > 0);', '__VERIFIER_assume(size > 0);\n  __VERIFIER_assume(T < size && T > 0);\n  __VERIFIER_assume(M > 0 && M < size);')
             content = content.replace('__VERIFIER_assume(__LANG_index >= 0);\n\
   __VERIFIER_assume(__LANG_index < size);', '__VERIFIER_assume(__LANG_index > 0 && __LANG_index < size);')
+            content = content.replace('__VERIFIER_assert((i <= T) && (i < size));', '__VERIFIER_assert(i <= T && i < size);')
+            content = content.replace("""__LANG_distance_out = __LANG_distance_n;
+      __LANG_distance_next = __LANG_distance_n;
+      __LANG_distance_n = __LANG_distance_n;
+      __LANG_distance_sum = 0;""", """__LANG_distance_n = __LANG_distance_n;
+      __LANG_distance_next = __LANG_distance_n;
+      __LANG_distance_sum = 0;
+      __LANG_distance_out = __LANG_distance_n;""")
+            content = content.replace("""__LANG_distance_out = __LANG_distance_next;
+      __LANG_distance_next = __LANG_distance_next;
+      __LANG_distance_n = __LANG_distance_n;
+      __LANG_distance_sum = __LANG_distance_sum + abs(__LANG_distance_q[i]);""", """__LANG_distance_next = __LANG_distance_next;
+      __LANG_distance_sum = __LANG_distance_sum + abs(__LANG_distance_q[i]);
+      __LANG_distance_out = __LANG_distance_next;
+      __LANG_distance_n = __LANG_distance_n;""")
         elif 'diffsparsevector' in results.file:
             content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (1 - (__LANG_distance_q[i] * (1 / ((4.0 * 1) / 1.0)))) : (0));', '__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (0.5 * 1) : (0));')
         f.write(content)
