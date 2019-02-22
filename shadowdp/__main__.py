@@ -117,6 +117,19 @@ def main(argv=sys.argv[1:]):
             content = content.replace('__LANG_distance_next = (__LANG_distance_next + __LANG_distance_q[i]) + __LANG_distance_sum;', '__LANG_distance_next = __LANG_distance_next;')
             content = content.replace('__LANG_distance_out = (__LANG_distance_next + __LANG_distance_q[i]) + __LANG_distance_sum;', '__LANG_distance_out = __LANG_distance_next;')
             content = content.replace('__VERIFIER_assert(__LANG_v_epsilon <= 1.0);', '__VERIFIER_assert(__LANG_v_epsilon <= 2.0);')
+            content = content.replace("""if (((i + 1) % M) == 0)
+    {
+      __LANG_distance_shadow_n = ((__LANG_distance_shadow_n + __LANG_distance_shadow_sum) + __LANG_distance_q[i]) + 0;
+      __LANG_distance_shadow_next = __LANG_distance_shadow_n;
+      __LANG_distance_shadow_sum = 0;
+      __LANG_distance_shadow_out = __LANG_distance_shadow_next;
+    }
+    else
+    {
+      __LANG_distance_shadow_next = (__LANG_distance_shadow_next + __LANG_distance_q[i]) + 0;
+      __LANG_distance_shadow_sum = __LANG_distance_shadow_sum + __LANG_distance_q[i];
+      __LANG_distance_shadow_out = __LANG_distance_shadow_next;
+    }""", '')
         elif 'diffsparsevector' in results.file:
             content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (1 - (__LANG_distance_q[i] * (1 / ((4.0 * 1) / 1.0)))) : (0));', '__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (0.5 * 1) : (0));')
         f.write(content)
