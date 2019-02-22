@@ -51,7 +51,7 @@ For example, in order to verify `noisymax.c`, simply run `shadowdp noisymax.c`, 
 
 All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `partiasum.c` / `smartsum.c` / `diffsparsevector.c`.
 
-We also provide a helper script `scripts/benchmark.py` to verify all algorithms at once, simply run `python3 scripts/benchmark.py` and ShadowDP will verify all the algorithms mentioned above.
+We also provide a helper script `scripts/benchmark.sh` to verify all algorithms at once, simply run `bash scripts/benchmark.sh` and ShadowDP will verify all the algorithms mentioned above.
 
 ### Non-linear rewrite
 Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Difference Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. All transformed source code including the re-written ones are in `examples/transformed` folder, to verify them all at once, run `python3 ./scripts/check.py ./examples/transformed`.
