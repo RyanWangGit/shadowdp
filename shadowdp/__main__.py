@@ -32,7 +32,7 @@ from shadowdp.checker import check
 
 
 logger = logging.getLogger(__name__)
-coloredlogs.install(level='DEBUG', fmt='%(levelname)s:%(module)s: %(message)s')
+coloredlogs.install(level='INFO', fmt='%(levelname)s:%(module)s: %(message)s')
 
 __HEADER = r"""extern void __VERIFIER_error() __attribute__ ((__noreturn__));
 extern int __VERIFIER_nondet_float(void);
