@@ -274,6 +274,15 @@ class LangTransformer(NodeVisitor):
                                init=None,
                                quals=[], funcspec=[], bitsize=[], storage=[])
                 )
+                # insert parameter __LANG_index
+                n.decl.type.args.params.append(
+                    c_ast.Decl(name='__LANG_index',
+                               type=c_ast.TypeDecl(declname='__LANG_index',
+                                                   type=c_ast.IdentifierType(names=['int']),
+                                                   quals=[]),
+                               init=None,
+                               quals=[], funcspec=[], bitsize=[], storage=[])
+                )
 
         n.body.block_items[:0] = inserted
 
