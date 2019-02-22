@@ -64,6 +64,9 @@ def main(argv=sys.argv[1:]):
     arg_parser.add_argument('-f', '--function',
                             action='store', dest='function', type=str, default=None,
                             help='The function to verify.', required=False)
+    arg_parser.add_argument('-e', '--epsilon',
+                            action='store', dest='epsilon', type=str, default=None,
+                            help='Set epsilon = 1 to solve the non-linear issues.', required=False)
     results = arg_parser.parse_args(argv)
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
@@ -72,7 +75,7 @@ def main(argv=sys.argv[1:]):
     logger.info('Parsing {}'.format(results.file))
     start = time.time()
     ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
-    transformer = LangTransformer(function_map=__FUNCTION_MAP)
+    transformer = LangTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
     c_generator = CGenerator()
 
     with open(results.out, 'w') as f:

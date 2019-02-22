@@ -180,7 +180,7 @@ class _DistanceGenerator(NodeVisitor):
 
 
 class LangTransformer(NodeVisitor):
-    def __init__(self, function_map=None):
+    def __init__(self, function_map=None, set_epsilon=None):
         super().__init__()
         if not function_map:
             self._func_map = {
@@ -191,6 +191,7 @@ class LangTransformer(NodeVisitor):
         else:
             assert 'assert' in function_map and 'assume' in function_map and 'havoc' in function_map
             self._func_map = function_map
+        self._set_epsilon = set_epsilon
         self._types = TypeSystem()
         self._parameters = []
         self._random_variables = set()
@@ -277,9 +278,10 @@ class LangTransformer(NodeVisitor):
         n.body.block_items[:0] = inserted
 
         # insert assert(__LANG_v_epsilon <= epsilon);
+        epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
         n.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
                                                  args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__LANG_v_epsilon'),
-                                                                                     c_ast.ID(epsilon))])),)
+                                                                                     epsilon_node)])),)
 
     def visit_Decl(self, n):
         logger.debug('{}'.format(_code_generator.visit_Decl(n)))
@@ -304,9 +306,6 @@ class LangTransformer(NodeVisitor):
                         self._random_variables.add(n.name)
                         logger.debug('Random variables: {}'.format(self._random_variables))
                         sample = _code_generator.visit(n.init.args.exprs[0])
-                        epsilon, *_ = self._parameters
-                        # incorporate epsilon = 1 approach
-                        sample = sample.replace(epsilon, '1.0')
                         assert isinstance(n.init.args.exprs[1], c_ast.Constant) and \
                                n.init.args.exprs[1].type == 'string', \
                             'The second argument of Lap function must be string annotation'
@@ -330,7 +329,10 @@ class LangTransformer(NodeVisitor):
                             n.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
                             assert isinstance(self._parents[n], c_ast.Compound)
                             n_index = self._parents[n].block_items.index(n)
-                            print('({} * (1/({})))'.format(d_eta, sample))
+                            # incorporate epsilon = 1 approach
+                            if self._set_epsilon:
+                                epsilon, *_ = self._parameters
+                                sample = sample.replace(epsilon, '1.0')
                             cost = '({} * (1/({})))'.format(d_eta, sample)
                             # try simplify the cost expression
                             try:
