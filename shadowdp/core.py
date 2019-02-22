@@ -232,9 +232,9 @@ class LangTransformer(NodeVisitor):
         epsilon, size, q, *_ = self._parameters
 
         inserted = [
-            # insert assume(epsilon >= 0)
+            # insert assume(epsilon > 0)
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID(epsilon),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(epsilon),
                                                                c_ast.Constant('int', 0))])),
             # insert assume(size > 0)
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
