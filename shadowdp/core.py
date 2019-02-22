@@ -241,14 +241,23 @@ class LangTransformer(NodeVisitor):
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
                                                                c_ast.Constant('int', 0))])),
+            # insert assume(__LANG_index >= 0);
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID('__LANG_index'),
+                                                               c_ast.Constant('int', 0))])),
+
+            # insert assume(__LANG_index < size);
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('<', c_ast.ID('__LANG_index'),
+                                                               c_ast.ID(size))])),
+
             # insert float __LANG_v_epsilon = 0;
             c_ast.Decl(name='__LANG_v_epsilon',
                        type=c_ast.TypeDecl(declname='__LANG_v_epsilon',
                                            type=c_ast.IdentifierType(names=['float']),
                                            quals=[]),
                        init=c_ast.Constant('int', '0'),
-                       quals=[], funcspec=[], bitsize=[], storage=[])
-
+                       quals=[], funcspec=[], bitsize=[], storage=[]),
         ]
 
         for name, is_align in self._types.dynamic_variables():
