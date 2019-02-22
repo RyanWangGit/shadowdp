@@ -82,7 +82,18 @@ def main(argv=sys.argv[1:]):
         # write verifier headers
         f.write(__HEADER)
         transformer.visit(ast)
-        f.write(c_generator.visit(ast))
+        content = c_generator.visit(ast)
+        if 'partialsum' in results.file:
+            print(content)
+            content = content.replace('float __LANG_v_epsilon = 0;', 'float __LANG_v_epsilon = 0;\n\tfloat __LANG_distance_sum=0;')
+            insert = """if (i == __LANG_index)
+        __VERIFIER_assume (__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1);
+    else
+        __VERIFIER_assume (__LANG_distance_q[i] == 0);\n\t"""
+            content = content.replace('sum = sum + q[i];', insert + 'sum = sum + q[i];\n\t__LANG_distance_sum = __LANG_distance_sum + __LANG_distance_q[i];')
+
+        f.write(content)
+
     logger.info('Transformation finished in {} seconds'.format(time.time() - start))
     start = time.time()
     is_verified = check(results.checker, results.out, results.function)
