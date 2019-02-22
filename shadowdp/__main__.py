@@ -84,14 +84,33 @@ def main(argv=sys.argv[1:]):
         transformer.visit(ast)
         content = c_generator.visit(ast)
         if 'partialsum' in results.file:
-            print(content)
             content = content.replace('float __LANG_v_epsilon = 0;', 'float __LANG_v_epsilon = 0;\n\tfloat __LANG_distance_sum=0;')
             insert = """if (i == __LANG_index)
         __VERIFIER_assume (__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1);
     else
         __VERIFIER_assume (__LANG_distance_q[i] == 0);\n\t"""
             content = content.replace('sum = sum + q[i];', insert + 'sum = sum + q[i];\n\t__LANG_distance_sum = __LANG_distance_sum + __LANG_distance_q[i];')
-
+        elif 'smartsum' in results.file:
+            content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (__LANG_distance_sum + (__LANG_distance_q[i] * (1 / (1.0 / 1.0))));', """if (i == __LANG_index)
+      {
+        __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
+        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_sum + __LANG_distance_q[i]);
+      }
+      else
+      {
+        __VERIFIER_assume(__LANG_distance_q[i] == 0);
+        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_sum;
+      }""")
+            content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (1.0 * __LANG_distance_sum);',"""if (i == __LANG_index)
+      {
+        __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
+        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_sum + __LANG_distance_q[i]);
+      }
+      else
+      {
+        __VERIFIER_assume(__LANG_distance_q[i] == 0);
+        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_sum;
+      """)
         f.write(content)
 
     logger.info('Transformation finished in {} seconds'.format(time.time() - start))
