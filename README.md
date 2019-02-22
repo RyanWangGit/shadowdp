@@ -14,7 +14,7 @@ Using docker is the easiest way to set everything up and running.
 
 ```bash
 docker pull cmlapsu/shadowdp
-docker run --it cmlapsu/shadowdp bash
+docker run -it cmlapsu/shadowdp bash
 ```
 
 Then you'll be in a shell inside a docker container with ShadowDP ready to use.
@@ -50,6 +50,8 @@ python3 setup.py install
 For example, in order to verify `noisymax.c`, simply run `shadowdp noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
 
 All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `partiasum.c` / `smartsum.c` / `diffsparsevector.c`.
+
+We also provide a helper script `scripts/benchmark.py` to verify all algorithms at once, simply run `python3 scripts/benchmark.py` and ShadowDP will verify all the algorithms mentioned above.
 
 ### Non-linear rewrite
 Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Difference Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. All transformed source code including the re-written ones are in `examples/transformed` folder, to verify them all at once, run `python3 ./scripts/check.py ./examples/transformed`.
