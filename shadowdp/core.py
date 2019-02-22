@@ -304,6 +304,9 @@ class LangTransformer(NodeVisitor):
                         self._random_variables.add(n.name)
                         logger.debug('Random variables: {}'.format(self._random_variables))
                         sample = _code_generator.visit(n.init.args.exprs[0])
+                        epsilon, *_ = self._parameters
+                        # incorporate epsilon = 1 approach
+                        sample = sample.replace(epsilon, '1.0')
                         assert isinstance(n.init.args.exprs[1], c_ast.Constant) and \
                                n.init.args.exprs[1].type == 'string', \
                             'The second argument of Lap function must be string annotation'
