@@ -87,7 +87,7 @@ def check(checkerpath, path, funcname=None):
             # remove failed solver output
             for solver in ('MathSat', 'Z3', 'SMTInterpol'):
                 if solver != name:
-                    shutil.rmtree('./output-{}-{}'.format(funcname, ))
+                    shutil.rmtree('./output-{}-{}'.format(funcname, solver))
             is_verified = True
             break
         else:
