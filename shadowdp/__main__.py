@@ -105,12 +105,12 @@ def main(argv=sys.argv[1:]):
             content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (1.0 * __LANG_distance_sum);',"""if (i == __LANG_index)
       {
         __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
-        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_sum + __LANG_distance_q[i]);
+        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_q[i]);
       }
       else
       {
         __VERIFIER_assume(__LANG_distance_q[i] == 0);
-        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_sum;
+        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_q[i];
       }""")
             content = content.replace('__LANG_distance_sum = __LANG_distance_sum + __LANG_distance_q[i];', '__LANG_distance_sum = __LANG_distance_sum + abs(__LANG_distance_q[i]);')
             content = content.replace('(((__LANG_distance_n + __LANG_distance_sum) + __LANG_distance_q[i]) + __LANG_distance_sum) + __LANG_distance_q[i]', '__LANG_distance_n')
