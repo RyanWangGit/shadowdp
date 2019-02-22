@@ -24,3 +24,7 @@ from shadowdp.__main__ import main
 
 def test_main():
     assert main(['./examples/original/noisymax.c'])
+    assert main(['./examples/original/sparsevector.c'])
+    assert main(['./examples/original/partialsum.c', '-e'])
+    assert main(['./examples/original/smartsum.c', '-e'])
+    assert main(['./examples/original/diffsparsevector.c', '-e'])
