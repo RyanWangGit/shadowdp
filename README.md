@@ -10,7 +10,9 @@ As described in Section 6 of our paper, ShadowDP consists of two components: (1)
 
 ### Using Docker
 
-Using docker is the easiest way to set everything up and running.
+Using docker is the easiest way to set everything up and running (You don't need the extra files we provided if you use Docker)
+
+From anywhere in the terminal, with the Docker engine running, run
 
 ```bash
 docker pull cmlapsu/shadowdp
@@ -47,14 +49,14 @@ python3 setup.py install
 
 ## Usage
 
-For example, in order to verify `noisymax.c`, simply run `shadowdp noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
+We provide a helper script at `scripts/benchmark.sh`, simply run `bash scripts/benchmark.sh` and it will run ShadowDP on all the case-studied algorithms in our paper.
+
+To verify individual programs, for example in order to verify `noisymax.c`, simply run `shadowdp noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
 
 All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `partiasum.c` / `smartsum.c` / `diffsparsevector.c`.
 
-We also provide a helper script `scripts/benchmark.sh` to verify all algorithms at once, simply run `bash scripts/benchmark.sh` and ShadowDP will verify all the algorithms mentioned above.
-
 ### Non-linear rewrite
-Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Difference Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. All transformed source code including the re-written ones are in `examples/transformed` folder, to verify them all at once, run `python3 ./scripts/check.py ./examples/transformed`.
+Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Difference Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we also include the rewrite version of transformed code in `examples/transformed`, you can run `python3 scripts/check.py examples/transformed` to verify them all at once.
 
 
 ## License
