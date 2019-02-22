@@ -83,6 +83,7 @@ def main(argv=sys.argv[1:]):
         f.write(__HEADER)
         transformer.visit(ast)
         content = c_generator.visit(ast)
+        # replace the non-linearity
         if 'partialsum' in results.file:
             content = content.replace('float __LANG_v_epsilon = 0;', 'float __LANG_v_epsilon = 0;\n\tfloat __LANG_distance_sum=0;')
             insert = """if (i == __LANG_index)
