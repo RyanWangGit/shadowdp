@@ -24,13 +24,16 @@ FROM ubuntu:16.04
 
 # install essential stuff
 RUN apt-get update -y
-RUN apt-get install -y git wget
+RUN apt-get install -y --no-install-recommends git wget bzip2 gcc
 
 # install python
-RUN apt-get install -y python3 python3-pip
+RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
 
 # install openjdk8
-RUN apt-get install -y openjdk-8-jdk
+RUN apt-get install -y --no-install-recommends openjdk-8-jdk
+
+# cleanup apt-get lists to
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # clone ShadowDP
 RUN git clone https://github.com/RyanWangGit/shadowdp.git
