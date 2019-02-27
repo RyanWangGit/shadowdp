@@ -163,7 +163,9 @@ def main(argv=sys.argv[1:]):
     is_verified = check(results.checker, results.out, results.function)
     if is_verified:
         logger.info('Verification finished in {} seconds'.format(time.time() - start))
-    return is_verified
+
+    # shell code 0 means SUCCESS
+    return 0 if is_verified else 1
 
 
 if __name__ == '__main__':
