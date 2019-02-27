@@ -36,8 +36,8 @@ RUN apt-get install -y --no-install-recommends openjdk-8-jdk
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # clone ShadowDP
-RUN git clone https://github.com/RyanWangGit/shadowdp.git
-WORKDIR ./shadowdp
+RUN git clone https://github.com/RyanWangGit/shadowdp.git /shadowdp
+WORKDIR /shadowdp
 
 # install CPA-Checker
 RUN bash ./scripts/get_cpachecker.sh
