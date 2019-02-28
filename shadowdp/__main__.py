@@ -158,11 +158,8 @@ def main(argv=sys.argv[1:]):
             content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (1 - (__LANG_distance_q[i] * (1 / ((4.0 * 1) / 1.0)))) : (0));', '__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (0.5 * 1) : (0));')
         f.write(content)
 
-    logger.info('Transformation finished in {} seconds'.format(time.time() - start))
     start = time.time()
     is_verified = check(results.checker, results.out, results.function)
-    if is_verified:
-        logger.info('Verification finished in {} seconds'.format(time.time() - start))
 
     # shell code 0 means SUCCESS
     return 0 if is_verified else 1

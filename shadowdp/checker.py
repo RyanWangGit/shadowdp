@@ -26,6 +26,7 @@ import subprocess
 import threading
 import logging
 import shutil
+import re
 logger = logging.getLogger(__name__)
 
 
@@ -83,6 +84,11 @@ def check(checkerpath, path, funcname=None):
         verified, name, out, err = results.get()
         if verified:
             logger.info('{} verified with {}.'.format(path, name))
+            # open and read report to find
+            with open('./output-{}-{}/Report.html'.format(funcname, name)) as report:
+                all_report = report.read()
+                time = re.search("""Total time for CPAchecker:\s*([0-9]+\.[0-9]+s)""", all_report).groups()
+                logger.info('Verification finished in {}'.format(time[0]))
             logger.info('CPA-Checker reports can be found at ./output-{}-{}'.format(funcname, name))
             # remove failed solver output
             for solver in ('MathSat', 'Z3', 'SMTInterpol'):
