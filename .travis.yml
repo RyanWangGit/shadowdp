@@ -35,7 +35,10 @@ jobs:
       if: branch = master
       script:
         - docker build . -t cmlapsu/shadowdp
+        # test the compiled docker image
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
+        - docker run -it cmlapsu/shadowdp python3 /shadowdp/scripts/check.py /shadowdp/examples/transformed
+      after_success:
         - echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin
         - docker push cmlapsu/shadowdp:latest
 
