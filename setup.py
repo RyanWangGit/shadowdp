@@ -7,10 +7,10 @@ with open('README.md', encoding='utf-8') as f:
 setup(
     name='ShadowDP',
     version='0.1',
-    description='An imperative language that enables verification and inference of the tightest privacy cost for '
-                'sophisticated privacy-preserving algorithms.',
+    description='Verification Tool for Differential Privacy. '
+                'Code for [PLDI\'19] "Proving Differential Privacy with Shadow Execution".',
     long_description=long_description,
-    url='',
+    url='https://github.com/cmla-psu/shadowdp',
     author='Yuin Wang/Zeyu Ding/Guanhong Wang/Daniel Kifer/Danfeng Zhang',
     author_email='{yxwang,zyding,gpw5092}@psu.edu, {dkifer,zhang}@cse.psu.edu',
     license='MIT',
