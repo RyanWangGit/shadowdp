@@ -40,7 +40,5 @@ if __name__ == '__main__':
                 print('\033[0;1m{}\033[0m\033[92m verified\033[0m'.format(file))
             else:
                 all_verified = False
-    if all_verified:
-        exit(0)
-    else:
-        exit(1)
+
+    exit(0) if all_verified else exit(1)
