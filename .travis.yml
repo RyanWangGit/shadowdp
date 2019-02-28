@@ -32,15 +32,17 @@ after_success:
 jobs:
   include:
     - stage: deploy
-      if: branch = master
       script:
+        # test docker build
         - docker build . -t cmlapsu/shadowdp
-        # test the compiled docker image
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
         - docker run -it cmlapsu/shadowdp python3 /shadowdp/scripts/check.py /shadowdp/examples/transformed
       after_success:
-        - echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin
-        - docker push cmlapsu/shadowdp:latest
+        # only push to docker hub on stable master branch
+        - if [[ "$TRAVIS_BRANCH" = "master" && $TRAVIS_PULL_REQUEST = "false" ]]; then
+            echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
+            docker push cmlapsu/shadowdp:latest;
+          fi
 
 notifications:
   email: false
