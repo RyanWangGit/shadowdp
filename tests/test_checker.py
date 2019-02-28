@@ -28,6 +28,6 @@ def test_check():
     assert check('./cpachecker', './examples/transformed/diffsparsevector_rewrite.c', 'diffsparsevector_rewrite')
     assert check('./cpachecker', './examples/transformed/partialsum_rewrite.c', 'partialsum_rewrite')
     assert check('./cpachecker', './examples/transformed/smartsum_rewrite.c', 'smartsum_rewrite')
-    assert check('./cpachecker', './examples/transformed/diffsparsevector_epsilon_1.c', 'diffsparsevector_epsilon_1')
+    assert check('./cpachecker', './examples/transformed/gapsparsevector_epsilon_1.c', 'gapsparsevector_epsilon_1')
     assert check('./cpachecker', './examples/transformed/partialsum_epsilon_1.c', 'partialsum_epsilon_1')
     assert check('./cpachecker', './examples/transformed/smartsum_epsilon_1.c', 'smartsum_epsilon_1')
