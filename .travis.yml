@@ -48,7 +48,7 @@ jobs:
             git init
             git add .
             git commit -m "Release of ShadowDP."
-            git remote set-url origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git
+            git remote add origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git
             git push -u --force origin master
           fi
 
