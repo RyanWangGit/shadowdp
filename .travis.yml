@@ -38,10 +38,18 @@ jobs:
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
         - docker run -it cmlapsu/shadowdp python3 /shadowdp/scripts/check.py /shadowdp/examples/transformed
       after_success:
-        # only push to docker hub on stable master branch
+        # only deploy on stable master branch
         - if [[ "$TRAVIS_BRANCH" = "master" && $TRAVIS_PULL_REQUEST = "false" ]]; then
+            # push to docker hub
             echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
             docker push cmlapsu/shadowdp:latest;
+            # push to github cmlapsu/shadowdp
+            rm -rf .git
+            git init
+            git add .
+            git commit -m "Release of ShadowDP."
+            git remote set-url origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git
+            git push -u --force origin master
           fi
 
 notifications:
