@@ -198,8 +198,12 @@ class ShadowDPTransformer(NodeVisitor):
                 'havoc': 'havoc',
             }
         else:
-            assert 'assert' in function_map and 'assume' in function_map and 'havoc' in function_map
+            if not isinstance(function_map, dict):
+                raise ValueError
+            if not ('assert' in function_map and 'assume' in function_map and 'havoc' in function_map):
+                raise ValueError
             self._func_map = function_map
+
         self._set_epsilon = set_epsilon
         self._types = TypeSystem()
         self._parameters = []
