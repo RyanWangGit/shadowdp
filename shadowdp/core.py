@@ -234,14 +234,6 @@ class ShadowDPTransformer(NodeVisitor):
             self._parents[child] = node
         return super().visit(node)
 
-    def visit_Assignment(self, node):
-        code = _code_generator.visit(node)
-        logger.debug('{}'.format(code))
-        distance_generator = _DistanceGenerator(self._types, self._condition_stack)
-        aligned, shadow = distance_generator.visit(node.rvalue)
-        self._types.update_distance(node.lvalue.name, aligned, shadow)
-        logger.debug('types: {}'.format(self._types))
-
     def visit_FuncDef(self, node):
         # the start of the transformation
         self._types.clear()
@@ -331,6 +323,14 @@ class ShadowDPTransformer(NodeVisitor):
         node.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
                                                     args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__LANG_v_epsilon'),
                                                                                      epsilon_node)])), )
+
+    def visit_Assignment(self, node):
+        code = _code_generator.visit(node)
+        logger.debug('{}'.format(code))
+        distance_generator = _DistanceGenerator(self._types, self._condition_stack)
+        aligned, shadow = distance_generator.visit(node.rvalue)
+        self._types.update_distance(node.lvalue.name, aligned, shadow)
+        logger.debug('types: {}'.format(self._types))
 
     def visit_Decl(self, n):
         logger.debug('{}'.format(_code_generator.visit_Decl(n)))
