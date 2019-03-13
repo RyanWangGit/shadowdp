@@ -26,6 +26,7 @@ from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
 from shadowdp.types import TypeSystem, convert_to_ast, is_node_equal
+from shadowdp.exceptions import *
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
@@ -208,6 +209,8 @@ class ShadowDPTransformer(NodeVisitor):
         self._types = TypeSystem()
         self._parameters = []
         self._random_variables = set()
+        # indicator that all records can differ or at most one record can differ
+        self._all_differ = True
         # use a stack to keep track of the conditions so that we know we're inside a true branch or false branch
         self._condition_stack = []
         # we keep tracks of the parent of each node since pycparser doesn't provide this feature, this is useful
@@ -243,8 +246,20 @@ class ShadowDPTransformer(NodeVisitor):
         # the start of the transformation
         self._types.clear()
         logger.info('Start transforming function {} ...'.format(node.decl.name))
+        # first pickup the annotation for parameters
+        first_statement = node.body.block_items[0]
+        if not (isinstance(first_statement, c_ast.Constant) and first_statement.type == 'string'):
+            raise NoParameterAnnotationError(first_statement.coord)
+        annotation = first_statement.value[1:-1]
+        if annotation not in ('ALL_DIFFER', 'ONE_DIFFER'):
+            raise ValueError('Annotation for sensitivity should be either \'ALL_DIFFER\' or \'ONE_DIFFER\'')
+
+        self._all_differ = True if annotation == 'ALL_DIFFER' else False
+
+        # visit children
         self.generic_visit(node)
 
+        # get the names of parameters
         epsilon, size, q, *_ = self._parameters
 
         inserted = [
@@ -275,6 +290,7 @@ class ShadowDPTransformer(NodeVisitor):
                        quals=[], funcspec=[], bitsize=[], storage=[]),
         ]
 
+        # add declarations for dynamically tracked variables
         for name, is_align in self._types.dynamic_variables():
             if name not in self._parameters:
                 distance_name = '__LANG_distance_{}{}'.format('' if is_align else 'shadow_', name)

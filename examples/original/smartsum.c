@@ -1,5 +1,6 @@
 void smartsum(float epsilon, int size, float q[], float T, int M)
 {
+  "ONE_DIFFER";
   float out = 0;
   float next = 0; float n = 0; int i = 0; float sum = 0;
   while(i <= T && i < size)
