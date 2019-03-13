@@ -317,10 +317,10 @@ class ShadowDPTransformer(NodeVisitor):
                        quals=[], funcspec=[], bitsize=[], storage=[]),
         ]
 
-        # insert assert(__LANG_v_epsilon <= epsilon);
+        # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
         node.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
-                                                    args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__LANG_v_epsilon'),
+                                                    args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
                                                                                      epsilon_node)])), )
 
     def visit_Assignment(self, node):
