@@ -27,7 +27,7 @@ import time
 import logging
 from pycparser import parse_file
 from pycparser.c_generator import CGenerator
-from shadowdp.core import LangTransformer
+from shadowdp.core import ShadowDPTransformer
 from shadowdp.checker import check
 
 
@@ -84,7 +84,7 @@ def main(argv=sys.argv[1:]):
     logger.info('Parsing {}'.format(results.file))
     start = time.time()
     ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
-    transformer = LangTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
+    transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
 
     # write the transformed code
     with open(results.out, 'w') as f:

@@ -179,7 +179,7 @@ class _DistanceGenerator(NodeVisitor):
                 for left, right in zip(self.visit(n.left), self.visit(n.right))]
 
 
-class LangTransformer(NodeVisitor):
+class ShadowDPTransformer(NodeVisitor):
     """ Traverse the AST and do necessary transformations on the AST according to the typing rules."""
     def __init__(self, function_map=None, set_epsilon=None):
         """ Initialize the transformer.
