@@ -219,7 +219,8 @@ class ShadowDPTransformer(NodeVisitor):
         self._is_to_transform = True
         # this is needed if we add some statements next to the current statement
         # e.g. float eta = havoc(); _v_epsilon = ...;
-        # we can't visit the `_v_epsilon = ...;` statement, so we keep track of the inserted statements
+        # we shouldn't visit the `_v_epsilon = ...;` statement node, so we keep track of the inserted statements
+        # to avoid them
         self._inserted = set()
 
     def visit(self, node):
