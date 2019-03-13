@@ -76,7 +76,7 @@ def main(argv=sys.argv[1:]):
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
     results.function = results.function if results.function else os.path.splitext(os.path.basename(results.file))[0]
 
-    if results.option not in ('check', 'transform', 'verify'):
+    if results.option[0] not in ('check', 'transform', 'verify'):
         logger.error('Option should be check / transform / verify')
         return 1
 
