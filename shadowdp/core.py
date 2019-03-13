@@ -209,8 +209,8 @@ class ShadowDPTransformer(NodeVisitor):
         self._types = TypeSystem()
         self._parameters = []
         self._random_variables = set()
-        # indicator that all records can differ or at most one record can differ
-        self._all_differ = True
+        # indicator that all at most one record can differ or records can differ
+        self._one_differ = True
         # use a stack to keep track of the conditions so that we know we're inside a true branch or false branch
         self._condition_stack = []
         # we keep tracks of the parent of each node since pycparser doesn't provide this feature, this is useful
@@ -246,7 +246,7 @@ class ShadowDPTransformer(NodeVisitor):
         if annotation not in ('ALL_DIFFER', 'ONE_DIFFER'):
             raise ValueError('Annotation for sensitivity should be either \'ALL_DIFFER\' or \'ONE_DIFFER\'')
 
-        self._all_differ = True if annotation == 'ALL_DIFFER' else False
+        self._one_differ = True if annotation == 'ONE_DIFFER' else False
 
         # visit children
         self.generic_visit(node)
