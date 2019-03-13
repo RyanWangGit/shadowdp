@@ -22,6 +22,15 @@
 
 
 class NoAnnotationError(ValueError):
-    def __init__(self, coord, message):
+    def __init__(self, coord):
         self.coord = coord
-        self.message = message
+
+
+class NoParameterAnnotationError(NoAnnotationError):
+    def __init__(self, coord):
+        super().__init__(coord)
+
+
+class NoSamplingAnnotationError(NoAnnotationError):
+    def __init__(self, coord):
+        super().__init__(coord)
