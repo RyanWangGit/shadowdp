@@ -209,8 +209,8 @@ class ShadowDPTransformer(NodeVisitor):
         self._parameters = []
         self._random_variables = set()
         self._condition_stack = []
-        # this is a trick to store node's parent, since we cannot dynamically add `parent` attribute
-        # to AST nodes. (pycparser uses __slots__ to fix that)
+        # we keep tracks of the parent of each node since pycparser doesn't provide this feature, this is useful
+        # for easy trace back
         self._parents = {}
         # indicate if the transformation should be done
         # this is needed since in While statement we might do loop until convergence, in that case we don't need to
