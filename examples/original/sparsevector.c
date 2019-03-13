@@ -1,14 +1,14 @@
 int sparsevector(float epsilon, int size, float q[], float T)
 {
   int out = 0;
-  float eta_1 = Lap(2.0 / epsilon, "ALIGNED; ALIGNED; 1");
+  float eta_1 = Lap(2.0 / epsilon, "ALIGNED; 1;");
   float T_bar = T + eta_1;
   int c_1 = 0, c_2 = 0;
   int i = 0;
 
   while (c_1 < 1 && i < size)
   {
-    float eta_2 = Lap((4.0 * 1) / epsilon, "ALIGNED; (q[i] + eta_2 >= T_bar) ? ALIGNED : SHADOW; 2");
+    float eta_2 = Lap((4.0 * 1) / epsilon, "ALIGNED; (q[i] + eta_2 >= T_bar) ? 2 : 0;");
 
     if (q[i] + eta_2 >= T_bar)
     {
@@ -22,4 +22,5 @@ int sparsevector(float epsilon, int size, float q[], float T)
     }
     i = i + 1;
   }
+  return out;
 }

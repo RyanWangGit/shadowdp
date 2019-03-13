@@ -6,7 +6,7 @@ void smartsum(float epsilon, int size, float q[], float T, int M)
   {
     if ((i + 1) % M == 0)
     {
-      float eta_1 = Lap(1.0 / epsilon, "ALIGNED; ALIGNED; __LANG_distance_sum + __LANG_distance_q[i]");
+      float eta_1 = Lap(1.0 / epsilon, "ALIGNED; __LANG_ALIGNED_sum - sum + __LANG_ALIGNED_q[i] - q[i];");
       n = n + sum + q[i] + eta_1;
       next = n;
       sum = 0;
@@ -14,11 +14,12 @@ void smartsum(float epsilon, int size, float q[], float T, int M)
     }
     else
     {
-      float eta_2 = Lap(1.0 / epsilon, "ALIGNED; ALIGNED; __LANG_distance_sum");
+      float eta_2 = Lap(1.0 / epsilon, "ALIGNED; __LANG_ALIGNED_sum - sum;");
       next = next + q[i] + eta_2;
       sum = sum + q[i];
       out = next;
     }
     i = i + 1;
   }
+  return out;
 }
