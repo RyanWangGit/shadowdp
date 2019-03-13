@@ -54,6 +54,10 @@ __FUNCTION_MAP = {
 
 def main(argv=sys.argv[1:]):
     arg_parser = argparse.ArgumentParser(description=__doc__)
+    arg_parser.add_argument('option', metavar='OPTION', type=str, nargs=1,
+                            help='check - transform and verify.\n'
+                                 'transform - only transform the source code.\n'
+                                 'verify - only verify the tranformed code.')
     arg_parser.add_argument('file', metavar='FILE', type=str, nargs=1)
     arg_parser.add_argument('-o', '--out',
                             action='store', dest='out', type=str,
@@ -72,21 +76,29 @@ def main(argv=sys.argv[1:]):
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
     results.function = results.function if results.function else os.path.splitext(os.path.basename(results.file))[0]
 
+    if results.option not in ('check', 'transform', 'verify'):
+        logger.error('Option should be check / transform / verify')
+        return 1
+
+    # parse the source code
     logger.info('Parsing {}'.format(results.file))
     start = time.time()
     ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
     transformer = LangTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
-    c_generator = CGenerator()
 
+    # write the transformed code
     with open(results.out, 'w') as f:
         # write verifier headers
         f.write(__HEADER)
         transformer.visit(ast)
-        content = c_generator.visit(ast)
-        f.write(content)
+        f.write(CGenerator().visit(ast))
 
     logger.info('Transformation finished in {0:.3f} seconds'.format(time.time() - start))
-    is_verified = check(results.checker, results.out, results.function)
+    is_verified = False
+    if results.option == 'check':
+        is_verified = check(results.checker, results.out, results.function)
+    elif results.option == 'verify':
+        is_verified = check(results.checker, results.file, results.function)
 
     # shell code 0 means SUCCESS
     return 0 if is_verified else 1
