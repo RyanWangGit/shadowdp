@@ -254,34 +254,6 @@ class ShadowDPTransformer(NodeVisitor):
         # get the names of parameters
         epsilon, size, q, *_ = self._parameters
 
-        inserted = [
-            # insert assume(epsilon > 0)
-            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(epsilon),
-                                                               c_ast.Constant('int', 0))])),
-            # insert assume(size > 0)
-            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
-                                                               c_ast.Constant('int', 0))])),
-            # insert assume(__SHADOWDP_index >= 0);
-            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID('__SHADOWDP_index'),
-                                                               c_ast.Constant('int', 0))])),
-
-            # insert assume(__SHADOWDP_index < size);
-            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('<', c_ast.ID('__SHADOWDP_index'),
-                                                               c_ast.ID(size))])),
-
-            # insert float __SHADOWDP_v_epsilon = 0;
-            c_ast.Decl(name='__SHADOWDP_v_epsilon',
-                       type=c_ast.TypeDecl(declname='__SHADOWDP_v_epsilon',
-                                           type=c_ast.IdentifierType(names=['float']),
-                                           quals=[]),
-                       init=c_ast.Constant('int', '0'),
-                       quals=[], funcspec=[], bitsize=[], storage=[]),
-        ]
-
         # add declarations for dynamically tracked variables
         for name, is_align in self._types.dynamic_variables():
             if name not in self._parameters:
@@ -316,7 +288,34 @@ class ShadowDPTransformer(NodeVisitor):
                                quals=[], funcspec=[], bitsize=[], storage=[])
                 )
 
-        node.body.block_items[:0] = inserted
+        # prepend the inserted statements
+        node.body.block_items[:0] = [
+            # insert assume(epsilon > 0)
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(epsilon),
+                                                               c_ast.Constant('int', 0))])),
+            # insert assume(size > 0)
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
+                                                               c_ast.Constant('int', 0))])),
+            # insert assume(__SHADOWDP_index >= 0);
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID('__SHADOWDP_index'),
+                                                               c_ast.Constant('int', 0))])),
+
+            # insert assume(__SHADOWDP_index < size);
+            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                           args=c_ast.ExprList([c_ast.BinaryOp('<', c_ast.ID('__SHADOWDP_index'),
+                                                               c_ast.ID(size))])),
+
+            # insert float __SHADOWDP_v_epsilon = 0;
+            c_ast.Decl(name='__SHADOWDP_v_epsilon',
+                       type=c_ast.TypeDecl(declname='__SHADOWDP_v_epsilon',
+                                           type=c_ast.IdentifierType(names=['float']),
+                                           quals=[]),
+                       init=c_ast.Constant('int', '0'),
+                       quals=[], funcspec=[], bitsize=[], storage=[]),
+        ]
 
         # insert assert(__LANG_v_epsilon <= epsilon);
         epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
