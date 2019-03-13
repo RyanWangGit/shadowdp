@@ -256,19 +256,19 @@ class ShadowDPTransformer(NodeVisitor):
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
                                                                c_ast.Constant('int', 0))])),
-            # insert assume(__LANG_index >= 0);
+            # insert assume(__SHADOWDP_index >= 0);
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID('__LANG_index'),
+                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID('__SHADOWDP_index'),
                                                                c_ast.Constant('int', 0))])),
 
-            # insert assume(__LANG_index < size);
+            # insert assume(__SHADOWDP_index < size);
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('<', c_ast.ID('__LANG_index'),
+                           args=c_ast.ExprList([c_ast.BinaryOp('<', c_ast.ID('__SHADOWDP_index'),
                                                                c_ast.ID(size))])),
 
-            # insert float __LANG_v_epsilon = 0;
-            c_ast.Decl(name='__LANG_v_epsilon',
-                       type=c_ast.TypeDecl(declname='__LANG_v_epsilon',
+            # insert float __SHADOWDP_v_epsilon = 0;
+            c_ast.Decl(name='__SHADOWDP_v_epsilon',
+                       type=c_ast.TypeDecl(declname='__SHADOWDP_v_epsilon',
                                            type=c_ast.IdentifierType(names=['float']),
                                            quals=[]),
                        init=c_ast.Constant('int', '0'),
