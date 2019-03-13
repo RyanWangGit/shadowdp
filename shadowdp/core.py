@@ -208,6 +208,7 @@ class ShadowDPTransformer(NodeVisitor):
         self._types = TypeSystem()
         self._parameters = []
         self._random_variables = set()
+        # use a stack to keep track of the conditions so that we know we're inside a true branch or false branch
         self._condition_stack = []
         # we keep tracks of the parent of each node since pycparser doesn't provide this feature, this is useful
         # for easy trace back
