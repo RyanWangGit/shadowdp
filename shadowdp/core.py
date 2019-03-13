@@ -231,19 +231,19 @@ class ShadowDPTransformer(NodeVisitor):
             self._parents[child] = node
         return super().visit(node)
 
-    def visit_Assignment(self, n):
-        code = _code_generator.visit(n)
+    def visit_Assignment(self, node):
+        code = _code_generator.visit(node)
         logger.debug('{}'.format(code))
         distance_generator = _DistanceGenerator(self._types, self._condition_stack)
-        aligned, shadow = distance_generator.visit(n.rvalue)
-        self._types.update_distance(n.lvalue.name, aligned, shadow)
+        aligned, shadow = distance_generator.visit(node.rvalue)
+        self._types.update_distance(node.lvalue.name, aligned, shadow)
         logger.debug('types: {}'.format(self._types))
 
-    def visit_FuncDef(self, n):
+    def visit_FuncDef(self, node):
         # the start of the transformation
         self._types.clear()
-        logger.info('Start transforming function {} ...'.format(n.decl.name))
-        self.generic_visit(n)
+        logger.info('Start transforming function {} ...'.format(node.decl.name))
+        self.generic_visit(node)
 
         epsilon, size, q, *_ = self._parameters
 
@@ -286,7 +286,7 @@ class ShadowDPTransformer(NodeVisitor):
                                            quals=[], funcspec=[], bitsize=[], storage=[]))
             elif name == q and is_align:
                 # insert parameter __LANG_distance_q
-                n.decl.type.args.params.append(
+                node.decl.type.args.params.append(
                     c_ast.Decl(name='__LANG_distance_{}'.format(q),
                                type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
                                                                         .format(q),
@@ -299,7 +299,7 @@ class ShadowDPTransformer(NodeVisitor):
                                quals=[], funcspec=[], bitsize=[], storage=[])
                 )
                 # insert parameter __LANG_index
-                n.decl.type.args.params.append(
+                node.decl.type.args.params.append(
                     c_ast.Decl(name='__LANG_index',
                                type=c_ast.TypeDecl(declname='__LANG_index',
                                                    type=c_ast.IdentifierType(names=['int']),
@@ -308,13 +308,13 @@ class ShadowDPTransformer(NodeVisitor):
                                quals=[], funcspec=[], bitsize=[], storage=[])
                 )
 
-        n.body.block_items[:0] = inserted
+        node.body.block_items[:0] = inserted
 
         # insert assert(__LANG_v_epsilon <= epsilon);
         epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
-        n.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
-                                                 args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__LANG_v_epsilon'),
-                                                                                     epsilon_node)])),)
+        node.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
+                                                    args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__LANG_v_epsilon'),
+                                                                                     epsilon_node)])), )
 
     def visit_Decl(self, n):
         logger.debug('{}'.format(_code_generator.visit_Decl(n)))
