@@ -180,8 +180,17 @@ class _DistanceGenerator(NodeVisitor):
 
 
 class LangTransformer(NodeVisitor):
+    """ Traverse the AST and do necessary transformations on the AST according to the typing rules."""
     def __init__(self, function_map=None, set_epsilon=None):
+        """ Initialize the transformer.
+        :param function_map: A dict containing a mapping from logical commands (assert / assume / havoc)
+        to actual commands (e.g., __VERIFIER_assert in CPAChecker), this is an abstraction for use with other
+        verification tools that may have other names for assert / assume / havoc commands.
+        :param set_epsilon: boolean value indicating if we want to set epsilon to 1 to overcome the non-linearity issue.
+        """
         super().__init__()
+
+        # set default value for function_map
         if not function_map:
             self._func_map = {
                 'assert': 'assert',
