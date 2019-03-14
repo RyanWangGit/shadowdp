@@ -254,42 +254,7 @@ class ShadowDPTransformer(NodeVisitor):
         # get the names of parameters
         epsilon, size, q, *_ = self._parameters
 
-        # add declarations for dynamically tracked variables
-        for name, is_align in self._types.dynamic_variables():
-            if name not in self._parameters:
-                distance_name = '__LANG_distance_{}{}'.format('' if is_align else 'shadow_', name)
-                inserted.append(c_ast.Decl(name=distance_name,
-                                           type=c_ast.TypeDecl(declname=distance_name,
-                                                               type=c_ast.IdentifierType(names=['float']),
-                                                               quals=[]),
-                                           init=c_ast.Constant('int', '0'),
-                                           quals=[], funcspec=[], bitsize=[], storage=[]))
-            elif name == q and is_align:
-                # insert parameter __LANG_distance_q
-                node.decl.type.args.params.append(
-                    c_ast.Decl(name='__LANG_distance_{}'.format(q),
-                               type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
-                                                                        .format(q),
-                                                                        type=c_ast.IdentifierType(
-                                                                            names=['float']),
-                                                                        quals=[]),
-                                                    dim=None,
-                                                    dim_quals=[]),
-                               init=None,
-                               quals=[], funcspec=[], bitsize=[], storage=[])
-                )
-                # insert parameter __LANG_index
-                node.decl.type.args.params.append(
-                    c_ast.Decl(name='__LANG_index',
-                               type=c_ast.TypeDecl(declname='__LANG_index',
-                                                   type=c_ast.IdentifierType(names=['int']),
-                                                   quals=[]),
-                               init=None,
-                               quals=[], funcspec=[], bitsize=[], storage=[])
-                )
-
-        # prepend the inserted statements
-        node.body.block_items[:0] = [
+        insert_statements = [
             # insert assume(epsilon > 0)
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(epsilon),
@@ -316,6 +281,44 @@ class ShadowDPTransformer(NodeVisitor):
                        init=c_ast.Constant('int', '0'),
                        quals=[], funcspec=[], bitsize=[], storage=[]),
         ]
+
+        # add declarations for dynamically tracked variables
+        declarations = []
+        for name, is_align in self._types.dynamic_variables():
+            if name not in self._parameters:
+                variable_name = '__LANG_{}_{}'.format('ALIGNED' if is_align else 'SHADOW', name)
+                declarations.append(c_ast.Decl(name=variable_name,
+                                               type=c_ast.TypeDecl(declname=variable_name,
+                                                                   type=c_ast.IdentifierType(names=['float']),
+                                                                   quals=[]),
+                                               init=c_ast.Constant('int', '0'),
+                                               quals=[], funcspec=[], bitsize=[], storage=[]))
+            elif name == q and is_align:
+                # insert parameter __LANG_distance_q
+                node.decl.type.args.params.append(
+                    c_ast.Decl(name='__LANG_distance_{}'.format(q),
+                               type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
+                                                                        .format(q),
+                                                                        type=c_ast.IdentifierType(
+                                                                            names=['float']),
+                                                                        quals=[]),
+                                                    dim=None,
+                                                    dim_quals=[]),
+                               init=None,
+                               quals=[], funcspec=[], bitsize=[], storage=[])
+                )
+                # insert parameter __LANG_index
+                node.decl.type.args.params.append(
+                    c_ast.Decl(name='__LANG_index',
+                               type=c_ast.TypeDecl(declname='__LANG_index',
+                                                   type=c_ast.IdentifierType(names=['int']),
+                                                   quals=[]),
+                               init=None,
+                               quals=[], funcspec=[], bitsize=[], storage=[])
+                )
+
+        # prepend the inserted statements
+        node.body.block_items[:0] = insert_statements + declarations
 
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
