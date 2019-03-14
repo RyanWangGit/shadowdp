@@ -163,7 +163,7 @@ class TypeSystem:
         return self._types[name]
 
     def get_distance(self, name, conditions=None):
-        """ get the distance(align, shadow) of a variable. Simplifies the distance if condition and is_true is given.
+        """ get the distance(align, shadow) of a variable. Simplifies the distance if conditions are given.
         :param name: The name of the variable.
         :param conditions: The condition to apply, can either be `str` or `c_ast.Node`
         :return: (Aligned distance, Shadow distance) of the variable.
