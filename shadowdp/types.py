@@ -47,7 +47,9 @@ def is_node_equal(node_1, node_2):
     return node_1.__repr__() == node_2.__repr__()
 
 
-class _Simplifier(NodeVisitor):
+class _DistanceSimplifier(NodeVisitor):
+    """Simplifies a given distance c_ast node using conditions.
+    e.g. distance x + y > 0 ? 2 : 0 would be simplified to 2 if condition (x + y > 0) is given."""
     def __init__(self, conditions):
         self._conditions = conditions
 
@@ -78,6 +80,8 @@ class _Simplifier(NodeVisitor):
 
 
 class TypeSystem:
+    """ TypeSystem keeps track of the distances of each variable. The distance of each variable is internally
+    represented by c_ast node, and gets simplified and casted to strings when get_distance method is called"""
     _EXPR_NODES = (c_ast.BinaryOp, c_ast.TernaryOp, c_ast.UnaryOp, c_ast.ID, c_ast.Constant, c_ast.ArrayRef)
 
     def __init__(self, types=None):
@@ -116,10 +120,6 @@ class TypeSystem:
             if shadow == '*':
                 dynamics.append((name, False))
         return dynamics
-
-    def _simplify_distance(self, distance, conditions):
-        simplifier = _Simplifier(conditions)
-        return simplifier.simplify(distance)
 
     def __eq__(self, other):
         if isinstance(other, TypeSystem):
@@ -168,21 +168,11 @@ class TypeSystem:
         :param conditions: The condition to apply, can either be `str` or `c_ast.Node`
         :return: (Aligned distance, Shadow distance) of the variable.
         """
-        aligned, shadow = self._types[name]
-        if aligned == '*':
-            aligned = '__LANG_distance_{}'.format(name)
-        else:
-            if conditions and len(conditions) != 0:
-                aligned = _generator.visit(self._simplify_distance(aligned, conditions))
-            else:
-                aligned = _generator.visit(aligned)
-        if shadow == '*':
-            shadow = '__LANG_distance_shadow_{}'.format(name)
-        else:
-            if conditions and len(conditions) != 0:
-                shadow = _generator.visit(self._simplify_distance(shadow, conditions))
-            else:
-                shadow = _generator.visit(shadow)
+        simplifier = _DistanceSimplifier(conditions)
+        distances = self._types[name]
+        aligned, shadow = (_generator.visit(simplifier.simplify(distance))
+                           if distance != '*' and conditions and len(conditions) != 0 else
+                           _generator.visit(distance) for distance in distances)
         return aligned, shadow
 
     def update_distance(self, name, aligned, shadow):
