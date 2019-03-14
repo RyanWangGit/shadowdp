@@ -28,6 +28,7 @@ import logging
 from pycparser import parse_file
 from pycparser.c_generator import CGenerator
 from shadowdp.core import ShadowDPTransformer
+from shadowdp.exceptions import *
 from shadowdp.checker import check
 
 
@@ -80,24 +81,34 @@ def main(argv=sys.argv[1:]):
         logger.error('Option should be check / transform / verify')
         return 1
 
-    # parse the source code
-    logger.info('Parsing {}'.format(results.file))
-    start = time.time()
-    ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
-    transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
+    if results.option[0] == 'check' or results.option[0] == 'transform':
+        # parse the source code
+        logger.info('Parsing {}'.format(results.file))
+        start = time.time()
+        ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
+        transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
 
-    # write the transformed code
-    with open(results.out, 'w') as f:
-        # write verifier headers
-        f.write(__HEADER)
-        transformer.visit(ast)
-        f.write(CGenerator().visit(ast))
+        try:
+            transformer.visit(ast)
+        except NoParameterAnnotationError as e:
+            logger.error('{} First statements must be a string containing annotation'.format(str(e.coord)))
+            return 1
+        except NoSamplingAnnotationError as e:
+            logger.error('{} Sampling command lack annotation'.format(str(e.coord)))
+            return 1
+        else:
+            # write the transformed code
+            with open(results.out, 'w') as f:
+                # write verifier headers
+                f.write(__HEADER)
+                f.write(CGenerator().visit(ast))
 
-    logger.info('Transformation finished in {0:.3f} seconds'.format(time.time() - start))
+            logger.info('Transformation finished in {0:.3f} seconds'.format(time.time() - start))
+
     is_verified = False
-    if results.option == 'check':
+    if results.option[0] == 'check':
         is_verified = check(results.checker, results.out, results.function)
-    elif results.option == 'verify':
+    elif results.option[0] == 'verify':
         is_verified = check(results.checker, results.file, results.function)
 
     # shell code 0 means SUCCESS
