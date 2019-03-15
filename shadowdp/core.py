@@ -428,7 +428,6 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types: {}'.format(self._types))
 
     def visit_If(self, n):
-        self.visit(n.cond)
         logger.debug('types(before branch): {}'.format(self._types))
         logger.debug('if({})'.format(_code_generator.visit(n.cond)))
         before_types = self._types.copy()
