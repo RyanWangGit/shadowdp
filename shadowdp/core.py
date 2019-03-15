@@ -238,6 +238,7 @@ class ShadowDPTransformer(NodeVisitor):
         # the start of the transformation
         self._types.clear()
         logger.info('Start transforming function {} ...'.format(node.decl.name))
+
         # first pickup the annotation for parameters
         first_statement = node.body.block_items[0]
         if not (isinstance(first_statement, c_ast.Constant) and first_statement.type == 'string'):
@@ -263,15 +264,6 @@ class ShadowDPTransformer(NodeVisitor):
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
                                                                c_ast.Constant('int', 0))])),
-            # insert assume(__SHADOWDP_index >= 0);
-            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID('__SHADOWDP_index'),
-                                                               c_ast.Constant('int', 0))])),
-
-            # insert assume(__SHADOWDP_index < size);
-            c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
-                           args=c_ast.ExprList([c_ast.BinaryOp('<', c_ast.ID('__SHADOWDP_index'),
-                                                               c_ast.ID(size))])),
 
             # insert float __SHADOWDP_v_epsilon = 0;
             c_ast.Decl(name='__SHADOWDP_v_epsilon',
@@ -282,43 +274,59 @@ class ShadowDPTransformer(NodeVisitor):
                        quals=[], funcspec=[], bitsize=[], storage=[]),
         ]
 
-        # add declarations for dynamically tracked variables
-        declarations = []
-        for name, is_align in self._types.dynamic_variables():
-            if name not in self._parameters:
-                variable_name = '__LANG_{}_{}'.format('ALIGNED' if is_align else 'SHADOW', name)
-                declarations.append(c_ast.Decl(name=variable_name,
-                                               type=c_ast.TypeDecl(declname=variable_name,
-                                                                   type=c_ast.IdentifierType(names=['float']),
-                                                                   quals=[]),
-                                               init=c_ast.Constant('int', '0'),
-                                               quals=[], funcspec=[], bitsize=[], storage=[]))
-            elif name == q and is_align:
-                # insert parameter __LANG_distance_q
-                node.decl.type.args.params.append(
-                    c_ast.Decl(name='__LANG_distance_{}'.format(q),
-                               type=c_ast.ArrayDecl(type=c_ast.TypeDecl(declname='__LANG_distance_{}'
-                                                                        .format(q),
-                                                                        type=c_ast.IdentifierType(
-                                                                            names=['float']),
-                                                                        quals=[]),
-                                                    dim=None,
-                                                    dim_quals=[]),
-                               init=None,
-                               quals=[], funcspec=[], bitsize=[], storage=[])
-                )
-                # insert parameter __LANG_index
-                node.decl.type.args.params.append(
-                    c_ast.Decl(name='__LANG_index',
-                               type=c_ast.TypeDecl(declname='__LANG_index',
-                                                   type=c_ast.IdentifierType(names=['int']),
-                                                   quals=[]),
-                               init=None,
-                               quals=[], funcspec=[], bitsize=[], storage=[])
-                )
+        if self._one_differ:
+            insert_statements.append(
+                # insert assume(__SHADOWDP_index >= 0);
+                c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                               args=c_ast.ExprList([c_ast.BinaryOp('>=', c_ast.ID('__SHADOWDP_index'),
+                                                                   c_ast.Constant('int', 0))])),
+            )
+            insert_statements.append(
+                # insert assume(__SHADOWDP_index < size);
+                c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                               args=c_ast.ExprList([c_ast.BinaryOp('<', c_ast.ID('__SHADOWDP_index'),
+                                                                   c_ast.ID(size))]))
+            )
+            # insert parameter __SHADOWDP_index
+            node.decl.type.args.params.append(
+                c_ast.Decl(name='__SHADOWDP_index',
+                           type=c_ast.TypeDecl(declname='__SHADOWDP_index',
+                                               type=c_ast.IdentifierType(names=['int']),
+                                               quals=[]),
+                           init=None,
+                           quals=[], funcspec=[], bitsize=[], storage=[])
+            )
+
+        # add declarations / new parameters for dynamically tracked variables
+        for name, *distances in self._types.variables():
+            for index, distance in enumerate(distances):
+                if distance == '*':
+                    # if it is a dynamically tracked local variable, add declarations
+                    version = 'ALIGNED' if index == 0 else 'SHADOW'
+                    if name not in self._parameters:
+                        varname = '__SHADOWDP_{}_{}'.format(version, name)
+                        insert_statements.append(
+                            c_ast.Decl(name=varname,
+                                       type=c_ast.TypeDecl(declname=varname,
+                                                           type=c_ast.IdentifierType(names=['float']), quals=[]),
+                                       init=c_ast.Constant('int', '0'), quals=[], funcspec=[], bitsize=[], storage=[]))
+                    # if it is a dynamically tracked parameter, add new parameters
+                    else:
+                        # TODO: should be able to detect the type of parameters
+                        if name != q:
+                            raise NotImplementedError
+                        varname = '__SHADOWDP_{}_{}'.format(version, q)
+                        node.decl.type.args.params.append(
+                            c_ast.Decl(name=varname,
+                                       type=c_ast.ArrayDecl(
+                                           type=c_ast.TypeDecl(declname=varname, type=c_ast.IdentifierType(
+                                               names=['float']), quals=[]), dim=None, dim_quals=[]),
+                                       init=None,
+                                       quals=[], funcspec=[], bitsize=[], storage=[])
+                        )
 
         # prepend the inserted statements
-        node.body.block_items[:0] = insert_statements + declarations
+        node.body.block_items[:0] = insert_statements
 
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
