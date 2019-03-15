@@ -240,7 +240,7 @@ class ShadowDPTransformer(NodeVisitor):
         logger.info('Start transforming function {} ...'.format(node.decl.name))
 
         # first pickup the annotation for parameters
-        first_statement = node.body.block_items[0]
+        first_statement = node.body.block_items.pop(0)
         if not (isinstance(first_statement, c_ast.Constant) and first_statement.type == 'string'):
             raise NoParameterAnnotationError(first_statement.coord)
         annotation = first_statement.value[1:-1]
