@@ -341,8 +341,8 @@ class ShadowDPTransformer(NodeVisitor):
         self._types.update_distance(node.lvalue.name, aligned, shadow)
         logger.debug('types: {}'.format(self._types))
 
-    def visit_Decl(self, n):
-        logger.debug('{}'.format(_code_generator.visit_Decl(n)))
+    def visit_Decl(self, node):
+        logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
 
         decl_type = n.type
         if isinstance(decl_type, c_ast.FuncDecl):
