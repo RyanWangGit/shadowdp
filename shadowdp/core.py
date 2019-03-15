@@ -22,6 +22,7 @@
 import sympy as sp
 import logging
 import copy
+import re
 from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
@@ -344,85 +345,95 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_Decl(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
 
-        decl_type = n.type
-        if isinstance(decl_type, c_ast.FuncDecl):
-            # put parameters into type system
-            for i, decl in enumerate(decl_type.args.params):
+        # if declarations are in function parameters, store distance into type system
+        if isinstance(node.type, c_ast.FuncDecl):
+            for param_index, decl in enumerate(node.type.args.params):
                 self._parameters.append(decl.name)
-                # TODO: this should be filled by annotation on the argument
-                if isinstance(decl.type, c_ast.TypeDecl):
+                # TODO: this should be filled by annotation on the parameter
+                # query variable has type (*, *)
+                if isinstance(decl.type, c_ast.ArrayDecl) and param_index == 2:
+                    self._types.update_distance(decl.name, '*', '*')
+                # other variables have type (0, 0)
+                elif isinstance(decl.type, c_ast.TypeDecl):
                     self._types.update_distance(decl.name, '0', '0')
-                elif isinstance(decl.type, c_ast.ArrayDecl) and i == 2:
-                    self._types.update_distance(decl.name, '*'.format(decl.name), '__LANG_distance_{}'.format(decl.name))
+
             logger.debug('Params: {}'.format(self._parameters))
-        if isinstance(decl_type, c_ast.TypeDecl):
-            # put variable declaration into type system
-            if n.init:
-                if isinstance(n.init, c_ast.FuncCall):
-                    if n.init.name.name == 'Lap':
-                        # random variable declaration
-                        self._random_variables.add(n.name)
-                        logger.debug('Random variables: {}'.format(self._random_variables))
-                        sample = _code_generator.visit(n.init.args.exprs[0])
-                        assert isinstance(n.init.args.exprs[1], c_ast.Constant) and \
-                               n.init.args.exprs[1].type == 'string', \
-                            'The second argument of Lap function must be string annotation'
-                        s_e, s_d, d_eta, *_ = map(lambda x: x.strip(), n.init.args.exprs[1].value[1:-1].split(';'))
-                        # set the random variable distance
-                        self._types.update_distance(n.name, s_d.replace('ALIGNED', d_eta).replace('SHADOW', '0'), '0')
-                        # set the normal variable distances
-                        for name in self._types.names():
-                            if name not in self._random_variables and name not in self._parameters:
-                                aligned, shadow = self._types.get_distance(name, self._condition_stack)
-                                # if the aligned distance and shadow distance are the same
-                                # then there's no need to update the distances
-                                if aligned == shadow:
-                                    continue
-                                else:
-                                    self._types.update_distance(name,
-                                                                s_e.replace('ALIGNED', '({})'.format(aligned))
-                                                                .replace('SHADOW', '({})'.format(shadow)),
-                                                                shadow)
-                        if self._is_to_transform:
-                            n.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
-                            assert isinstance(self._parents[n], c_ast.Compound)
-                            n_index = self._parents[n].block_items.index(n)
-                            # incorporate epsilon = 1 approach
-                            if self._set_epsilon:
-                                epsilon, *_ = self._parameters
-                                sample = sample.replace(epsilon, '1.0')
-                            cost = '({} * (1/({})))'.format(d_eta, sample)
+
+        # if declarations are in function body, store distance into type system
+        elif isinstance(node.type, c_ast.TypeDecl):
+            # if no initial value is given, default to (0, 0)
+            if not node.init:
+                self._types.update_distance(node.name, '0', '0')
+            elif isinstance(node.init, (c_ast.ExprList, c_ast.Constant)):
+                aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.init)
+                self._types.update_distance(node.name, aligned, shadow)
+            # if it is random variable declaration
+            elif isinstance(node.init, c_ast.FuncCall) and node.init.name.name == 'Lap':
+                self._random_variables.add(node.name)
+                logger.debug('Random variables: {}'.format(self._random_variables))
+                if not (isinstance(node.init.args.exprs[1], c_ast.Constant) and
+                        node.init.args.exprs[1].type == 'string'):
+                    raise NoSamplingAnnotationError
+
+                selector, distance_eta, *_ = map(lambda x: x.strip(), node.init.args.exprs[1].value[1:-1].split(';'))
+                # set the random variable distance
+                self._types.update_distance(node.name, distance_eta, '0')
+
+                # update distances of normal variables according to the selector
+                for name, align, shadow in self._types.variables(self._condition_stack):
+                    # if the aligned distance and shadow distance are the same
+                    # then there's no need to update the distances
+                    if align != shadow and name not in self._random_variables and name not in self._parameters:
+                        self._types.update_distance(
+                            name,
+                            selector.replace('ALIGNED', '({})'.format(align)).replace('SHADOW', '({})'.format(shadow)),
+                            shadow)
+
+                if self._loop_level == 0:
+                    # transform sampling command to havoc command
+                    node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
+
+                    # insert cost variable update statement
+                    assert isinstance(self._parents[node], c_ast.Compound)
+                    n_index = self._parents[node].block_items.index(node)
+                    scale = _code_generator.visit(node.init.args.exprs[0])
+                    # incorporate epsilon = 1 approach
+                    if self._set_epsilon:
+                        epsilon, *_ = self._parameters
+                        scale = scale.replace(epsilon, '1.0')
+
+                    # TODO: maybe create a specialized simplifier for this scenario
+                    pieces = re.compile('\?|\:').split(distance_eta)
+                    new_pieces = []
+                    for piece in pieces:
+                        if '=' not in piece and '>' not in piece and '<' not in piece \
+                                and '|' not in piece and '&' not in piece:
+                            cost = '({} * (1/({})))'.format(piece, scale)
                             # try simplify the cost expression
                             try:
                                 cost = str(sp.simplify(cost))
-                            except:
+                            except Exception:
                                 pass
-                            finally:
-                                pass
+                            new_pieces.append(cost)
+                        else:
+                            pass
 
-                            v_epsilon = '({}) + ({})'.format(s_e.replace('ALIGNED', '__LANG_v_epsilon').replace('SHADOW', '0'),
-                                                             s_d.replace('ALIGNED', cost).replace('SHADOW', '0'))
-                            simplifier = _ExpressionSimplifier()
-                            update_v_epsilon = c_ast.Assignment(op='=',
-                                                                lvalue=c_ast.ID('__LANG_v_epsilon'),
-                                                                rvalue=simplifier.simplify(v_epsilon))
-                            self._parents[n].block_items.insert(n_index + 1, update_v_epsilon)
-                            self._inserted.add(update_v_epsilon)
-
-                    else:
-                        # TODO: function call currently not supported
-                        raise NotImplementedError
-                else:
-                    distance_generator = _DistanceGenerator(self._types, self._condition_stack)
-                    aligned, shadow = distance_generator.visit(n.init)
-                    self._types.update_distance(n.name, aligned, shadow)
+                    v_epsilon = '({}) + ({})'.format(
+                        selector.replace('ALIGNED', '__SHADOWDP_v_epsilon').replace('SHADOW', '0'),
+                        cost)
+                    simplifier = _ExpressionSimplifier()
+                    update_v_epsilon = c_ast.Assignment(op='=',
+                                                        lvalue=c_ast.ID('__LANG_v_epsilon'),
+                                                        rvalue=simplifier.simplify(v_epsilon))
+                    self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+                    self._inserted.add(update_v_epsilon)
             else:
-                self._types.update_distance(n.name, '0', '0')
+                raise NotImplementedError('Initial value currently not supported: {}'.format(node.init))
 
-        elif isinstance(decl_type, c_ast.ArrayDecl):
+        elif isinstance(node.type, c_ast.ArrayDecl):
             # put array variable declaration into type dict
             # TODO: fill in the type
-            self._types.update_distance(n.name, '0', '0')
+            self._types.update_distance(node.name, '0', '0')
 
         logger.debug('types: {}'.format(self._types))
 
