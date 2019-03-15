@@ -112,14 +112,9 @@ class TypeSystem:
     def names(self):
         return self._types.keys()
 
-    def dynamic_variables(self):
-        dynamics = []
-        for name, (align, shadow) in self._types.items():
-            if align == '*':
-                dynamics.append((name, True))
-            if shadow == '*':
-                dynamics.append((name, False))
-        return dynamics
+    def variables(self, conditions=None):
+        for name in self._types.keys():
+            yield name, self.get_distance(name, conditions)
 
     def __eq__(self, other):
         if isinstance(other, TypeSystem):
