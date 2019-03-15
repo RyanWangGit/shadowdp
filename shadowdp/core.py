@@ -216,10 +216,9 @@ class ShadowDPTransformer(NodeVisitor):
         # we keep tracks of the parent of each node since pycparser doesn't provide this feature, this is useful
         # for easy trace back
         self._parents = {}
-        # indicate if the transformation should be done
-        # this is needed since in While statement we might do loop until convergence, in that case we don't need to
-        # do transformation
-        self._is_to_transform = True
+        # indicate if level of loop statements, this is needed since in While statement we might loop until convergence,
+        # before convergence we shouldn't do transformation
+        self._loop_level = 0
         # this is needed if we add some statements next to the current statement
         # e.g. float eta = havoc(); _v_epsilon = ...;
         # we shouldn't visit the `_v_epsilon = ...;` statement node, so we keep track of the inserted statements
@@ -453,7 +452,7 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(after merge): {}'.format(self._types))
         # TODO: use Z3 to solve constraints to decide this value
         to_generate_shadow = True
-        if self._is_to_transform:
+        if self._loop_level == 0:
             # have to generate separate shadow branch
             if to_generate_shadow:
                 shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
@@ -535,15 +534,15 @@ class ShadowDPTransformer(NodeVisitor):
 
     def visit_While(self, node):
         cur_types = None
-        # don't output while doing iterations
+        # don't output logs while doing iterations
         logger.disabled = True
-        self._is_to_transform = False
+        self._loop_level += 1
         while cur_types != self._types:
             cur_types = self._types.copy()
             self.generic_visit(node)
             self._types.merge(cur_types)
         logger.disabled = False
-        self._is_to_transform = True
+        self._loop_level -= 1
         logger.debug('while({})'.format(_code_generator.visit(node.cond)))
         logger.debug('types(fixed point): {}'.format(self._types))
         aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
