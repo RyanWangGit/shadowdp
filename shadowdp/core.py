@@ -335,10 +335,9 @@ class ShadowDPTransformer(NodeVisitor):
                                                                         epsilon_node)])), )
 
     def visit_Assignment(self, node):
-        code = _code_generator.visit(node)
-        logger.debug('{}'.format(code))
-        distance_generator = _DistanceGenerator(self._types, self._condition_stack)
-        aligned, shadow = distance_generator.visit(node.rvalue)
+        logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
+        # get new distance from the assignment expression
+        aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
         self._types.update_distance(node.lvalue.name, aligned, shadow)
         logger.debug('types: {}'.format(self._types))
 
