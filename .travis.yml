@@ -44,14 +44,14 @@ jobs:
             echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
             docker push cmlapsu/shadowdp:latest;
             # push to github cmlapsu/shadowdp
-            rm -rf .git
-            git init
-            git config user.name "Ryan Wang"
-            git config user.email "ryanwang.cs@gmail.com"
-            git add .
-            git commit -m "Release of ShadowDP."
-            git remote add origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git
-            git push -u --force origin master
+            rm -rf .git;
+            git init;
+            git config user.name "Ryan Wang";
+            git config user.email "ryanwang.cs@gmail.com";
+            git add .;
+            git commit -m "Release of ShadowDP.";
+            git remote add origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git;
+            git push -u --force origin master;
           fi
 
 notifications:
