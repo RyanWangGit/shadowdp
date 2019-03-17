@@ -165,9 +165,10 @@ class TypeSystem:
         """
         simplifier = _DistanceSimplifier(conditions)
         distances = self._types[name]
-        aligned, shadow = (_generator.visit(simplifier.simplify(distance))
-                           if distance != '*' and conditions and len(conditions) != 0 else
-                           _generator.visit(distance) for distance in distances)
+
+        aligned, shadow = ('*' if distance == '*' else
+                           (_generator.visit(simplifier.simplify(distance)) if conditions and len(conditions) != 0
+                            else _generator.visit(distance)) for distance in distances)
         return aligned, shadow
 
     def update_distance(self, name, aligned, shadow):
