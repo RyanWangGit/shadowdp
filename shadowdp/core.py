@@ -392,7 +392,7 @@ class ShadowDPTransformer(NodeVisitor):
                     if align != shadow and name not in self._random_variables and name not in self._parameters:
                         self._types.update_distance(
                             name,
-                            selector.replace('ALIGNED', '({})'.format(align)).replace('SHADOW', '({})'.format(shadow)),
+                            selector.replace('SHADOW', '({})'.format(shadow)).replace('ALIGNED', '({})'.format(align)),
                             shadow)
 
                 if self._loop_level == 0:
@@ -425,7 +425,7 @@ class ShadowDPTransformer(NodeVisitor):
                             pass
 
                     v_epsilon = '({}) + ({})'.format(
-                        selector.replace('ALIGNED', '__SHADOWDP_v_epsilon').replace('SHADOW', '0'),
+                        selector.replace('SHADOW', '0').replace('ALIGNED', '__SHADOWDP_v_epsilon'),
                         cost)
                     simplifier = _ExpressionSimplifier()
                     update_v_epsilon = c_ast.Assignment(op='=',
