@@ -437,6 +437,9 @@ class ShadowDPTransformer(NodeVisitor):
             # TODO: fill in the type
             self._types.update_distance(node.name, '0', '0')
 
+        else:
+            raise NotImplementedError('Declaration statement currently not supported: {}'.format(node))
+
         logger.debug('types: {}'.format(self._types))
 
     def visit_If(self, n):
