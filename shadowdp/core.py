@@ -168,13 +168,17 @@ class _DistanceGenerator(NodeVisitor):
         return '0', '0'
 
     def visit_ID(self, n):
-        return self._types.get_distance(n.name, self._conditions)
+        align, shadow = self._types.get_distance(n.name, self._conditions)
+        align = '(__SHADOWDP_ALIGNED_{0} - {0})'.format(n.name) if align == '*' else align
+        shadow = '(__SHADOWDP_SHADOW_{0} - {0})'.format(n.name) if shadow == '*' else shadow
+        return align, shadow
 
     def visit_ArrayRef(self, n):
-        aligned, shadow = self._types.get_distance(n.name.name, self._conditions)
-        aligned += '[{}]'.format(_code_generator.visit(n.subscript))
-        shadow += '[{}]'.format(_code_generator.visit(n.subscript))
-        return [aligned, shadow]
+        varname, subscript = n.name.name, _code_generator.visit(n.subscript)
+        align, shadow = self._types.get_distance(n.name.name, self._conditions)
+        align = '(__SHADOWDP_ALIGNED_{0}[{1}] - {0}[{1}])'.format(varname, subscript) if align == '*' else align
+        shadow = '(__SHADOWDP_SHADOW_{0}[{1}] - {0}[{1}])'.format(varname, subscript) if shadow == '*' else shadow
+        return align, shadow
 
     def visit_BinaryOp(self, n):
         return [self.try_simplify('{} {} {}'.format(left, n.op, right))
