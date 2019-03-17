@@ -44,7 +44,7 @@ jobs:
             docker push cmlapsu/shadowdp:latest;
             rm -rf .git;
             git init;
-            git config user.name "Ryan Wang";
+            git config user.name "Yuxin (Ryan) Wang";
             git config user.email "ryanwang.cs@gmail.com";
             git add .;
             git commit -m "Release of ShadowDP.";
