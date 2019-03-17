@@ -429,7 +429,7 @@ class ShadowDPTransformer(NodeVisitor):
                         cost)
                     simplifier = _ExpressionSimplifier()
                     update_v_epsilon = c_ast.Assignment(op='=',
-                                                        lvalue=c_ast.ID('__LANG_v_epsilon'),
+                                                        lvalue=c_ast.ID('__SHADOWDP_v_epsilon'),
                                                         rvalue=simplifier.simplify(v_epsilon))
                     self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                     self._inserted.add(update_v_epsilon)
