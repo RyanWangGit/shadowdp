@@ -75,6 +75,7 @@ class _ShadowBranchGenerator(NodeVisitor):
 
 
 class _ExpressionReplacer(NodeVisitor):
+    """ this class returns the aligned or shadow version of an expression, e.g., returns e^aligned or e^shadow of e"""
     def __init__(self, types, is_aligned, conditions):
         assert isinstance(types, TypeSystem)
         self._types = types
