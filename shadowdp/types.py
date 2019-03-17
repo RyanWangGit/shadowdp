@@ -171,14 +171,15 @@ class TypeSystem:
                             else _generator.visit(distance)) for distance in distances)
         return aligned, shadow
 
-    def update_distance(self, name, aligned, shadow):
-        aligned = '*' if aligned == '*' else convert_to_ast(aligned)
-        shadow = '*' if shadow == '*' else convert_to_ast(shadow)
+    def update_distance(self, name, align, shadow):
+        # convert to internal AST representation
+        align = convert_to_ast(align) if align != '*' else '*'
+        shadow = convert_to_ast(shadow) if shadow != '*' else '*'
         if name not in self._types:
-            self._types[name] = [aligned, shadow]
+            self._types[name] = [align, shadow]
         else:
             cur_aligned, cur_shadow = self._types[name]
-            if not is_node_equal(cur_aligned, aligned):
-                self._types[name][0] = aligned
+            if not is_node_equal(cur_aligned, align):
+                self._types[name][0] = align
             if not is_node_equal(cur_shadow, shadow):
                 self._types[name][1] = shadow
