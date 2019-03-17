@@ -165,7 +165,7 @@ class _DistanceGenerator(NodeVisitor):
         raise NotImplementedError
 
     def visit_Constant(self, n):
-        return ['0', '0']
+        return '0', '0'
 
     def visit_ID(self, n):
         return self._types.get_distance(n.name, self._conditions)
