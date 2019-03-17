@@ -114,7 +114,8 @@ class TypeSystem:
 
     def variables(self, conditions=None):
         for name in self._types.keys():
-            yield name, self.get_distance(name, conditions)
+            align, shadow = self.get_distance(name, conditions)
+            yield name, align, shadow
 
     def __eq__(self, other):
         if isinstance(other, TypeSystem):
