@@ -298,7 +298,7 @@ class ShadowDPTransformer(NodeVisitor):
             )
 
         # add declarations / new parameters for dynamically tracked variables
-        for name, *distances in self._types.variables():
+        for name, distances in self._types.variables():
             for index, distance in enumerate(distances):
                 if distance == '*':
                     # if it is a dynamically tracked local variable, add declarations
@@ -382,7 +382,7 @@ class ShadowDPTransformer(NodeVisitor):
                 self._types.update_distance(node.name, distance_eta, '0')
 
                 # update distances of normal variables according to the selector
-                for name, align, shadow in self._types.variables(self._condition_stack):
+                for name, (align, shadow) in self._types.variables(self._condition_stack):
                     # if the aligned distance and shadow distance are the same
                     # then there's no need to update the distances
                     if align != shadow and name not in self._random_variables and name not in self._parameters:

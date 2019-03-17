@@ -120,9 +120,7 @@ class TypeSystem:
 
     def variables(self, conditions=None):
         for name in self._types.keys():
-            align, shadow = self.get_distance(name, conditions)
-            yield name, align, shadow
-
+            yield name, self.get_distance(name, conditions)
 
     def diff(self, other):
         assert isinstance(other, TypeSystem)
