@@ -337,7 +337,7 @@ class ShadowDPTransformer(NodeVisitor):
 
     def visit_Assignment(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
-        # get new distance from the assignment expression
+        # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
         self._types.update_distance(node.lvalue.name, aligned, shadow)
         logger.debug('types: {}'.format(self._types))
@@ -376,6 +376,7 @@ class ShadowDPTransformer(NodeVisitor):
                         node.init.args.exprs[1].type == 'string'):
                     raise NoSamplingAnnotationError
 
+                # get the annotation for sampling command
                 selector, distance_eta, *_ = map(lambda x: x.strip(), node.init.args.exprs[1].value[1:-1].split(';'))
                 # set the random variable distance
                 self._types.update_distance(node.name, distance_eta, '0')
