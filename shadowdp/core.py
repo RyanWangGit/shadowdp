@@ -396,9 +396,6 @@ class ShadowDPTransformer(NodeVisitor):
                             shadow)
 
                 if self._loop_level == 0:
-                    # transform sampling command to havoc command
-                    node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
-
                     # insert cost variable update statement
                     assert isinstance(self._parents[node], c_ast.Compound)
                     n_index = self._parents[node].block_items.index(node)
@@ -433,6 +430,9 @@ class ShadowDPTransformer(NodeVisitor):
                                                         rvalue=simplifier.simplify(v_epsilon))
                     self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                     self._inserted.add(update_v_epsilon)
+
+                    # transform sampling command to havoc command
+                    node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
             else:
                 raise NotImplementedError('Initial value currently not supported: {}'.format(node.init))
 
