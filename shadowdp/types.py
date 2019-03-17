@@ -103,6 +103,12 @@ class TypeSystem:
     def __repr__(self):
         return self._types.__repr__()
 
+    def __eq__(self, other):
+        if isinstance(other, TypeSystem):
+            return self._types.__repr__() == other.__repr__()
+        else:
+            return False
+
     def copy(self):
         return TypeSystem(copy.deepcopy(self._types))
 
@@ -117,11 +123,6 @@ class TypeSystem:
             align, shadow = self.get_distance(name, conditions)
             yield name, align, shadow
 
-    def __eq__(self, other):
-        if isinstance(other, TypeSystem):
-            return self._types.__repr__() == other.__repr__()
-        else:
-            return False
 
     def diff(self, other):
         assert isinstance(other, TypeSystem)
