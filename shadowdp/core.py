@@ -144,10 +144,6 @@ class _ExpressionSimplifier(NodeVisitor):
         # TODO
         return n
 
-    def simplify(self, expression):
-        ast = convert_to_ast(expression)
-        return self.visit(ast)
-
 
 class _DistanceGenerator(NodeVisitor):
     def __init__(self, types, conditions):
@@ -341,11 +337,12 @@ class ShadowDPTransformer(NodeVisitor):
                                                                         epsilon_node)])), )
 
     def visit_Assignment(self, node):
-        logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
-        # get new distance from the assignment expression (T-Asgn)
-        aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
-        self._types.update_distance(node.lvalue.name, aligned, shadow)
-        logger.debug('types: {}'.format(self._types))
+        if self._loop_level == 0:
+            logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
+            # get new distance from the assignment expression (T-Asgn)
+            aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
+            self._types.update_distance(node.lvalue.name, aligned, shadow)
+            logger.debug('types: {}'.format(self._types))
 
     def visit_Decl(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
@@ -397,7 +394,7 @@ class ShadowDPTransformer(NodeVisitor):
                             shadow)
 
                 if self._loop_level == 0:
-                    # insert cost variable update statement
+                    # insert cost variable update statement and transform sampling command to havoc command (T-Lap)
                     assert isinstance(self._parents[node], c_ast.Compound)
                     n_index = self._parents[node].block_items.index(node)
                     scale = _code_generator.visit(node.init.args.exprs[0])
@@ -407,28 +404,25 @@ class ShadowDPTransformer(NodeVisitor):
                         scale = scale.replace(epsilon, '1.0')
 
                     # TODO: maybe create a specialized simplifier for this scenario
-                    pieces = re.compile('\?|\:').split(distance_eta)
-                    new_pieces = []
+                    # transform distance expression to cost expression,
+                    # e.g., q[i] + eta > bq ? 2 : 0 -> q[i] + eta > bq ? 2 * 1 / scale : 0
+                    pieces = re.split('([?:])', distance_eta)
+                    transformed = []
                     for piece in pieces:
-                        if '=' not in piece and '>' not in piece and '<' not in piece \
-                                and '|' not in piece and '&' not in piece:
-                            cost = '({} * (1/({})))'.format(piece, scale)
-                            # try simplify the cost expression
-                            try:
-                                cost = str(sp.simplify(cost))
-                            except Exception:
-                                pass
-                            new_pieces.append(cost)
+                        if len(re.findall(r'[=><\\|&?|:]', piece)) == 0:
+                            cost = str(sp.simplify('({} * (1/({})))'.format(piece, scale)))
+                            transformed.append(cost)
                         else:
-                            pass
+                            transformed.append(piece)
 
+                    # calculate v_epsilon by combining normal cost and sampling cost
                     v_epsilon = '({}) + ({})'.format(
                         selector.replace('SHADOW', '0').replace('ALIGNED', '__SHADOWDP_v_epsilon'),
-                        cost)
-                    simplifier = _ExpressionSimplifier()
+                        ''.join(transformed))
+
+                    v_epsilon = _ExpressionSimplifier().visit(convert_to_ast(v_epsilon))
                     update_v_epsilon = c_ast.Assignment(op='=',
-                                                        lvalue=c_ast.ID('__SHADOWDP_v_epsilon'),
-                                                        rvalue=simplifier.simplify(v_epsilon))
+                                                        lvalue=c_ast.ID('__SHADOWDP_v_epsilon'), rvalue=v_epsilon)
                     self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                     self._inserted.add(update_v_epsilon)
 
