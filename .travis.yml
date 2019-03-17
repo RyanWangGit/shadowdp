@@ -40,10 +40,8 @@ jobs:
       after_success:
         # only deploy on stable master branch
         - if [[ "$TRAVIS_BRANCH" = "master" && $TRAVIS_PULL_REQUEST = "false" ]]; then
-            # push to docker hub
             echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
             docker push cmlapsu/shadowdp:latest;
-            # push to github cmlapsu/shadowdp
             rm -rf .git;
             git init;
             git config user.name "Ryan Wang";
