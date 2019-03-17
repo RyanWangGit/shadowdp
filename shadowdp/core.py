@@ -364,6 +364,7 @@ class ShadowDPTransformer(NodeVisitor):
             # if no initial value is given, default to (0, 0)
             if not node.init:
                 self._types.update_distance(node.name, '0', '0')
+            # else update the distance to the distance of initial value (T-Asgn)
             elif isinstance(node.init, (c_ast.ExprList, c_ast.Constant)):
                 aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.init)
                 self._types.update_distance(node.name, aligned, shadow)
