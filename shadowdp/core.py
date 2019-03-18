@@ -55,7 +55,7 @@ class _ShadowBranchGenerator(NodeVisitor):
         :param shadow_variables: the variable list whose shadow distances should be updated
         """
         self._shadow_variables = shadow_variables
-        self._distance_generator = _DistanceGenerator(types, conditions)
+        self._expression_replacer = _ExpressionReplacer(types, False, conditions)
 
     def visit_Decl(self, node):
         raise NotImplementedError('currently doesn\'t support declaration in branch')
@@ -67,8 +67,8 @@ class _ShadowBranchGenerator(NodeVisitor):
                             if isinstance(child, c_ast.Assignment) and child.lvalue.name in self._shadow_variables]
         for child in node:
             if isinstance(child, c_ast.Assignment):
-                child.lvalue.name = '__LANG_distance_shadow_{}'.format(child.lvalue.name)
-                child.rvalue = convert_to_ast(self._distance_generator.visit(child.rvalue)[1])
+                child.lvalue.name = '__SHADOWDP_SHADOW_{}'.format(child.lvalue.name)
+                child.rvalue = self._expression_replacer.visit(child.rvalue)
             else:
                 self.visit(child)
 
