@@ -34,3 +34,7 @@ class NoParameterAnnotationError(NoAnnotationError):
 class NoSamplingAnnotationError(NoAnnotationError):
     def __init__(self, coord):
         super().__init__(coord)
+
+
+class ReturnDistanceNotZero(ValueError):
+    pass
