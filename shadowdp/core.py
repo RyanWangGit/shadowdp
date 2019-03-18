@@ -234,7 +234,7 @@ class ShadowDPTransformer(NodeVisitor):
         self._inserted = set()
 
     def _instrument_assume(self, query_node):
-        """ instrument assume functions of query input """
+        """ instrument assume functions of query input (sensitivity guarantee) """
         assume_functions = []
         shadow_query_node = copy.deepcopy(query_node)
         original_query_node = copy.deepcopy(query_node)
