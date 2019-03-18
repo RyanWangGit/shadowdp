@@ -492,7 +492,6 @@ class ShadowDPTransformer(NodeVisitor):
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
 
-            # TODO: the following piece of code can be simplified
             exp_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
                                                          '__SHADOWDP_ALIGNED' in node.name.name and
                                                          self._parameters[2] in node.name.name)
