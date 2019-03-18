@@ -281,6 +281,7 @@ class ShadowDPTransformer(NodeVisitor):
                        quals=[], funcspec=[], bitsize=[], storage=[]),
         ]
 
+        # setup different sensitivity settings
         if self._one_differ:
             insert_statements.append(
                 # insert assume(__SHADOWDP_index >= 0);
