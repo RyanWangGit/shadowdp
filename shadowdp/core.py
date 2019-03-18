@@ -329,13 +329,6 @@ class ShadowDPTransformer(NodeVisitor):
         # prepend the inserted statements
         node.body.block_items[:0] = insert_statements
 
-        # insert assert(__SHADOWDP_v_epsilon <= epsilon);
-        epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
-        node.body.block_items.append(c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
-                                                    args=c_ast.ExprList(
-                                                        [c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
-                                                                        epsilon_node)])), )
-
     def visit_Assignment(self, node):
         if self._loop_level == 0:
             logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
@@ -571,3 +564,14 @@ class ShadowDPTransformer(NodeVisitor):
         align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
         if align != '0':
             raise ReturnDistanceNotZero()
+        # insert assert(__SHADOWDP_v_epsilon <= epsilon);
+        epsilon, *_ = self._parameters
+        epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
+        assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
+                                     args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
+                                                                         epsilon_node)]))
+        self._parents[node].block_items.insert(self._parents[node].block_items.index(node), assert_node)
+        self._inserted.add(assert_node)
+        # because we have inserted a statement before Return statement while iterating, it will be a forever loop
+        # add the current node to the set to not visit this same node again
+        self._inserted.add(node)
