@@ -436,7 +436,10 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_If(self, n):
         logger.debug('types(before branch): {}'.format(self._types))
         logger.debug('Line {}: if({})'.format(n.coord.line, _code_generator.visit(n.cond)))
+        # backup the current types before entering the true or false branch
         before_types = self._types.copy()
+
+        # add current condition for simplification
         self._condition_stack.append([n.cond, True])
         # to be used in if branch transformation assert(e^aligned);
         aligned_true_cond = _ExpressionReplacer(before_types, True, self._condition_stack).visit(
