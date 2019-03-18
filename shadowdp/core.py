@@ -489,63 +489,65 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted.add(shadow_branch)
                 self._parents[n].block_items.insert(self._parents[n].block_items.index(n) + 1, shadow_branch)
 
-            # insert assertion
-            n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                                          args=c_ast.ExprList(exprs=[aligned_true_cond])))
-
-            # if the expression contains `query` variable, add an assume function on dq
-            exp_checker = _ExpressionFinder(
-                lambda node: isinstance(node, c_ast.ArrayRef) and
-                             node.name.name == '__LANG_distance_{}'.format(self._parameters[2]))
-            query_distance_node = exp_checker.visit(aligned_true_cond)
-            if query_distance_node:
-                # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
-                # TODO: should change according to programmer
-                assume_function = \
-                    c_ast.FuncCall(name=c_ast.ID(self._func_map['assume']),
-                                   args=c_ast.ExprList(
-                                       exprs=[c_ast.BinaryOp(op='&&',
-                                                             left=c_ast.BinaryOp(op='>=',
-                                                                                 left=query_distance_node,
-                                                                                 right=c_ast.Constant('int', '-1')),
-                                                             right=c_ast.BinaryOp(op='<=',
-                                                                                  left=query_distance_node,
-                                                                                  right=c_ast.Constant('int', '1')))]))
-                n.iftrue.block_items.insert(0, assume_function)
-
-            for name, is_aligned in self._types.diff(true_types):
-                if is_aligned:
-                    n.iftrue.block_items.append(c_ast.Assignment(op='=',
-                                                                 lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
-                                                                 rvalue=true_types.get_raw_distance(name)[0]))
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
-            # add assume to else branch
-            # insert assertion
-            n.iffalse.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                                           args=c_ast.ExprList(exprs=[
-                                                               c_ast.UnaryOp(op='!', expr=aligned_false_cond)
-                                                           ])))
-            query_distance_node = exp_checker.visit(aligned_false_cond)
-            if query_distance_node:
-                # insert assume(__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1)
-                # TODO: should change according to programmer
-                assume_function = \
-                    c_ast.FuncCall(name=c_ast.ID(self._func_map['assume']),
-                                   args=c_ast.ExprList(
-                                       exprs=[c_ast.BinaryOp(op='&&',
-                                                             left=c_ast.BinaryOp(op='>=',
-                                                                                 left=query_distance_node,
-                                                                                 right=c_ast.Constant('int', '-1')),
-                                                             right=c_ast.BinaryOp(op='<=',
-                                                                                  left=query_distance_node,
-                                                                                  right=c_ast.Constant('int', '1')))]))
-                n.iffalse.block_items.insert(0, assume_function)
-            for name, is_aligned in self._types.diff(false_types):
-                if is_aligned:
-                    n.iffalse.block_items.append(c_ast.Assignment(op='=',
-                                                                  lvalue=c_ast.ID('__LANG_distance_{}'.format(name)),
-                                                                  rvalue=false_types.get_raw_distance(name)[0]))
+
+            # TODO: the following piece of code can be simplified
+            exp_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
+                                                         '__SHADOWDP_ALIGNED' in node.name.name and
+                                                         self._parameters[2] in node.name.name)
+
+            # insert assert and assume functions to corresponding branch
+            for aligned_cond in (aligned_true_cond, aligned_false_cond):
+                block_node = n.iftrue if aligned_cond is aligned_true_cond else n.iffalse
+                # insert the assertion
+                block_node.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                                                args=c_ast.ExprList(exprs=[aligned_cond])))
+                # if the expression contains `query` variable,
+                # add assume functions on __SHADOWDP_ALIGNED_query and __SHADOWDP_SHADOW_query
+                query_node = exp_checker.visit(aligned_cond)
+                if query_node:
+                    # insert following statements:
+                    if self._one_differ:
+                        # TODO: implement here
+                        pass
+                    # insert following statements:
+                    # assume(__SHADOWDP_ALIGNED_q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] <= 1);
+                    # assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+                    else:
+                        shadow_query_node = copy.deepcopy(query_node)
+                        shadow_query_node.name.name = query_node.name.name.replace('ALIGNED', 'SHADOW')
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
+                                                                      left=shadow_query_node,
+                                                                      right=query_node)]))
+                        block_node.block_items.insert(0, assume_function)
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='>=',
+                                                                      left=query_node,
+                                                                      right=c_ast.Constant('int', '-1'))]))
+                        block_node.block_items.insert(0, assume_function)
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='<=',
+                                                                      left=query_node,
+                                                                      right=c_ast.Constant('int', '1'))]))
+                        block_node.block_items.insert(0, assume_function)
+
+            # instrument statements for updating aligned or shadow variables (Instrumentation rule)
+            for types in (true_types, false_types):
+                block_node = n.iftrue if types is true_types else n.iffalse
+                # TODO: should handle more cases
+                for name, is_aligned in self._types.diff(true_types):
+                    if is_aligned:
+                        block_node.block_items.append(
+                            c_ast.Assignment(op='=',
+                                             lvalue=c_ast.ID('__SHADOWDP_ALIGNED_{}'),
+                                             rvalue=c_ast.BinaryOp(op='+',
+                                                                   left=c_ast.ID(name=name),
+                                                                   right=true_types.get_raw_distance(name)[0])))
 
         self._condition_stack.pop()
 
