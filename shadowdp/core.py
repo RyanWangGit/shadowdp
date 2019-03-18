@@ -544,7 +544,7 @@ class ShadowDPTransformer(NodeVisitor):
                     if is_aligned:
                         block_node.block_items.append(
                             c_ast.Assignment(op='=',
-                                             lvalue=c_ast.ID('__SHADOWDP_ALIGNED_{}'),
+                                             lvalue=c_ast.ID('__SHADOWDP_ALIGNED_{}'.format(name)),
                                              rvalue=c_ast.BinaryOp(op='+',
                                                                    left=c_ast.ID(name=name),
                                                                    right=true_types.get_raw_distance(name)[0])))
