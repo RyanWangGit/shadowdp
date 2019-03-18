@@ -466,8 +466,6 @@ class ShadowDPTransformer(NodeVisitor):
             if to_generate_shadow:
                 shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
                     copy.deepcopy(n.cond))
-                parent = self._parents[n]
-                n_index = parent.block_items.index(n)
                 shadow_branch = c_ast.If(cond=shadow_cond,
                                          iftrue=c_ast.Compound(
                                              block_items=copy.deepcopy(n.iftrue.block_items)),
@@ -479,7 +477,7 @@ class ShadowDPTransformer(NodeVisitor):
                     self._condition_stack)
                 shadow_branch_generator.visit(shadow_branch)
                 self._inserted.add(shadow_branch)
-                parent.block_items.insert(n_index + 1, shadow_branch)
+                self._parents[n].block_items.insert(self._parents[n].block_items.index(n) + 1, shadow_branch)
 
             # insert assertion
             n.iftrue.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
