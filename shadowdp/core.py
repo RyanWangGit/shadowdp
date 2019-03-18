@@ -596,7 +596,7 @@ class ShadowDPTransformer(NodeVisitor):
                                              lvalue=c_ast.ID('__SHADOWDP_ALIGNED_{}'.format(name)),
                                              rvalue=c_ast.BinaryOp(op='+',
                                                                    left=c_ast.ID(name=name),
-                                                                   right=true_types.get_raw_distance(name)[0])))
+                                                                   right=types.get_raw_distance(name)[0])))
 
         self._condition_stack.pop()
 
