@@ -566,3 +566,8 @@ class ShadowDPTransformer(NodeVisitor):
         self._inserted.add(assertion)
         node.stmt.block_items.insert(0, assertion)
         self.generic_visit(node)
+
+    def visit_Return(self, node):
+        align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
+        if align != '0':
+            raise ReturnDistanceNotZero()
