@@ -589,7 +589,7 @@ class ShadowDPTransformer(NodeVisitor):
             for types in (true_types, false_types):
                 block_node = n.iftrue if types is true_types else n.iffalse
                 # TODO: should handle more cases
-                for name, is_aligned in self._types.diff(true_types):
+                for name, is_aligned in self._types.diff(types):
                     if is_aligned:
                         block_node.block_items.append(
                             c_ast.Assignment(op='=',
