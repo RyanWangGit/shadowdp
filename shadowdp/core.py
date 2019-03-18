@@ -435,7 +435,7 @@ class ShadowDPTransformer(NodeVisitor):
 
     def visit_If(self, n):
         logger.debug('types(before branch): {}'.format(self._types))
-        logger.debug('if({})'.format(_code_generator.visit(n.cond)))
+        logger.debug('Line {}: if({})'.format(n.coord.line, _code_generator.visit(n.cond)))
         before_types = self._types.copy()
         self._condition_stack.append([n.cond, True])
         # to be used in if branch transformation assert(e^aligned);
@@ -549,7 +549,7 @@ class ShadowDPTransformer(NodeVisitor):
             self._types.merge(cur_types)
         logger.disabled = False
         self._loop_level -= 1
-        logger.debug('while({})'.format(_code_generator.visit(node.cond)))
+        logger.debug('Line {}: while({})'.format(node.coord.line, _code_generator.visit(node.cond)))
         logger.debug('types(fixed point): {}'.format(self._types))
         aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
             copy.deepcopy(node.cond))
