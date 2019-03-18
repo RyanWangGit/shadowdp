@@ -57,9 +57,8 @@ class _ShadowBranchGenerator(NodeVisitor):
         self._shadow_variables = shadow_variables
         self._distance_generator = _DistanceGenerator(types, conditions)
 
-    # TODO: currently doesn't support declaration in branch
     def visit_Decl(self, node):
-        raise NotImplementedError
+        raise NotImplementedError('currently doesn\'t support declaration in branch')
 
     def visit_Compound(self, node):
         # TODO: currently doesn't support ArrayRef
