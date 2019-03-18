@@ -525,13 +525,17 @@ class ShadowDPTransformer(NodeVisitor):
                         assume_function = c_ast.FuncCall(
                             name=c_ast.ID(self._func_map['assume']),
                             args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='>=',
-                                                                      left=query_node,
+                                                                      left=c_ast.BinaryOp('-',
+                                                                                          left=query_node,
+                                                                                          right=original_query_node),
                                                                       right=c_ast.Constant('int', '-1'))]))
                         block_node.block_items.insert(0, assume_function)
                         assume_function = c_ast.FuncCall(
                             name=c_ast.ID(self._func_map['assume']),
                             args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='<=',
-                                                                      left=query_node,
+                                                                      left=c_ast.BinaryOp('-',
+                                                                                          left=query_node,
+                                                                                          right=original_query_node),
                                                                       right=c_ast.Constant('int', '1'))]))
                         block_node.block_items.insert(0, assume_function)
 
