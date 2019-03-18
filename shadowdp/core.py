@@ -576,8 +576,11 @@ class ShadowDPTransformer(NodeVisitor):
             for aligned_cond in (aligned_true_cond, aligned_false_cond):
                 block_node = n.iftrue if aligned_cond is aligned_true_cond else n.iffalse
                 # insert the assertion
+                assert_body = c_ast.ExprList(exprs=[aligned_cond]) if aligned_cond is aligned_true_cond else \
+                    c_ast.UnaryOp(op='!', expr=c_ast.ExprList(exprs=[aligned_cond]))
+
                 block_node.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                                                args=c_ast.ExprList(exprs=[aligned_cond])))
+                                                                args=assert_body))
                 # if the expression contains `query` variable,
                 # add assume functions on __SHADOWDP_ALIGNED_query and __SHADOWDP_SHADOW_query
                 query_node = exp_checker.visit(aligned_cond)
