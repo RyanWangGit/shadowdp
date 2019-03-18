@@ -444,10 +444,12 @@ class ShadowDPTransformer(NodeVisitor):
         self.visit(n.iftrue)
         true_types = self._types
         logger.debug('types(true branch): {}'.format(true_types))
+
+        # revert current types back to enter the false branch
         self._types = before_types.copy()
-        logger.debug('else')
         self._condition_stack[-1][1] = False
         if n.iffalse:
+            logger.debug('Line: {} else'.format(n.iffalse.coord.line))
             self.visit(n.iffalse)
         # to be used in else branch transformation assert(not (e^aligned));
         aligned_false_cond = _ExpressionReplacer(before_types, True, self._condition_stack).visit(
@@ -456,6 +458,7 @@ class ShadowDPTransformer(NodeVisitor):
         false_types = self._types.copy()
         self._types.merge(true_types)
         logger.debug('types(after merge): {}'.format(self._types))
+
         # TODO: use Z3 to solve constraints to decide this value
         to_generate_shadow = True
         if self._loop_level == 0:
