@@ -474,7 +474,7 @@ class ShadowDPTransformer(NodeVisitor):
                                          iffalse=c_ast.Compound(
                                              block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
-                    {name for name, is_aligned in self._types.dynamic_variables() if not is_aligned},
+                    {name for name, (_, shadow) in self._types.variables() if shadow == '*'},
                     self._types,
                     self._condition_stack)
                 shadow_branch_generator.visit(shadow_branch)
