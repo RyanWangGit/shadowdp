@@ -572,8 +572,6 @@ class ShadowDPTransformer(NodeVisitor):
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
 
-
-
             # insert assert and assume functions to corresponding branch
             for aligned_cond in (aligned_true_cond, aligned_false_cond):
                 block_node = n.iftrue if aligned_cond is aligned_true_cond else n.iffalse
