@@ -506,16 +506,67 @@ class ShadowDPTransformer(NodeVisitor):
                 # add assume functions on __SHADOWDP_ALIGNED_query and __SHADOWDP_SHADOW_query
                 query_node = exp_checker.visit(aligned_cond)
                 if query_node:
+                    shadow_query_node = copy.deepcopy(query_node)
+                    original_query_node = copy.deepcopy(query_node)
+                    shadow_query_node.name.name = query_node.name.name.replace('ALIGNED', 'SHADOW')
+                    original_query_node.name.name = query_node.name.name.replace('__SHADOWDP_ALIGNED_', '')
                     # insert following statements:
+                    # if (i == __SHADOWDP_index) {
+                    #   assume(__SHADOWDP_ALIGNED_q[i] - q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] - q[i] <= 1);
+                    #   assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+                    # }
+                    # else {
+                    #   assume(__SHADOWDP_ALIGNED_q[i] - q[i] == 0);
+                    #   assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+                    # }
                     if self._one_differ:
-                        # TODO: implement here
-                        pass
+                        if_block = c_ast.If(cond=c_ast.BinaryOp('==',
+                                                                left=query_node.subscript,
+                                                                right=c_ast.ID(name='__SHADOWDP_index')),
+                                            iftrue=c_ast.Compound(block_items=[]),
+                                            iffalse=c_ast.Compound(block_items=[]))
+                        block_node.block_items.insert(0, if_block)
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
+                                                                      left=shadow_query_node,
+                                                                      right=query_node)]))
+                        if_block.iftrue.block_items.insert(0, assume_function)
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='>=',
+                                                                      left=c_ast.BinaryOp('-',
+                                                                                          left=query_node,
+                                                                                          right=original_query_node),
+                                                                      right=c_ast.Constant('int', '-1'))]))
+                        if_block.iftrue.block_items.insert(0, assume_function)
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='<=',
+                                                                      left=c_ast.BinaryOp('-',
+                                                                                          left=query_node,
+                                                                                          right=original_query_node),
+                                                                      right=c_ast.Constant('int', '1'))]))
+                        if_block.iftrue.block_items.insert(0, assume_function)
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
+                                                                      left=c_ast.BinaryOp('-',
+                                                                                          left=query_node,
+                                                                                          right=original_query_node),
+                                                                      right=c_ast.Constant('int', '0'))]))
+                        if_block.iffalse.block_items.insert(0, assume_function)
+                        assume_function = c_ast.FuncCall(
+                            name=c_ast.ID(self._func_map['assume']),
+                            args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
+                                                                      left=shadow_query_node,
+                                                                      right=query_node)]))
+                        if_block.iffalse.block_items.insert(0, assume_function)
+
                     # insert following statements:
-                    # assume(__SHADOWDP_ALIGNED_q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] <= 1);
+                    # assume(__SHADOWDP_ALIGNED_q[i] - q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] - q[i] <= 1);
                     # assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
                     else:
-                        shadow_query_node = copy.deepcopy(query_node)
-                        shadow_query_node.name.name = query_node.name.name.replace('ALIGNED', 'SHADOW')
                         assume_function = c_ast.FuncCall(
                             name=c_ast.ID(self._func_map['assume']),
                             args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
