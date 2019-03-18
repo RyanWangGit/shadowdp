@@ -329,12 +329,11 @@ class ShadowDPTransformer(NodeVisitor):
         node.body.block_items[:0] = insert_statements
 
     def visit_Assignment(self, node):
-        if self._loop_level == 0:
-            logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
-            # get new distance from the assignment expression (T-Asgn)
-            aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
-            self._types.update_distance(node.lvalue.name, aligned, shadow)
-            logger.debug('types: {}'.format(self._types))
+        logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
+        # get new distance from the assignment expression (T-Asgn)
+        aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
+        self._types.update_distance(node.lvalue.name, aligned, shadow)
+        logger.debug('types: {}'.format(self._types))
 
     def visit_Decl(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
