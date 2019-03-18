@@ -87,16 +87,23 @@ class _ExpressionReplacer(NodeVisitor):
             distance = alignd if self._is_aligned else shadow
             if distance == '0':
                 return node
+            elif distance == '*':
+                return c_ast.ArrayRef(
+                    name=c_ast.ID(
+                        name='__SHADOWDP_{}_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', node.name.name)),
+                    subscript=node.subscript
+                )
             else:
                 return c_ast.BinaryOp(op='+',
                                       left=node,
-                                      right=c_ast.ArrayRef(name=c_ast.ID(name=distance),
-                                                           subscript=node.subscript))
+                                      right=convert_to_ast(distance))
         elif isinstance(node, c_ast.ID):
             aligned, shadow = self._types.get_distance(node.name, self._conditions)
             distance = aligned if self._is_aligned else shadow
             if distance == '0':
                 return node
+            elif distance == '*':
+                return c_ast.ID(name='__SHADOWDP_{}_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', node.name))
             else:
                 return c_ast.BinaryOp(op='+',
                                       left=node,
