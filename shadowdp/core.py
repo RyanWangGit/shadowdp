@@ -62,7 +62,7 @@ class _ShadowBranchGenerator(NodeVisitor):
 
     def visit_Compound(self, node):
         # TODO: currently doesn't support ArrayRef
-        # remove those assignments which has no
+        # only generate shadow execution for dynamically tracked variables
         node.block_items = [child for child in node.block_items
                             if isinstance(child, c_ast.Assignment) and child.lvalue.name in self._shadow_variables]
         for child in node:
