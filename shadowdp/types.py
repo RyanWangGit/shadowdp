@@ -115,16 +115,13 @@ class TypeSystem:
     def clear(self):
         self._types.clear()
 
-    def names(self):
-        return self._types.keys()
-
     def variables(self, conditions=None):
         for name in self._types.keys():
             yield name, self.get_distance(name, conditions)
 
     def diff(self, other):
         assert isinstance(other, TypeSystem)
-        for name in other.names():
+        for name, *_ in other.variables():
             if name not in self._types:
                 yield (name, True)
                 yield (name, False)
@@ -138,7 +135,7 @@ class TypeSystem:
 
     def merge(self, other):
         assert isinstance(other, TypeSystem)
-        for name in other.names():
+        for name, *_ in other.variables():
             if name not in self._types:
                 # TODO: break PEP8, maybe expose an interface to access internal dict
                 self._types[name] = other._types[name]
