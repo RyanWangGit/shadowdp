@@ -537,6 +537,10 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(after merge): {}'.format(self._types))
 
         # TODO: use Z3 to solve constraints to decide this value
+        exp_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
+                                                     '__SHADOWDP_' in node.name.name and
+                                                     self._parameters[2] in node.name.name)
+
         to_generate_shadow = True
         if self._loop_level == 0:
             # have to generate separate shadow branch
@@ -556,12 +560,19 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted.add(shadow_branch)
                 self._parents[n].block_items.insert(self._parents[n].block_items.index(n) + 1, shadow_branch)
 
+                # insert assume functions before the shadow branch
+                query_node = exp_checker.visit(shadow_cond)
+                if query_node:
+                    assume_functions = self._instrument_assume(query_node)
+                    index = self._parents[n].block_items.index(n) + 1
+                    self._parents[n].block_items[index:index] = assume_functions
+                    for assume_function in assume_functions:
+                        self._inserted.add(assume_function)
+
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
 
-            exp_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
-                                                         '__SHADOWDP_ALIGNED' in node.name.name and
-                                                         self._parameters[2] in node.name.name)
+
 
             # insert assert and assume functions to corresponding branch
             for aligned_cond in (aligned_true_cond, aligned_false_cond):
