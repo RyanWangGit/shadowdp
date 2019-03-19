@@ -481,7 +481,7 @@ class ShadowDPTransformer(NodeVisitor):
                     # incorporate epsilon = 1 approach
                     if self._set_epsilon:
                         epsilon, *_ = self._parameters
-                        scale = scale.replace(epsilon, '1.0')
+                        scale = scale.replace(epsilon, self._set_epsilon)
 
                     # TODO: maybe create a specialized simplifier for this scenario
                     # transform distance expression to cost expression,
@@ -647,7 +647,8 @@ class ShadowDPTransformer(NodeVisitor):
             raise ReturnDistanceNotZero()
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
-        epsilon_node = c_ast.Constant(type='float', value=1.0) if self._set_epsilon else c_ast.ID(epsilon)
+        epsilon_node = c_ast.Constant(type='float', value=float(self._set_epsilon)) \
+            if self._set_epsilon else c_ast.ID(epsilon)
         assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
                                      args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
                                                                          epsilon_node)]))

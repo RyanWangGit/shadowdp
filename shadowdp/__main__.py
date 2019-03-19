@@ -70,7 +70,7 @@ def main(argv=sys.argv[1:]):
                             action='store', dest='function', type=str, default=None,
                             help='The function to verify.', required=False)
     arg_parser.add_argument('-e', '--epsilon',
-                            action='store_true', dest='epsilon', default=False,
+                            action='store', dest='epsilon', type=str, default=None,
                             help='Set epsilon = 1 to solve the non-linear issues.', required=False)
     results = arg_parser.parse_args(argv)
     results.file = results.file[0]
