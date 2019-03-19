@@ -1,6 +1,6 @@
 int noisymax (float epsilon, int size, float q[])
 {
-  "ALL_DIFFER";
+  "ALL_DIFFER; epsilon: <0, 0>; size: <0, 0>; q: <*, *>";
   int max = 0;
   int i = 0;
   float bq = 0;

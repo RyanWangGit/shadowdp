@@ -1,6 +1,6 @@
 int partialsum (float epsilon, int size, float q[])
 {
-  "ONE_DIFFER";
+  "ONE_DIFFER; epsilon: <0, 0>; size: <0, 0>; q: <*, *>";
   float out = 0;
   float sum = 0; int i = 0;
   while(i < size)
