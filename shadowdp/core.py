@@ -237,29 +237,32 @@ class ShadowDPTransformer(NodeVisitor):
         """ instrument assume functions of query input (sensitivity guarantee) """
         assume_functions = []
         shadow_query_node = copy.deepcopy(query_node)
+        align_query_node = copy.deepcopy(query_node)
         original_query_node = copy.deepcopy(query_node)
-        shadow_query_node.name.name = query_node.name.name.replace('ALIGNED', 'SHADOW')
+        regex = re.compile(r'__SHADOWDP_[A-Z]+_([_a-zA-Z][a-zA-Z0-9\[\]]*)')
+        align_query_node.name.name = regex.sub(r'__SHADOWDP__ALIGNED_\g<1>', query_node.name.name)
+        shadow_query_node.name.name = regex.sub(r'__SHADOWDP__SHADOW_\g<1>', query_node.name.name)
         original_query_node.name.name = query_node.name.name.replace('__SHADOWDP_ALIGNED_', '')
         common_assume = [
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='<=',
                                                               left=c_ast.BinaryOp('-',
-                                                                                  left=query_node,
+                                                                                  left=align_query_node,
                                                                                   right=original_query_node),
                                                               right=c_ast.Constant('int', '1'))])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='>=',
                                                               left=c_ast.BinaryOp('-',
-                                                                                  left=query_node,
+                                                                                  left=align_query_node,
                                                                                   right=original_query_node),
                                                               right=c_ast.Constant('int', '-1'))])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
                                                               left=shadow_query_node,
-                                                              right=query_node)]))
+                                                              right=align_query_node)]))
             ]
         # insert following statements:
         # if (i == __SHADOWDP_index) {
@@ -282,12 +285,12 @@ class ShadowDPTransformer(NodeVisitor):
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
                                                               left=shadow_query_node,
-                                                              right=query_node)])),
+                                                              right=align_query_node)])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
                                                               left=c_ast.BinaryOp('-',
-                                                                                  left=query_node,
+                                                                                  left=align_query_node,
                                                                                   right=original_query_node),
                                                               right=c_ast.Constant('int', '0'))]))
 
