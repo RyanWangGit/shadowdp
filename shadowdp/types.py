@@ -172,6 +172,16 @@ class TypeSystem:
         return aligned, shadow
 
     def update_distance(self, name, align, shadow):
+        # try simplify
+        from sympy import simplify
+        try:
+            align = simplify(align)
+        except Exception:
+            pass
+        try:
+            shadow = simplify(shadow)
+        except Exception:
+            pass
         # convert to internal AST representation
         align = convert_to_ast(align) if align != '*' else '*'
         shadow = convert_to_ast(shadow) if shadow != '*' else '*'
