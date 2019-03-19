@@ -428,7 +428,7 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_Decl(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
 
-        # if declarations are in function parameters, store distance into type system
+        # if declarations are in function parameters, the distances are already stored in type system due to annotation
         if isinstance(node.type, c_ast.FuncDecl):
             for param_index, decl in enumerate(node.type.args.params):
                 self._parameters.append(decl.name)
