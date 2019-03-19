@@ -174,6 +174,8 @@ class TypeSystem:
     def update_distance(self, name, align, shadow):
         # try simplify
         from sympy import simplify
+        align = str(align).replace('[', '__LEFTBRACE__').replace(']', '__RIGHTBRACE__')
+        shadow = str(shadow).replace('[', '__LEFTBRACE__').replace(']', '__RIGHTBRACE__')
         try:
             align = simplify(align)
         except Exception:
@@ -182,6 +184,8 @@ class TypeSystem:
             shadow = simplify(shadow)
         except Exception:
             pass
+        align = str(align).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
+        shadow = str(shadow).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
         # convert to internal AST representation
         align = convert_to_ast(align) if align != '*' else '*'
         shadow = convert_to_ast(shadow) if shadow != '*' else '*'

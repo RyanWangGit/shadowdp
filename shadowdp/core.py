@@ -489,7 +489,10 @@ class ShadowDPTransformer(NodeVisitor):
                     transformed = []
                     for piece in pieces:
                         if len(re.findall(r'[=><\\|&?|:]', piece)) == 0:
-                            cost = str(sp.simplify('({} * (1/({})))'.format(piece, scale)))
+                            cost_expr = '(abs({}) * (1/({})))'.format(piece, scale)\
+                                .replace('[', '__LEFTBRACE__').replace(']', '__RIGHTBRACE__')
+                            cost = str(sp.simplify(cost_expr))
+                            cost = cost.replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
                             transformed.append(cost)
                         else:
                             transformed.append(piece)
