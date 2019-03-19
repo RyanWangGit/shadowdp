@@ -19,14 +19,22 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from shadowdp.__main__ import main
 
 
-def test_main():
-    assert main(['check', './examples/original/noisymax.c']) == 0
-    assert main(['check', './examples/original/sparsevector.c']) == 0
-    assert main(['check', './examples/original/diffsparsevector.c', '-e', '1']) == 0
-    assert main(['check', './examples/original/numsparsevector.c', '-e', '1']) == 0
-    assert main(['check', './examples/original/partialsum.c', '-e', '1']) == 0
-    assert main(['check', './examples/original/smartsum.c', '-e', '2']) == 0
+class NoAnnotationError(ValueError):
+    def __init__(self, coord):
+        self.coord = coord
 
+
+class NoParameterAnnotationError(NoAnnotationError):
+    def __init__(self, coord):
+        super().__init__(coord)
+
+
+class NoSamplingAnnotationError(NoAnnotationError):
+    def __init__(self, coord):
+        super().__init__(coord)
+
+
+class ReturnDistanceNotZero(ValueError):
+    pass

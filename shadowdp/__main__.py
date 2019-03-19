@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2018 Ryan Wang
+# Copyright (c) 2018-2019 Yuxin (Ryan) Wang
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,8 @@ import time
 import logging
 from pycparser import parse_file
 from pycparser.c_generator import CGenerator
-from shadowdp.core import LangTransformer
+from shadowdp.core import ShadowDPTransformer
+from shadowdp.exceptions import *
 from shadowdp.checker import check
 
 
@@ -54,6 +55,10 @@ __FUNCTION_MAP = {
 
 def main(argv=sys.argv[1:]):
     arg_parser = argparse.ArgumentParser(description=__doc__)
+    arg_parser.add_argument('option', metavar='OPTION', type=str, nargs=1,
+                            help='check - transform and verify.\n'
+                                 'transform - only transform the source code.\n'
+                                 'verify - only verify the tranformed code.')
     arg_parser.add_argument('file', metavar='FILE', type=str, nargs=1)
     arg_parser.add_argument('-o', '--out',
                             action='store', dest='out', type=str,
@@ -65,101 +70,46 @@ def main(argv=sys.argv[1:]):
                             action='store', dest='function', type=str, default=None,
                             help='The function to verify.', required=False)
     arg_parser.add_argument('-e', '--epsilon',
-                            action='store_true', dest='epsilon', default=False,
+                            action='store', dest='epsilon', type=str, default=None,
                             help='Set epsilon = 1 to solve the non-linear issues.', required=False)
     results = arg_parser.parse_args(argv)
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
     results.function = results.function if results.function else os.path.splitext(os.path.basename(results.file))[0]
 
-    logger.info('Parsing {}'.format(results.file))
-    start = time.time()
-    ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
-    transformer = LangTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
-    c_generator = CGenerator()
+    if results.option[0] not in ('check', 'transform', 'verify'):
+        logger.error('Option should be check / transform / verify')
+        return 1
 
-    with open(results.out, 'w') as f:
-        # write verifier headers
-        f.write(__HEADER)
-        transformer.visit(ast)
-        content = c_generator.visit(ast)
-        # replace the non-linearity
-        if 'partialsum' in results.file:
-            content = content.replace('float __LANG_v_epsilon = 0;', 'float __LANG_v_epsilon = 0;\n\tfloat __LANG_distance_sum=0;')
-            insert = """if (i == __LANG_index)
-        __VERIFIER_assume (__LANG_distance_q[i] >= -1 && __LANG_distance_q[i] <= 1);
-    else
-        __VERIFIER_assume (__LANG_distance_q[i] == 0);\n\t"""
-            content = content.replace('sum = sum + q[i];', insert + 'sum = sum + q[i];\n\t__LANG_distance_sum = __LANG_distance_sum + __LANG_distance_q[i];')
-        elif 'smartsum' in results.file:
-            content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (__LANG_distance_sum + (__LANG_distance_q[i] * (1 / (1.0 / 1.0))));', """if (i == __LANG_index)
-      {
-        __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
-        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_sum + __LANG_distance_q[i]);
-      }
-      else
-      {
-        __VERIFIER_assume(__LANG_distance_q[i] == 0);
-        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_sum;
-      }""")
-            content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (1.0 * __LANG_distance_sum);',"""if (i == __LANG_index)
-      {
-        __VERIFIER_assume(__LANG_distance_q[i] <= 1 && __LANG_distance_q[i] >= -1);
-        __LANG_v_epsilon = __LANG_v_epsilon + abs(__LANG_distance_q[i]);
-      }
-      else
-      {
-        __VERIFIER_assume(__LANG_distance_q[i] == 0);
-        __LANG_v_epsilon = __LANG_v_epsilon + __LANG_distance_q[i];
-      }""")
-            content = content.replace('__LANG_distance_sum = __LANG_distance_sum + __LANG_distance_q[i];', '__LANG_distance_sum = __LANG_distance_sum + abs(__LANG_distance_q[i]);')
-            content = content.replace('(((__LANG_distance_n + __LANG_distance_sum) + __LANG_distance_q[i]) + __LANG_distance_sum) + __LANG_distance_q[i]', '__LANG_distance_n')
-            content = content.replace('__LANG_distance_next = (__LANG_distance_next + __LANG_distance_q[i]) + __LANG_distance_sum;', '__LANG_distance_next = __LANG_distance_next;')
-            content = content.replace('__LANG_distance_out = (__LANG_distance_next + __LANG_distance_q[i]) + __LANG_distance_sum;', '__LANG_distance_out = __LANG_distance_next;')
-            content = content.replace('__VERIFIER_assert(__LANG_v_epsilon <= 1.0);', '__VERIFIER_assert(__LANG_v_epsilon <= 2);')
-            content = content.replace("""if (((i + 1) % M) == 0)
-    {
-      __LANG_distance_shadow_n = ((__LANG_distance_shadow_n + __LANG_distance_shadow_sum) + __LANG_distance_q[i]) + 0;
-      __LANG_distance_shadow_next = __LANG_distance_shadow_n;
-      __LANG_distance_shadow_sum = 0;
-      __LANG_distance_shadow_out = __LANG_distance_shadow_next;
-    }
-    else
-    {
-      __LANG_distance_shadow_next = (__LANG_distance_shadow_next + __LANG_distance_q[i]) + 0;
-      __LANG_distance_shadow_sum = __LANG_distance_shadow_sum + __LANG_distance_q[i];
-      __LANG_distance_shadow_out = __LANG_distance_shadow_next;
-    }""", '')
-            content = content.replace('__VERIFIER_assume(size > 0);', '__VERIFIER_assume(size > 0);\n  __VERIFIER_assume(T < size && T > 0);\n  __VERIFIER_assume(M > 0 && M < size);')
-            content = content.replace('__VERIFIER_assume(__LANG_index >= 0);\n\
-  __VERIFIER_assume(__LANG_index < size);', '__VERIFIER_assume(__LANG_index > 0 && __LANG_index < size);')
-            content = content.replace('__VERIFIER_assert((i <= T) && (i < size));', '__VERIFIER_assert(i <= T && i < size);')
-            content = content.replace("""__LANG_distance_out = __LANG_distance_n;
-      __LANG_distance_next = __LANG_distance_n;
-      __LANG_distance_n = __LANG_distance_n;
-      __LANG_distance_sum = 0;""", """__LANG_distance_n = __LANG_distance_n;
-      __LANG_distance_next = __LANG_distance_n;
-      __LANG_distance_sum = 0;
-      __LANG_distance_out = __LANG_distance_n;""")
-            content = content.replace("""__LANG_distance_out = __LANG_distance_next;
-      __LANG_distance_next = __LANG_distance_next;
-      __LANG_distance_n = __LANG_distance_n;
-      __LANG_distance_sum = __LANG_distance_sum + abs(__LANG_distance_q[i]);""", """__LANG_distance_next = __LANG_distance_next;
-      __LANG_distance_sum = __LANG_distance_sum + abs(__LANG_distance_q[i]);
-      __LANG_distance_out = __LANG_distance_next;
-      __LANG_distance_n = __LANG_distance_n;""")
-            content = content.replace('while ((i <= T) && (i < size))', 'while (i <= T && i < size)')
-            content = content.replace('__VERIFIER_assume(epsilon > 0);\n', '')
-            content = content.replace('float __LANG_distance_shadow_out = 0;\n', '')
-            content = content.replace('float __LANG_distance_shadow_next = 0;\n', '')
-            content = content.replace('float __LANG_distance_shadow_n = 0;\n', '')
-            content = content.replace('float __LANG_distance_shadow_sum = 0;\n', '')
-        elif 'diffsparsevector' in results.file:
-            content = content.replace('__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (1 - (__LANG_distance_q[i] * (1 / ((4.0 * 1) / 1.0)))) : (0));', '__LANG_v_epsilon = __LANG_v_epsilon + (((q[i] + eta_2) >= T_bar) ? (0.5 * 1) : (0));')
-        f.write(content)
+    if results.option[0] == 'check' or results.option[0] == 'transform':
+        # parse the source code
+        logger.info('Parsing {}'.format(results.file))
+        start = time.time()
+        ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
+        transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
 
-    logger.info('Transformation finished in {0:.3f} seconds'.format(time.time() - start))
-    is_verified = check(results.checker, results.out, results.function)
+        try:
+            transformer.visit(ast)
+        except NoParameterAnnotationError as e:
+            logger.error('{} First statements must be a string containing annotation'.format(str(e.coord)))
+            return 1
+        except NoSamplingAnnotationError as e:
+            logger.error('{} Sampling command lack annotation'.format(str(e.coord)))
+            return 1
+        else:
+            # write the transformed code
+            with open(results.out, 'w') as f:
+                # write verifier headers
+                f.write(__HEADER)
+                f.write(CGenerator().visit(ast))
+
+            logger.info('Transformation finished in {0:.3f} seconds'.format(time.time() - start))
+
+    is_verified = False
+    if results.option[0] == 'check':
+        is_verified = check(results.checker, results.out, results.function)
+    elif results.option[0] == 'verify':
+        is_verified = check(results.checker, results.file, results.function)
 
     # shell code 0 means SUCCESS
     return 0 if is_verified else 1

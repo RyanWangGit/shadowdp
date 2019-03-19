@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2018 Ryan Wang
+# Copyright (c) 2018-2019 Ryan Wang
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,6 @@ def test_check():
     assert check('./cpachecker', './examples/transformed/diffsparsevector_rewrite.c', 'diffsparsevector_rewrite')
     assert check('./cpachecker', './examples/transformed/partialsum_rewrite.c', 'partialsum_rewrite')
     assert check('./cpachecker', './examples/transformed/smartsum_rewrite.c', 'smartsum_rewrite')
-    assert check('./cpachecker', './examples/transformed/diffsparsevector_epsilon_1.c', 'diffsparsevector_epsilon_1')
+    assert check('./cpachecker', './examples/transformed/gapsparsevector_epsilon_1.c', 'gapsparsevector_epsilon_1')
     assert check('./cpachecker', './examples/transformed/partialsum_epsilon_1.c', 'partialsum_epsilon_1')
     assert check('./cpachecker', './examples/transformed/smartsum_epsilon_1.c', 'smartsum_epsilon_1')

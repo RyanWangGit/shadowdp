@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2018 Ryan Wang
+# Copyright (c) 2018-2019 Yuxin (Ryan) Wang
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,9 @@ def is_node_equal(node_1, node_2):
     return node_1.__repr__() == node_2.__repr__()
 
 
-class _Simplifier(NodeVisitor):
+class _DistanceSimplifier(NodeVisitor):
+    """Simplifies a given distance c_ast node using conditions.
+    e.g. distance x + y > 0 ? 2 : 0 would be simplified to 2 if condition (x + y > 0) is given."""
     def __init__(self, conditions):
         self._conditions = conditions
 
@@ -78,6 +80,8 @@ class _Simplifier(NodeVisitor):
 
 
 class TypeSystem:
+    """ TypeSystem keeps track of the distances of each variable. The distance of each variable is internally
+    represented by c_ast node, and gets simplified and casted to strings when get_distance method is called"""
     _EXPR_NODES = (c_ast.BinaryOp, c_ast.TernaryOp, c_ast.UnaryOp, c_ast.ID, c_ast.Constant, c_ast.ArrayRef)
 
     def __init__(self, types=None):
@@ -99,37 +103,28 @@ class TypeSystem:
     def __repr__(self):
         return self._types.__repr__()
 
-    def copy(self):
-        return TypeSystem(copy.deepcopy(self._types))
-
-    def clear(self):
-        self._types.clear()
-
-    def names(self):
-        return self._types.keys()
-
-    def dynamic_variables(self):
-        dynamics = []
-        for name, (align, shadow) in self._types.items():
-            if align == '*':
-                dynamics.append((name, True))
-            if shadow == '*':
-                dynamics.append((name, False))
-        return dynamics
-
-    def _simplify_distance(self, distance, conditions):
-        simplifier = _Simplifier(conditions)
-        return simplifier.simplify(distance)
-
     def __eq__(self, other):
         if isinstance(other, TypeSystem):
             return self._types.__repr__() == other.__repr__()
         else:
             return False
 
+    def __contains__(self, item):
+        return self._types.__contains__(item)
+
+    def copy(self):
+        return TypeSystem(copy.deepcopy(self._types))
+
+    def clear(self):
+        self._types.clear()
+
+    def variables(self, conditions=None):
+        for name in self._types.keys():
+            yield name, self.get_distance(name, conditions)
+
     def diff(self, other):
         assert isinstance(other, TypeSystem)
-        for name in other.names():
+        for name, *_ in other.variables():
             if name not in self._types:
                 yield (name, True)
                 yield (name, False)
@@ -143,7 +138,7 @@ class TypeSystem:
 
     def merge(self, other):
         assert isinstance(other, TypeSystem)
-        for name in other.names():
+        for name, *_ in other.variables():
             if name not in self._types:
                 # TODO: break PEP8, maybe expose an interface to access internal dict
                 self._types[name] = other._types[name]
@@ -163,36 +158,46 @@ class TypeSystem:
         return self._types[name]
 
     def get_distance(self, name, conditions=None):
-        """ get the distance(align, shadow) of a variable. Simplifies the distance if condition and is_true is given.
+        """ get the distance(align, shadow) of a variable. Simplifies the distance if conditions are given.
         :param name: The name of the variable.
         :param conditions: The condition to apply, can either be `str` or `c_ast.Node`
         :return: (Aligned distance, Shadow distance) of the variable.
         """
-        aligned, shadow = self._types[name]
-        if aligned == '*':
-            aligned = '__LANG_distance_{}'.format(name)
-        else:
-            if conditions and len(conditions) != 0:
-                aligned = _generator.visit(self._simplify_distance(aligned, conditions))
-            else:
-                aligned = _generator.visit(aligned)
-        if shadow == '*':
-            shadow = '__LANG_distance_shadow_{}'.format(name)
-        else:
-            if conditions and len(conditions) != 0:
-                shadow = _generator.visit(self._simplify_distance(shadow, conditions))
-            else:
-                shadow = _generator.visit(shadow)
+        simplifier = _DistanceSimplifier(conditions)
+        distances = self._types[name]
+
+        aligned, shadow = ('*' if distance == '*' else
+                           (_generator.visit(simplifier.simplify(distance)) if conditions and len(conditions) != 0
+                            else _generator.visit(distance)) for distance in distances)
         return aligned, shadow
 
-    def update_distance(self, name, aligned, shadow):
-        aligned = '*' if aligned == '*' else convert_to_ast(aligned)
-        shadow = '*' if shadow == '*' else convert_to_ast(shadow)
+    def update_distance(self, name, align, shadow, is_assign=True):
+        # try simplify
+        from sympy import simplify
+
+        align = str(align).replace('[', '__LEFTBRACE__').replace(']', '__RIGHTBRACE__')
+        shadow = str(shadow).replace('[', '__LEFTBRACE__').replace(']', '__RIGHTBRACE__')
+        try:
+            align = simplify(align)
+        except Exception:
+            pass
+        try:
+            shadow = simplify(shadow)
+        except Exception:
+            pass
+        align = str(align).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
+        shadow = str(shadow).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
+        if is_assign:
+            align = '0' if align == '__SHADOWDP_ALIGNED_{0} - {0}'.format(name) else align
+            shadow = '0' if shadow == '__SHADOWDP_SHADOW_{0} - {0}'.format(name) else shadow
+        # convert to internal AST representation
+        align = convert_to_ast(align) if align != '*' else '*'
+        shadow = convert_to_ast(shadow) if shadow != '*' else '*'
         if name not in self._types:
-            self._types[name] = [aligned, shadow]
+            self._types[name] = [align, shadow]
         else:
             cur_aligned, cur_shadow = self._types[name]
-            if not is_node_equal(cur_aligned, aligned):
-                self._types[name][0] = aligned
+            if not is_node_equal(cur_aligned, align):
+                self._types[name][0] = align
             if not is_node_equal(cur_shadow, shadow):
                 self._types[name][1] = shadow

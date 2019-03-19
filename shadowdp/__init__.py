@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2018 Ryan Wang
+# Copyright (c) 2018-2019 Yuxin (Ryan) Wang
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,4 +21,4 @@
 # SOFTWARE.
 from shadowdp.checker import check
 from shadowdp.types import TypeSystem
-from shadowdp.core import LangTransformer
+from shadowdp.core import ShadowDPTransformer
