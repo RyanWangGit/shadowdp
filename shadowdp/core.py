@@ -404,7 +404,7 @@ class ShadowDPTransformer(NodeVisitor):
                     else:
                         # TODO: should be able to detect the type of parameters
                         if name != q:
-                            raise NotImplementedError
+                            raise NotImplementedError('Currently only supports * types for query variables')
                         varname = '__SHADOWDP_{}_{}'.format(version, q)
                         node.decl.type.args.params.append(
                             c_ast.Decl(name=varname,
@@ -452,7 +452,7 @@ class ShadowDPTransformer(NodeVisitor):
                 logger.debug('Random variables: {}'.format(self._random_variables))
                 if not (isinstance(node.init.args.exprs[1], c_ast.Constant) and
                         node.init.args.exprs[1].type == 'string'):
-                    raise NoSamplingAnnotationError
+                    raise NoSamplingAnnotationError(node.coord)
 
                 # get the annotation for sampling command
                 selector, distance_eta, *_ = map(lambda x: x.strip(), node.init.args.exprs[1].value[1:-1].split(';'))
