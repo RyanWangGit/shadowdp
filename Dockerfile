@@ -29,6 +29,9 @@ RUN apt-get install -y --no-install-recommends wget bzip2 gcc
 # install python
 RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
 
+# install vim for debugging purposes
+RUN apt-get install -y --no-install-recommends vim
+
 # install openjdk8
 RUN apt-get install -y --no-install-recommends openjdk-8-jdk
 
