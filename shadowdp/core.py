@@ -240,9 +240,9 @@ class ShadowDPTransformer(NodeVisitor):
         align_query_node = copy.deepcopy(query_node)
         original_query_node = copy.deepcopy(query_node)
         regex = re.compile(r'__SHADOWDP_[A-Z]+_([_a-zA-Z][a-zA-Z0-9\[\]]*)')
-        align_query_node.name.name = regex.sub(r'__SHADOWDP__ALIGNED_\g<1>', query_node.name.name)
-        shadow_query_node.name.name = regex.sub(r'__SHADOWDP__SHADOW_\g<1>', query_node.name.name)
-        original_query_node.name.name = query_node.name.name.replace('__SHADOWDP_ALIGNED_', '')
+        align_query_node.name.name = regex.sub(r'__SHADOWDP_ALIGNED_\g<1>', query_node.name.name)
+        shadow_query_node.name.name = regex.sub(r'__SHADOWDP_SHADOW_\g<1>', query_node.name.name)
+        original_query_node.name.name = regex.sub(r'\g<1>', query_node.name.name)
         common_assume = [
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
