@@ -510,12 +510,17 @@ class ShadowDPTransformer(NodeVisitor):
                                                      '__SHADOWDP_' in node.name.name and
                                                      self._parameters[2] in node.name.name)
                     query_node = expr_checker.visit(update_v_epsilon)
-                    assume_functions = self._instrument_assume(query_node)
-                    self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
-                    self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
+                    if query_node:
+                        assume_functions = self._instrument_assume(query_node)
+                        self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+                        self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
+                        for function in assume_functions:
+                            self._inserted.add(function)
+                    else:
+                        self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+
                     self._inserted.add(update_v_epsilon)
-                    for function in assume_functions:
-                        self._inserted.add(function)
+
 
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
