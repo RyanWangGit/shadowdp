@@ -571,7 +571,7 @@ class ShadowDPTransformer(NodeVisitor):
                                                      '__SHADOWDP_' in node.name.name and
                                                      self._parameters[2] in node.name.name)
 
-        to_generate_shadow = True
+        to_generate_shadow = exp_checker.visit(n.cond) is not None
         if self._loop_level == 0:
             # have to generate separate shadow branch
             if to_generate_shadow:
