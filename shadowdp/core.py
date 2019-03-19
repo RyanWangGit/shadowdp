@@ -506,8 +506,16 @@ class ShadowDPTransformer(NodeVisitor):
                     v_epsilon = _ExpressionSimplifier().visit(convert_to_ast(v_epsilon))
                     update_v_epsilon = c_ast.Assignment(op='=',
                                                         lvalue=c_ast.ID('__SHADOWDP_v_epsilon'), rvalue=v_epsilon)
+                    expr_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
+                                                     '__SHADOWDP_' in node.name.name and
+                                                     self._parameters[2] in node.name.name)
+                    query_node = expr_checker.visit(update_v_epsilon)
+                    assume_functions = self._instrument_assume(query_node)
                     self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+                    self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
                     self._inserted.add(update_v_epsilon)
+                    for function in assume_functions:
+                        self._inserted.add(function)
 
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
