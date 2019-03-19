@@ -317,11 +317,23 @@ class ShadowDPTransformer(NodeVisitor):
         first_statement = node.body.block_items.pop(0)
         if not (isinstance(first_statement, c_ast.Constant) and first_statement.type == 'string'):
             raise NoParameterAnnotationError(first_statement.coord)
-        annotation = first_statement.value[1:-1]
-        if annotation not in ('ALL_DIFFER', 'ONE_DIFFER'):
+        sensitivity, *parameter_distances = first_statement.value[1:-1].strip().split(';')
+        if sensitivity not in ('ALL_DIFFER', 'ONE_DIFFER'):
             raise ValueError('Annotation for sensitivity should be either \'ALL_DIFFER\' or \'ONE_DIFFER\'')
 
-        self._one_differ = True if annotation == 'ONE_DIFFER' else False
+        # get distances from annotation string and store to type system
+        for parameter in parameter_distances:
+            results = re.findall(r'([a-zA-Z_]+):\s*<([*a-zA-Z0-9\[\]]+),\s*([*a-zA-Z0-9\[\]]+)>', parameter)
+            if len(results) == 0:
+                raise ValueError('Illegal annotation for parameter: {}'.format(parameter))
+            else:
+                name, align, shadow = results[0]
+                if align != shadow:
+                    raise ValueError('Annotated distances must be identical. {}'.format(parameter))
+                else:
+                    self._types.update_distance(name, align, shadow)
+
+        self._one_differ = True if sensitivity == 'ONE_DIFFER' else False
 
         # visit children
         self.generic_visit(node)
@@ -417,13 +429,8 @@ class ShadowDPTransformer(NodeVisitor):
         if isinstance(node.type, c_ast.FuncDecl):
             for param_index, decl in enumerate(node.type.args.params):
                 self._parameters.append(decl.name)
-                # TODO: this should be filled by annotation on the parameter
-                # query variable has type (*, *)
-                if isinstance(decl.type, c_ast.ArrayDecl) and param_index == 2:
-                    self._types.update_distance(decl.name, '*', '*')
-                # other variables have type (0, 0)
-                elif isinstance(decl.type, c_ast.TypeDecl):
-                    self._types.update_distance(decl.name, '0', '0')
+                if decl.name not in self._types:
+                    raise ValueError('Parameter {} not annotated.'.format(decl.name))
 
             logger.debug('Params: {}'.format(self._parameters))
 
