@@ -109,6 +109,9 @@ class TypeSystem:
         else:
             return False
 
+    def __contains__(self, item):
+        return self._types.__contains__(item)
+
     def copy(self):
         return TypeSystem(copy.deepcopy(self._types))
 
