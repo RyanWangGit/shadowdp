@@ -461,6 +461,9 @@ class ShadowDPTransformer(NodeVisitor):
 
                 # update distances of normal variables according to the selector
                 for name, (align, shadow) in self._types.variables(self._condition_stack):
+                    # first unwrap the star variables (T-Laplace)
+                    align = '(__SHADOWDP_ALIGNED_{0} - {0})'.format(name) if align == '*' else align
+                    shadow = '(__SHADOWDP_SHADOW_{0} - {0})'.format(name) if shadow == '*' else shadow
                     # if the aligned distance and shadow distance are the same
                     # then there's no need to update the distances
                     if align != shadow and name not in self._random_variables and name not in self._parameters:
