@@ -24,7 +24,7 @@ FROM ubuntu:16.04
 
 # install essential stuff
 RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends wget bzip2 gcc
+RUN apt-get install -y --no-install-recommends wget bzip2 gcc g++ make
 
 # install python
 RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
@@ -35,7 +35,7 @@ RUN apt-get install -y --no-install-recommends vim
 # install openjdk8
 RUN apt-get install -y --no-install-recommends openjdk-8-jdk
 
-# cleanup apt-get lists to
+# cleanup apt-get lists to reduce the image size
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # copy ShadowDP into the image
