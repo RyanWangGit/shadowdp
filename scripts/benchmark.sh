@@ -27,6 +27,8 @@ echo ''
 # apply epsilon = 1 technique to solve non-linearity
 shadowdp check examples/original/diffsparsevector.c -e 1
 echo ''
+shadowdp check examples/original/numsparsevector.c -e 1
+echo ''
 shadowdp check examples/original/partialsum.c -e 1
 echo ''
 # apply epsilon = 2 technique to solve non-linearity
