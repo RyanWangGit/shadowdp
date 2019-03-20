@@ -577,7 +577,6 @@ class ShadowDPTransformer(NodeVisitor):
                 lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
                               self._types.get_distance(node.name)[1] == '*'))
             to_generate_shadow = star_variable_finder.visit(n.cond) is not None
-            print(to_generate_shadow)
             if to_generate_shadow:
                 shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
                     copy.deepcopy(n.cond))
