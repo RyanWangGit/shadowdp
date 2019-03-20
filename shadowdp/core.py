@@ -567,13 +567,17 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(after merge): {}'.format(self._types))
 
         # TODO: use Z3 to solve constraints to decide this value
-        exp_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
-                                                     '__SHADOWDP_' in node.name.name and
-                                                     self._parameters[2] in node.name.name)
+        exp_checker = _ExpressionFinder(
+            lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
+                         self._parameters[2] in node.name.name)
 
-        to_generate_shadow = exp_checker.visit(n.cond) is not None
         if self._loop_level == 0:
             # have to generate separate shadow branch
+            star_variable_finder = _ExpressionFinder(
+                lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
+                              self._types.get_distance(node.name)[1] == '*'))
+            to_generate_shadow = star_variable_finder.visit(n.cond) is not None
+            print(to_generate_shadow)
             if to_generate_shadow:
                 shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
                     copy.deepcopy(n.cond))
