@@ -521,7 +521,6 @@ class ShadowDPTransformer(NodeVisitor):
 
                     self._inserted.add(update_v_epsilon)
 
-
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
             else:
