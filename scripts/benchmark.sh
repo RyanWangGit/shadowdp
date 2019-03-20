@@ -20,13 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #!/bin/sh
-shadowdp examples/original/noisymax.c
+shadowdp check examples/original/noisymax.c
 echo ''
-shadowdp examples/original/sparsevector.c
+shadowdp check examples/original/sparsevector.c
 echo ''
 # apply epsilon = 1 technique to solve non-linearity
-shadowdp examples/original/diffsparsevector.c -e
+shadowdp check examples/original/diffsparsevector.c -e 1
 echo ''
-shadowdp examples/original/partialsum.c -e
+shadowdp check examples/original/partialsum.c -e 1
 echo ''
-shadowdp examples/original/smartsum.c -e
+# apply epsilon = 2 technique to solve non-linearity
+shadowdp check examples/original/smartsum.c -e 2
