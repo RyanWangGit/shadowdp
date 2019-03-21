@@ -22,9 +22,11 @@
 FROM alpine:3.9.2
 
 # install essential stuff
-RUN apk add --no-cache g++ make
-# install python
-RUN apk add --no-cache python3 openjdk8-jre bash
+RUN apk add --no-cache g++ make bash git
+
+# install python / java
+RUN apk add --no-cache python3 openjdk8-jre
+
 # install vim for debugging purposes
 RUN apk add --no-cache vim
 # install ttf-dejavu as is needed by cpachecker
