@@ -19,24 +19,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-FROM ubuntu:16.04
+FROM alpine:3.7
 
 # install essential stuff
-RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends wget bzip2 gcc g++ make
-
+RUN apk add --no-cache g++ make
 # install python
-RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
-
+RUN apk add --no-cache python3 openjdk8-jre bash
 # install vim for debugging purposes
-RUN apt-get install -y --no-install-recommends vim
-
-# install openjdk8
-RUN apt-get install -y --no-install-recommends openjdk-8-jdk
-
-# cleanup apt-get lists to reduce the image size
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache vim
+# install ttf-dejavu as is needed by cpachecker
+RUN apk add --no-cache ttf-dejavu
 
 # copy ShadowDP into the image
 COPY . /shadowdp
