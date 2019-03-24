@@ -661,7 +661,7 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_Return(self, node):
         align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
         if align != '0':
-            raise ReturnDistanceNotZero()
+            raise ReturnDistanceNotZero(node.coord, _code_generator.visit(node.expr), align)
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
         epsilon_node = c_ast.Constant(type='float', value=float(self._set_epsilon)) \

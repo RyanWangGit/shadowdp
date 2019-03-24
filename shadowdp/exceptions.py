@@ -37,4 +37,7 @@ class NoSamplingAnnotationError(NoAnnotationError):
 
 
 class ReturnDistanceNotZero(ValueError):
-    pass
+    def __init__(self, coord, name, distance):
+        self.coord = coord
+        self.name = name
+        self.distance = distance
