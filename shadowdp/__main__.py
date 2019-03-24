@@ -41,7 +41,7 @@ extern int __VERIFIER_nondet_int();
 extern void __VERIFIER_assume(int);
 extern void __assert_fail();
 #define __VERIFIER_assert(cond) { if(!(cond)) { __assert_fail(); } }
-#define abs(x) ((x) < 0 ? -(x) : (x))
+#define Abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
 """
