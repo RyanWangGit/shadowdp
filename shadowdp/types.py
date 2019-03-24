@@ -140,8 +140,7 @@ class TypeSystem:
         assert isinstance(other, TypeSystem)
         for name, *_ in other.variables():
             if name not in self._types:
-                # TODO: break PEP8, maybe expose an interface to access internal dict
-                self._types[name] = other._types[name]
+                self._types[name] = other.get_raw_distance(name)
             else:
                 cur_align, cur_shadow = self._types[name]
                 other_align, other_shadow = other.get_raw_distance(name)
