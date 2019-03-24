@@ -188,8 +188,8 @@ class TypeSystem:
         align = str(align).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
         shadow = str(shadow).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
         if is_assign:
-            align = '0' if align == '__SHADOWDP_ALIGNED_{0} - {0}'.format(name) else align
-            shadow = '0' if shadow == '__SHADOWDP_SHADOW_{0} - {0}'.format(name) else shadow
+            align = '0' if align == '__SHADOWDP_ALIGNED_DISTANCE_{0}'.format(name) else align
+            shadow = '0' if shadow == '__SHADOWDP_SHADOW_DISTANCE_{0}'.format(name) else shadow
         # convert to internal AST representation
         align = convert_to_ast(align) if align != '*' else '*'
         shadow = convert_to_ast(shadow) if shadow != '*' else '*'
