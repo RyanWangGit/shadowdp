@@ -96,6 +96,9 @@ def main(argv=sys.argv[1:]):
         except NoSamplingAnnotationError as e:
             logger.error('{} Sampling command lack annotation'.format(str(e.coord)))
             return 1
+        except ReturnDistanceNotZero as e:
+            logger.error('{}: Aligned distance of return variable {} is not zero ({})'
+                         .format(str(e.coord), e.name, e.distance))
         else:
             # write the transformed code
             with open(results.out, 'w') as f:
