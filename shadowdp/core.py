@@ -37,15 +37,17 @@ class _ExpressionFinder(NodeVisitor):
     """ this class find a specific node in the expression"""
     def __init__(self, check_func):
         self._check_func = check_func
+        self._nodes = []
+
+    def visit(self, node):
+        super().visit(node)
+        return self._nodes
 
     def generic_visit(self, node):
         if self._check_func(node):
-            return node
-        else:
-            for child in node:
-                node = self.generic_visit(child)
-                if node:
-                    return node
+            self._nodes.append(node)
+        for child in node:
+            self.generic_visit(child)
 
 
 class _ShadowBranchGenerator(NodeVisitor):
@@ -512,9 +514,9 @@ class ShadowDPTransformer(NodeVisitor):
                     expr_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
                                                      '__SHADOWDP_' in node.name.name and
                                                      self._parameters[2] in node.name.name)
-                    query_node = expr_checker.visit(update_v_epsilon)
-                    if query_node:
-                        assume_functions = self._instrument_assume(query_node)
+                    query_nodes = expr_checker.visit(update_v_epsilon)
+                    if len(query_nodes) != 0:
+                        assume_functions = self._instrument_assume(query_nodes[0])
                         self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                         self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
                         for function in assume_functions:
@@ -597,9 +599,9 @@ class ShadowDPTransformer(NodeVisitor):
                 self._parents[n].block_items.insert(self._parents[n].block_items.index(n) + 1, shadow_branch)
 
                 # insert assume functions before the shadow branch
-                query_node = exp_checker.visit(shadow_cond)
-                if query_node:
-                    assume_functions = self._instrument_assume(query_node)
+                query_nodes = exp_checker.visit(shadow_cond)
+                if len(query_nodes) != 0:
+                    assume_functions = self._instrument_assume(query_nodes[0])
                     index = self._parents[n].block_items.index(n) + 1
                     self._parents[n].block_items[index:index] = assume_functions
                     for assume_function in assume_functions:
@@ -619,9 +621,9 @@ class ShadowDPTransformer(NodeVisitor):
                                                                 args=assert_body))
                 # if the expression contains `query` variable,
                 # add assume functions on __SHADOWDP_ALIGNED_DISTANCE_query and __SHADOWDP_SHADOW_DISTANCE_query
-                query_node = exp_checker.visit(aligned_cond)
-                if query_node:
-                    assume_functions = self._instrument_assume(query_node)
+                query_nodes = exp_checker.visit(aligned_cond)
+                if len(query_nodes) != 0:
+                    assume_functions = self._instrument_assume(query_nodes[0])
                     block_node.block_items[0:0] = assume_functions
 
             # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)
