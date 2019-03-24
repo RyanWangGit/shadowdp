@@ -67,8 +67,10 @@ class _ShadowBranchGenerator(NodeVisitor):
                             if isinstance(child, c_ast.Assignment) and child.lvalue.name in self._shadow_variables]
         for child in node:
             if isinstance(child, c_ast.Assignment):
-                child.lvalue.name = '__SHADOWDP_SHADOW_{}'.format(child.lvalue.name)
-                child.rvalue = self._expression_replacer.visit(child.rvalue)
+                child.rvalue = c_ast.BinaryOp(op='-', left=self._expression_replacer.visit(child.rvalue),
+                                              right=c_ast.ID(name=child.lvalue.name))
+                # change the assignment variable name to shadow distance variable
+                child.lvalue.name = '__SHADOWDP_SHADOW_DISTANCE_{}'.format(child.lvalue.name)
             else:
                 self.visit(child)
 
@@ -82,34 +84,20 @@ class _ExpressionReplacer(NodeVisitor):
         self._conditions = conditions
 
     def _replace(self, node):
-        if isinstance(node, c_ast.ArrayRef):
-            alignd, shadow = self._types.get_distance(node.name.name, self._conditions)
-            distance = alignd if self._is_aligned else shadow
-            if distance == '0':
-                return node
-            elif distance == '*':
-                return c_ast.ArrayRef(
-                    name=c_ast.ID(
-                        name='__SHADOWDP_{}_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', node.name.name)),
-                    subscript=node.subscript
-                )
-            else:
-                return c_ast.BinaryOp(op='+',
-                                      left=node,
-                                      right=convert_to_ast(distance))
-        elif isinstance(node, c_ast.ID):
-            aligned, shadow = self._types.get_distance(node.name, self._conditions)
-            distance = aligned if self._is_aligned else shadow
-            if distance == '0':
-                return node
-            elif distance == '*':
-                return c_ast.ID(name='__SHADOWDP_{}_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', node.name))
-            else:
-                return c_ast.BinaryOp(op='+',
-                                      left=node,
-                                      right=c_ast.ID(name=aligned if self._is_aligned else shadow))
+        if not isinstance(node, (c_ast.ArrayRef, c_ast.ID)):
+            raise NotImplementedError('Expression type {} currently not supported.'.format(type(node)))
+        varname = node.name.name if isinstance(node, c_ast.ArrayRef) else node.name
+        alignd, shadow = self._types.get_distance(varname, self._conditions)
+        distance = alignd if self._is_aligned else shadow
+        if distance == '0':
+            return node
+        elif distance == '*':
+            distance_varname = '__SHADOWDP_{}_DISTANCE_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', varname)
+            distance_var = c_ast.ArrayRef(name=c_ast.ID(name=distance_varname), subscript=node.subscript) \
+                if isinstance(node, c_ast.ArrayRef) else c_ast.ID(name=distance_varname)
+            return c_ast.BinaryOp(op='+', left=node, right=distance_var)
         else:
-            raise NotImplementedError
+            return c_ast.BinaryOp(op='+', left=node, right=convert_to_ast(distance))
 
     def visit_BinaryOp(self, node):
         if isinstance(node.left, (c_ast.ArrayRef, c_ast.ID)):
@@ -172,15 +160,15 @@ class _DistanceGenerator(NodeVisitor):
 
     def visit_ID(self, n):
         align, shadow = self._types.get_distance(n.name, self._conditions)
-        align = '(__SHADOWDP_ALIGNED_{0} - {0})'.format(n.name) if align == '*' else align
-        shadow = '(__SHADOWDP_SHADOW_{0} - {0})'.format(n.name) if shadow == '*' else shadow
+        align = '(__SHADOWDP_ALIGNED_DISTANCE_{0})'.format(n.name) if align == '*' else align
+        shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0})'.format(n.name) if shadow == '*' else shadow
         return align, shadow
 
     def visit_ArrayRef(self, n):
         varname, subscript = n.name.name, _code_generator.visit(n.subscript)
         align, shadow = self._types.get_distance(n.name.name, self._conditions)
-        align = '(__SHADOWDP_ALIGNED_{0}[{1}] - {0}[{1}])'.format(varname, subscript) if align == '*' else align
-        shadow = '(__SHADOWDP_SHADOW_{0}[{1}] - {0}[{1}])'.format(varname, subscript) if shadow == '*' else shadow
+        align = '(__SHADOWDP_ALIGNED_DISTANCE_{0}[{1}])'.format(varname, subscript) if align == '*' else align
+        shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0}[{1}])'.format(varname, subscript) if shadow == '*' else shadow
         return align, shadow
 
     def visit_BinaryOp(self, n):
@@ -239,42 +227,36 @@ class ShadowDPTransformer(NodeVisitor):
     def _instrument_assume(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
         assume_functions = []
-        shadow_query_node = copy.deepcopy(query_node)
-        align_query_node = copy.deepcopy(query_node)
-        original_query_node = copy.deepcopy(query_node)
-        regex = re.compile(r'__SHADOWDP_[A-Z]+_([_a-zA-Z][a-zA-Z0-9\[\]]*)')
-        align_query_node.name.name = regex.sub(r'__SHADOWDP_ALIGNED_\g<1>', query_node.name.name)
-        shadow_query_node.name.name = regex.sub(r'__SHADOWDP_SHADOW_\g<1>', query_node.name.name)
-        original_query_node.name.name = regex.sub(r'\g<1>', query_node.name.name)
+        shadow_distance_node = copy.deepcopy(query_node)
+        align_distance_node = copy.deepcopy(query_node)
+        regex = re.compile(r'__SHADOWDP_[A-Z]+_DISTANCE_([_a-zA-Z][a-zA-Z0-9\[\]]*)')
+        align_distance_node.name.name = regex.sub(r'__SHADOWDP_ALIGNED_DISTANCE_\g<1>', query_node.name.name)
+        shadow_distance_node.name.name = regex.sub(r'__SHADOWDP_SHADOW_DISTANCE_\g<1>', query_node.name.name)
         common_assume = [
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='<=',
-                                                              left=c_ast.BinaryOp('-',
-                                                                                  left=align_query_node,
-                                                                                  right=original_query_node),
+                                                              left=align_distance_node,
                                                               right=c_ast.Constant('int', '1'))])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='>=',
-                                                              left=c_ast.BinaryOp('-',
-                                                                                  left=align_query_node,
-                                                                                  right=original_query_node),
+                                                              left=align_distance_node,
                                                               right=c_ast.Constant('int', '-1'))])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
-                                                              left=shadow_query_node,
-                                                              right=align_query_node)]))
+                                                              left=shadow_distance_node,
+                                                              right=align_distance_node)]))
             ]
         # insert following statements:
         # if (i == __SHADOWDP_index) {
-        #   assume(__SHADOWDP_ALIGNED_q[i] - q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] - q[i] <= 1);
-        #   assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+        #   assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1); assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
+        #   assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         # }
         # else {
-        #   assume(__SHADOWDP_ALIGNED_q[i] - q[i] == 0);
-        #   assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+        #   assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] == 0);
+        #   assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         # }
         if self._one_differ:
             if_block = c_ast.If(cond=c_ast.BinaryOp('==',
@@ -287,21 +269,19 @@ class ShadowDPTransformer(NodeVisitor):
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
-                                                              left=shadow_query_node,
-                                                              right=align_query_node)])),
+                                                              left=shadow_distance_node,
+                                                              right=align_distance_node)])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
-                                                              left=c_ast.BinaryOp('-',
-                                                                                  left=align_query_node,
-                                                                                  right=original_query_node),
+                                                              left=align_distance_node,
                                                               right=c_ast.Constant('int', '0'))]))
 
             ]
             assume_functions.append(if_block)
         # insert following statements:
-        # assume(__SHADOWDP_ALIGNED_q[i] - q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] - q[i] <= 1);
-        # assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+        # assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1); assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
+        # assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         else:
             assume_functions = common_assume
         return assume_functions
@@ -397,7 +377,7 @@ class ShadowDPTransformer(NodeVisitor):
                     # if it is a dynamically tracked local variable, add declarations
                     version = 'ALIGNED' if index == 0 else 'SHADOW'
                     if name not in self._parameters:
-                        varname = '__SHADOWDP_{}_{}'.format(version, name)
+                        varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, name)
                         insert_statements.append(
                             c_ast.Decl(name=varname,
                                        type=c_ast.TypeDecl(declname=varname,
@@ -408,7 +388,7 @@ class ShadowDPTransformer(NodeVisitor):
                         # TODO: should be able to detect the type of parameters
                         if name != q:
                             raise NotImplementedError('Currently only supports * types for query variables')
-                        varname = '__SHADOWDP_{}_{}'.format(version, q)
+                        varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, q)
                         node.decl.type.args.params.append(
                             c_ast.Decl(name=varname,
                                        type=c_ast.ArrayDecl(
@@ -465,8 +445,8 @@ class ShadowDPTransformer(NodeVisitor):
                 # update distances of normal variables according to the selector
                 for name, (align, shadow) in self._types.variables(self._condition_stack):
                     # first unwrap the star variables (T-Laplace)
-                    align = '(__SHADOWDP_ALIGNED_{0} - {0})'.format(name) if align == '*' else align
-                    shadow = '(__SHADOWDP_SHADOW_{0} - {0})'.format(name) if shadow == '*' else shadow
+                    align = '(__SHADOWDP_ALIGNED_DISTANCE_{0})'.format(name) if align == '*' else align
+                    shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0})'.format(name) if shadow == '*' else shadow
                     # if the aligned distance and shadow distance are the same
                     # then there's no need to update the distances
                     if align != shadow and name not in self._random_variables and name not in self._parameters:
@@ -617,13 +597,13 @@ class ShadowDPTransformer(NodeVisitor):
                 block_node.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                                 args=assert_body))
                 # if the expression contains `query` variable,
-                # add assume functions on __SHADOWDP_ALIGNED_query and __SHADOWDP_SHADOW_query
+                # add assume functions on __SHADOWDP_ALIGNED_DISTANCE_query and __SHADOWDP_SHADOW_DISTANCE_query
                 query_node = exp_checker.visit(aligned_cond)
                 if query_node:
                     assume_functions = self._instrument_assume(query_node)
                     block_node.block_items[0:0] = assume_functions
 
-            # instrument statements for updating aligned or shadow variables (Instrumentation rule)
+            # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)
             for types in (true_types, false_types):
                 block_node = n.iftrue if types is true_types else n.iffalse
                 # TODO: should handle more cases
@@ -631,10 +611,8 @@ class ShadowDPTransformer(NodeVisitor):
                     if is_aligned:
                         block_node.block_items.append(
                             c_ast.Assignment(op='=',
-                                             lvalue=c_ast.ID('__SHADOWDP_ALIGNED_{}'.format(name)),
-                                             rvalue=c_ast.BinaryOp(op='+',
-                                                                   left=c_ast.ID(name=name),
-                                                                   right=types.get_raw_distance(name)[0])))
+                                             lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
+                                             rvalue=types.get_raw_distance(name)[0]))
 
         self._condition_stack.pop()
 
