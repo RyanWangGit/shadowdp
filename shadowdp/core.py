@@ -646,11 +646,12 @@ class ShadowDPTransformer(NodeVisitor):
                 block_node = n.iftrue if types is true_types else n.iffalse
                 # TODO: should handle more cases
                 for name, is_aligned in self._types.diff(types):
+                    aligned_distance_update = c_ast.Assignment(
+                        op='=', lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
+                        rvalue=convert_to_ast(types.get_distance(name, self._condition_stack)[0]))
                     if is_aligned:
-                        block_node.block_items.append(
-                            c_ast.Assignment(op='=',
-                                             lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
-                                             rvalue=types.get_raw_distance(name)[0]))
+                        block_node.block_items.append(aligned_distance_update)
+                        self._inserted.add(aligned_distance_update)
         self._pc = before_pc
         self._condition_stack.pop()
 
