@@ -19,18 +19,23 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-FROM alpine:3.9.2
+FROM ubuntu:18.04
 
 # install essential stuff
-RUN apk add --no-cache g++ make bash git
+RUN apt-get update -y
+RUN apt-get install -y --no-install-recommends wget bzip2 gcc
 
-# install python / java
-RUN apk add --no-cache python3 openjdk8-jre
+# install python
+RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
 
 # install vim for debugging purposes
-RUN apk add --no-cache vim
-# install ttf-dejavu as is needed by cpachecker
-RUN apk add --no-cache ttf-dejavu
+RUN apt-get install -y --no-install-recommends vim
+
+# install openjdk8
+RUN apt-get install -y --no-install-recommends openjdk-8-jdk
+
+# cleanup apt-get lists to
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # copy ShadowDP into the image
 COPY . /shadowdp
