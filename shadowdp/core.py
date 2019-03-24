@@ -232,6 +232,9 @@ class ShadowDPTransformer(NodeVisitor):
         # we shouldn't visit the `_v_epsilon = ...;` statement node, so we keep track of the inserted statements
         # to avoid them
         self._inserted = set()
+        # pc corresponds to the pc value in paper, which means if the shadow execution diverges or not, and controls
+        # the generation of shadow branch
+        self._pc = False
 
     def _instrument_assume(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
