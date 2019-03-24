@@ -403,6 +403,26 @@ class ShadowDPTransformer(NodeVisitor):
 
     def visit_Assignment(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
+        if self._loop_level == 0 and self._pc:
+            # generate x^shadow = x + x^shadow - e according to (T-Asgn)
+            parent = self._parents[node]
+            if isinstance(parent, c_ast.Compound):
+                node_index = parent.block_items.index(node)
+                if isinstance(node.lvalue, c_ast.ID):
+                    shadow_distance = c_ast.ID(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(node.lvalue.name))
+                elif isinstance(node.lvalue, c_ast.ArrayRef):
+                    shadow_distance = c_ast.ArrayRef(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(node.lvalue.name.name),
+                                                     subscript=node.lvalue.subscript)
+                else:
+                    raise NotImplementedError('Assigned value type not supported {}'.format(type(node.lvalue)))
+                # insert x^shadow = x + x^shadow - e;
+                insert_node = c_ast.Assignment(op='=', lvalue=shadow_distance, rvalue=c_ast.BinaryOp(
+                    op='-', left=c_ast.BinaryOp(op='+', left=node.lvalue, right=shadow_distance), right=node.rvalue))
+                parent.block_items.insert(node_index - 1, insert_node)
+                self._inserted.add(insert_node)
+                self._inserted.add(node)
+            else:
+                raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
         self._types.update_distance(node.lvalue.name, aligned, shadow)
@@ -522,6 +542,12 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_If(self, n):
         logger.debug('types(before branch): {}'.format(self._types))
         logger.debug('Line {}: if({})'.format(n.coord.line, _code_generator.visit(n.cond)))
+        # update pc value
+        star_variable_finder = _ExpressionFinder(
+            lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
+                          self._types.get_distance(node.name)[1] == '*'))
+        self._pc = not self._pc or star_variable_finder.visit(n.cond) is not None
+
         # backup the current types before entering the true or false branch
         before_types = self._types.copy()
 
@@ -554,12 +580,7 @@ class ShadowDPTransformer(NodeVisitor):
                          self._parameters[2] in node.name.name)
 
         if self._loop_level == 0:
-            # have to generate separate shadow branch
-            star_variable_finder = _ExpressionFinder(
-                lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
-                              self._types.get_distance(node.name)[1] == '*'))
-            to_generate_shadow = star_variable_finder.visit(n.cond) is not None
-            if to_generate_shadow:
+            if self._pc:
                 shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
                     copy.deepcopy(n.cond))
                 shadow_branch = c_ast.If(cond=shadow_cond,
