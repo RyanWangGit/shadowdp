@@ -674,7 +674,9 @@ class ShadowDPTransformer(NodeVisitor):
                                    args=c_ast.ExprList(exprs=[aligned_cond]))
         self._inserted.add(assertion)
         node.stmt.block_items.insert(0, assertion)
+        cur_types = self._types.copy()
         self.generic_visit(node)
+        self._types.merge(cur_types)
 
     def visit_Return(self, node):
         align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
