@@ -545,12 +545,27 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(before branch): {}'.format(self._types))
         logger.debug('Line {}: if({})'.format(n.coord.line, _code_generator.visit(n.cond)))
         # update pc value
+        before_pc = self._pc
         star_variable_finder = _ExpressionFinder(
             lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
                           self._types.get_distance(node.name)[1] == '*'))
         self._pc = not self._pc or star_variable_finder.visit(n.cond) is not None
 
         # backup the current types before entering the true or false branch
+        """
+        # promote the shadow distances of the assigned variables to *
+        shadow_finder = _ExpressionFinder(lambda node: isinstance(node, c_ast.Assignment) and node.lvalue)
+        for assign_node in shadow_finder.visit(n):
+            if isinstance(assign_node.lvalue, c_ast.ID):
+                varname = assign_node.lvalue.name
+            elif isinstance(assign_node.lvalue, c_ast.ArrayRef):
+                varname = assign_node.lvalue.name.name
+            else:
+                raise NotImplementedError('Assign node lvalue type not supported {}'.format(type(assign_node.lvalue)))
+            align, shadow = self._types.get_distance(varname)
+            self._types.update_distance(varname, align, '*')
+        """
+        # backup the current type system
         before_types = self._types.copy()
 
         # add current condition for simplification
@@ -636,7 +651,7 @@ class ShadowDPTransformer(NodeVisitor):
                             c_ast.Assignment(op='=',
                                              lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
                                              rvalue=types.get_raw_distance(name)[0]))
-
+        self._pc = before_pc
         self._condition_stack.pop()
 
     def visit_While(self, node):
