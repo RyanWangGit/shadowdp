@@ -31,5 +31,7 @@ shadowdp check examples/original/numsparsevector.c -e
 echo ''
 shadowdp check examples/original/partialsum.c -e
 echo ''
+shadowdp check examples/original/prefixsum.c -e
+echo ''
 # use goal=2 for checking 2 * epsilon-differential privacy
 shadowdp check examples/original/smartsum.c -e -g 2
