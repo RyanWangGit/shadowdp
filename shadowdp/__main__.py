@@ -91,7 +91,8 @@ def main(argv=sys.argv[1:]):
         logger.info('Parsing {}'.format(results.file))
         start = time.time()
         ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
-        transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
+        transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP,
+                                          set_epsilon=results.epsilon, set_goal=results.goal)
 
         try:
             transformer.visit(ast)
