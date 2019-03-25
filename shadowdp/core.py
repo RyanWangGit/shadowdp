@@ -554,10 +554,10 @@ class ShadowDPTransformer(NodeVisitor):
                     update_v_epsilon = c_ast.Assignment(op='=',
                                                         lvalue=c_ast.ID('__SHADOWDP_v_epsilon'), rvalue=v_epsilon)
                     # insert assume functions on query variable if cost variable calculation contains it
-                    expr_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
-                                                     '__SHADOWDP_' in node.name.name and
-                                                     self._parameters[2] in node.name.name)
-                    query_nodes = expr_checker.visit(update_v_epsilon)
+                    query_var_checker = _ExpressionFinder(
+                        lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
+                                     self._parameters[2] in node.name.name)
+                    query_nodes = query_var_checker.visit(update_v_epsilon)
                     if len(query_nodes) != 0:
                         assume_functions = self._assume_query(query_nodes[0])
                         self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
