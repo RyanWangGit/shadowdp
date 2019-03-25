@@ -13,7 +13,7 @@ int numsparsevector(float epsilon, int size, float q[], float T)
 
     if (q[i] + eta_2 >= T_bar)
     {
-      float eta_3 = Lap(3.0 * 1 / epsilon, "ALIGNED; -(__SHADOWDP_ALIGNED_q[i] - q[i]);");
+      float eta_3 = Lap(3.0 * 1 / epsilon, "ALIGNED; -(__SHADOWDP_ALIGNED_DISTANCE_q[i]);");
       out = q[i] + eta_3;
       c_1 = c_1 + 1;
     }
