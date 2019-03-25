@@ -428,7 +428,10 @@ class ShadowDPTransformer(NodeVisitor):
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
-        self._types.update_distance(node.lvalue.name, aligned, shadow)
+        if self._pc:
+            self._types.update_distance(node.lvalue.name, aligned, '*')
+        else:
+            self._types.update_distance(node.lvalue.name, aligned, shadow)
         logger.debug('types: {}'.format(self._types))
 
     def visit_Decl(self, node):
@@ -451,8 +454,10 @@ class ShadowDPTransformer(NodeVisitor):
             # else update the distance to the distance of initial value (T-Asgn)
             elif isinstance(node.init, (c_ast.Constant, c_ast.BinaryOp, c_ast.BinaryOp, c_ast.UnaryOp)):
                 aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.init)
-                self._types.update_distance(node.name, aligned, shadow)
-            # if it is random variable declaration
+                if self._pc:
+                    self._types.update_distance(node.name, aligned, '*')
+                else:
+                    self._types.update_distance(node.name, aligned, shadow)
             # if it is random variable declaration (T-Laplace)
             elif isinstance(node.init, c_ast.FuncCall) and node.init.name.name == 'Lap':
                 self._random_variables.add(node.name)
