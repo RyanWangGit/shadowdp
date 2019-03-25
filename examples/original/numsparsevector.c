@@ -10,10 +10,9 @@ int numsparsevector(float epsilon, int size, float q[], float T)
   while (c_1 < 1 && i < size)
   {
     float eta_2 = Lap((6.0 * 1) / epsilon, "ALIGNED; (q[i] + eta_2 >= T_bar) ? 2 : 0;");
-
+    float eta_3 = Lap(3.0 * 1 / epsilon, "ALIGNED; (q[i] + eta_2 >= T_bar) ? -(__SHADOWDP_ALIGNED_DISTANCE_q[i]) : 0;");
     if (q[i] + eta_2 >= T_bar)
     {
-      float eta_3 = Lap(3.0 * 1 / epsilon, "ALIGNED; -(__SHADOWDP_ALIGNED_DISTANCE_q[i]);");
       out = q[i] + eta_3;
       c_1 = c_1 + 1;
     }
