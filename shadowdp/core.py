@@ -226,6 +226,32 @@ class ShadowDPTransformer(NodeVisitor):
         # the generation of shadow branch
         self._pc = False
 
+    def _update_pc(self, pc, types, condition):
+        # TODO: use Z3 to solve constraints to decide this value
+        star_variable_finder = _ExpressionFinder(
+            lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
+                          types.get_distance(node.name)[1] == '*'))
+        return not pc or star_variable_finder.visit(condition) is not None
+
+    # Instrumentation rule
+    def _instrument(self, types1, types2, pc):
+        if not isinstance(types1, TypeSystem) or not isinstance(types2, TypeSystem):
+            raise ValueError('types1 and types2 must be TypeSystem')
+        c_align, c_shadow = [], []
+        for name, (align1, shadow1) in types1.variables(self._condition_stack):
+            if name not in types2:
+                continue
+            align2, shadow2 = types2.get_distance(name, self._condition_stack)
+            if align1 != '*' and align2 == '*':
+                c_align.append(c_ast.Assignment(
+                    op='=', lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
+                    rvalue=convert_to_ast(align1)))
+            elif shadow1 != '*' and shadow2 == '*':
+                c_shadow.append(c_ast.Assignment(
+                    op='=', lvalue=c_ast.ID('__SHADOWDP_SHADOW_DISTANCE_{}'.format(name)),
+                    rvalue=convert_to_ast(shadow1)))
+        return c_align if pc else c_align + c_shadow
+
     def _assume_query(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
         assume_functions = []
