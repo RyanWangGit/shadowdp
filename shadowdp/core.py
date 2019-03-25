@@ -576,16 +576,13 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(before branch): {}'.format(self._types))
         logger.debug('Line {}: if({})'.format(n.coord.line, _code_generator.visit(n.cond)))
 
-        # update pc value
+        # update pc value updPC
         before_pc = self._pc
-        # TODO: use Z3 to solve constraints to decide this value
-        star_variable_finder = _ExpressionFinder(
-            lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
-                          self._types.get_distance(node.name)[1] == '*'))
-        self._pc = not self._pc or star_variable_finder.visit(n.cond) is not None
+        self._pc = self._update_pc(self._pc, self._types, n.cond)
 
-        # backup the current types before entering the true or false branch
-        """
+        before_types = self._types.copy()
+        # corresponds to \Gamma_0 in paper
+        types_0 = self._types.copy()
         # promote the shadow distances of the assigned variables to *
         shadow_finder = _ExpressionFinder(lambda node: isinstance(node, c_ast.Assignment) and node.lvalue)
         for assign_node in shadow_finder.visit(n):
@@ -594,12 +591,16 @@ class ShadowDPTransformer(NodeVisitor):
             elif isinstance(assign_node.lvalue, c_ast.ArrayRef):
                 varname = assign_node.lvalue.name.name
             else:
-                raise NotImplementedError('Assign node lvalue type not supported {}'.format(type(assign_node.lvalue)))
-            align, shadow = self._types.get_distance(varname)
-            self._types.update_distance(varname, align, '*')
-        """
-        # backup the current type system
-        before_types = self._types.copy()
+                raise NotImplementedError(
+                    'Assign node lvalue type not supported {}'.format(type(assign_node.lvalue)))
+            align, shadow = types_0.get_distance(varname)
+            types_0.update_distance(varname, align, '*')
+
+        if self._pc and not before_pc:
+            self._types = types_0
+
+        # backup the current types before entering the true or false branch
+        cur_types = self._types.copy()
 
         # add current condition for simplification
         self._condition_stack.append([n.cond, True])
@@ -611,7 +612,7 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(true branch): {}'.format(true_types))
 
         # revert current types back to enter the false branch
-        self._types = before_types.copy()
+        self._types = cur_types
         self._condition_stack[-1][1] = False
         if n.iffalse:
             logger.debug('Line: {} else'.format(n.iffalse.coord.line))
@@ -629,8 +630,16 @@ class ShadowDPTransformer(NodeVisitor):
                          self._parameters[2] in node.name.name)
 
         if self._loop_level == 0:
-            if self._pc:
-                shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
+            if self._pc and not before_pc:
+                # insert c_s
+                c_s = self._instrument(before_types, types_0, before_pc)
+                if_index = self._parents[n].block_items.index(n)
+                self._parents[n].block_items[if_index:if_index] = c_s
+                for statement in c_s:
+                    self._inserted.add(statement)
+                self._inserted.add(n)
+                # insert c_shadow
+                shadow_cond = _ExpressionReplacer(types_0, False, self._condition_stack).visit(
                     copy.deepcopy(n.cond))
                 shadow_branch = c_ast.If(cond=shadow_cond,
                                          iftrue=c_ast.Compound(
@@ -638,17 +647,18 @@ class ShadowDPTransformer(NodeVisitor):
                                          iffalse=c_ast.Compound(
                                              block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
-                    {name for name, (_, shadow) in self._types.variables() if shadow == '*'},
-                    self._types,
+                    {name for name, (_, shadow) in types_0.variables() if shadow == '*'},
+                    types_0,
                     self._condition_stack)
                 shadow_branch_generator.visit(shadow_branch)
+                if_index = self._parents[n].block_items.index(n)
+                self._parents[n].block_items.insert(if_index + 1, shadow_branch)
                 self._inserted.add(shadow_branch)
-                self._parents[n].block_items.insert(self._parents[n].block_items.index(n) + 1, shadow_branch)
 
                 # insert assume functions before the shadow branch
                 query_nodes = exp_checker.visit(shadow_cond)
                 if len(query_nodes) != 0:
-                    assume_functions = self._instrument_assume(query_nodes[0])
+                    assume_functions = self._assume_query(query_nodes[0])
                     index = self._parents[n].block_items.index(n) + 1
                     self._parents[n].block_items[index:index] = assume_functions
                     for assume_function in assume_functions:
@@ -676,28 +686,31 @@ class ShadowDPTransformer(NodeVisitor):
             # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)
             for types in (true_types, false_types):
                 block_node = n.iftrue if types is true_types else n.iffalse
-                # TODO: should handle more cases
-                for name, is_aligned in self._types.diff(types):
-                    aligned_distance_update = c_ast.Assignment(
-                        op='=', lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
-                        rvalue=convert_to_ast(types.get_distance(name, self._condition_stack)[0]))
-                    if is_aligned:
-                        block_node.block_items.append(aligned_distance_update)
-                        self._inserted.add(aligned_distance_update)
+                instruments = self._instrument(types, self._types, self._pc)
+                block_node.block_items.extend(instruments)
+                for instrument in instruments:
+                    self._inserted.add(instrument)
+
         self._pc = before_pc
         self._condition_stack.pop()
 
     def visit_While(self, node):
-        cur_types = None
+        before_pc = self._pc
+        self._pc = self._update_pc(self._pc, self._types, node.cond)
+
+        before_types = self._types.copy()
+
+        fixed_types = None
         # don't output logs while doing iterations
         logger.disabled = True
         self._loop_level += 1
-        while cur_types != self._types:
-            cur_types = self._types.copy()
+        while fixed_types != self._types:
+            fixed_types = self._types.copy()
             self.generic_visit(node)
-            self._types.merge(cur_types)
+            self._types.merge(fixed_types)
         logger.disabled = False
         self._loop_level -= 1
+
         logger.debug('Line {}: while({})'.format(node.coord.line, _code_generator.visit(node.cond)))
         logger.debug('types(fixed point): {}'.format(self._types))
         aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
@@ -706,9 +719,26 @@ class ShadowDPTransformer(NodeVisitor):
                                    args=c_ast.ExprList(exprs=[aligned_cond]))
         self._inserted.add(assertion)
         node.stmt.block_items.insert(0, assertion)
-        cur_types = self._types.copy()
         self.generic_visit(node)
-        self._types.merge(cur_types)
+        self._types = before_types.copy()
+        self._types.merge(fixed_types)
+
+        c_s = self._instrument(before_types, self._types, self._pc)
+        while_index = self._parents[node].block_items.index(node)
+        self._parents[node].block_items[while_index:while_index] = c_s
+        for statement in c_s:
+            self._inserted.add(statement)
+        self._inserted.add(node)
+
+        update_statements = self._instrument(fixed_types, self._types, self._pc)
+        node.stmt.block_items.extend(update_statements)
+        for statement in update_statements:
+            self._inserted.add(statement)
+
+        # TODO: while shadow branch
+        if self._pc and not before_pc:
+            pass
+        self._pc = before_pc
 
     def visit_Return(self, node):
         align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
