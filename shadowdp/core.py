@@ -227,6 +227,8 @@ class ShadowDPTransformer(NodeVisitor):
         # pc corresponds to the pc value in paper, which means if the shadow execution diverges or not, and controls
         # the generation of shadow branch
         self._pc = False
+        # to track the inserted assume functions so that we don't have to insert redundent assumes
+        self._inserted_query_assumes = [[]]
 
     def _update_pc(self, pc, types, condition):
         # TODO: use Z3 to solve constraints to decide this value
@@ -246,7 +248,6 @@ class ShadowDPTransformer(NodeVisitor):
                          self._parameters[2] in node.name.name)
 
         assumes, inserted_statement = [], []
-        inserted_query = set()
         for name, distances1 in types1.variables(self._condition_stack):
             if name not in types2:
                 continue
@@ -255,12 +256,9 @@ class ShadowDPTransformer(NodeVisitor):
             for type_index in range(2):
                 version = 'ALIGNED' if type_index == 0 else 'SHADOW'
                 if distances1[type_index] != '*' and distances2[type_index] == '*':
-                    query_nodes = query_var_checker.visit(convert_to_ast(distances1[type_index]))
-                    for query in query_nodes:
-                        if any(is_node_equal(query, inserted) for inserted in inserted_query):
-                            continue
+                    for query in query_var_checker.visit(convert_to_ast(distances1[type_index])):
                         assumes.extend(self._assume_query(query))
-                        inserted_query.add(query)
+                        self._inserted_query_assumes[-1].append(query)
                     if type_index == 0 or (type_index == 1 and pc):
                         inserted_statement.append(c_ast.Assignment(
                             op='=', lvalue=c_ast.ID('__SHADOWDP_{}_DISTANCE_{}'.format(version, name)),
@@ -328,6 +326,11 @@ class ShadowDPTransformer(NodeVisitor):
         # assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         else:
             assume_functions = common_assume
+        # if assume function has already been inserted in this scope
+        for inserted in self._inserted_query_assumes[-1]:
+            if is_node_equal(assume_functions, inserted):
+                return []
+        self._inserted_query_assumes[-1].append(assume_functions)
         return assume_functions
 
     def visit(self, node):
@@ -577,15 +580,13 @@ class ShadowDPTransformer(NodeVisitor):
                     query_var_checker = _ExpressionFinder(
                         lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                                      self._parameters[2] in node.name.name)
-                    query_nodes = query_var_checker.visit(update_v_epsilon)
-                    if len(query_nodes) != 0:
-                        assume_functions = self._assume_query(query_nodes[0])
-                        self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+
+                    self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+                    for query_node in query_var_checker.visit(update_v_epsilon):
+                        assume_functions = self._assume_query(query_node)
                         self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
                         for function in assume_functions:
                             self._inserted.add(function)
-                    else:
-                        self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
 
                     self._inserted.add(update_v_epsilon)
 
@@ -632,6 +633,7 @@ class ShadowDPTransformer(NodeVisitor):
         # backup the current types before entering the true or false branch
         cur_types = self._types.copy()
 
+        self._inserted_query_assumes.append([])
         # add current condition for simplification
         self._condition_stack.append([n.cond, True])
         # to be used in if branch transformation assert(e^aligned);
@@ -640,7 +642,9 @@ class ShadowDPTransformer(NodeVisitor):
         self.visit(n.iftrue)
         true_types = self._types
         logger.debug('types(true branch): {}'.format(true_types))
+        true_assumes = self._inserted_query_assumes.pop()
 
+        self._inserted_query_assumes.append([])
         # revert current types back to enter the false branch
         self._types = cur_types
         self._condition_stack[-1][1] = False
@@ -654,6 +658,7 @@ class ShadowDPTransformer(NodeVisitor):
         false_types = self._types.copy()
         self._types.merge(true_types)
         logger.debug('types(after merge): {}'.format(self._types))
+        false_assumes = self._inserted_query_assumes.pop()
 
         exp_checker = _ExpressionFinder(
             lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
@@ -686,9 +691,8 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted.add(shadow_branch)
 
                 # insert assume functions before the shadow branch
-                query_nodes = exp_checker.visit(shadow_cond)
-                if len(query_nodes) != 0:
-                    assume_functions = self._assume_query(query_nodes[0])
+                for query_node in exp_checker.visit(shadow_cond):
+                    assume_functions = self._assume_query(query_node)
                     index = self._parents[n].block_items.index(n) + 1
                     self._parents[n].block_items[index:index] = assume_functions
                     for assume_function in assume_functions:
@@ -708,18 +712,23 @@ class ShadowDPTransformer(NodeVisitor):
                                                                 args=assert_body))
                 # if the expression contains `query` variable,
                 # add assume functions on __SHADOWDP_ALIGNED_DISTANCE_query and __SHADOWDP_SHADOW_DISTANCE_query
-                query_nodes = exp_checker.visit(aligned_cond)
-                if len(query_nodes) != 0:
-                    assume_functions = self._assume_query(query_nodes[0])
+                inserted = true_assumes if aligned_cond is aligned_true_cond else false_assumes
+                self._inserted_query_assumes.append(inserted)
+                for query_node in exp_checker.visit(aligned_cond):
+                    assume_functions = self._assume_query(query_node)
                     block_node.block_items[0:0] = assume_functions
+                self._inserted_query_assumes.pop()
 
             # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)
             for types in (true_types, false_types):
                 block_node = n.iftrue if types is true_types else n.iffalse
+                inserted = true_assumes if types is true_types else false_assumes
+                self._inserted_query_assumes.append(inserted)
                 instruments = self._instrument(types, self._types, self._pc)
                 block_node.block_items.extend(instruments)
                 for instrument in instruments:
                     self._inserted.add(instrument)
+                self._inserted_query_assumes.pop()
 
         self._pc = before_pc
         self._condition_stack.pop()
@@ -741,34 +750,38 @@ class ShadowDPTransformer(NodeVisitor):
         logger.disabled = False
         self._loop_level -= 1
 
-        logger.debug('Line {}: while({})'.format(node.coord.line, _code_generator.visit(node.cond)))
-        logger.debug('types(fixed point): {}'.format(self._types))
-        aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
-            copy.deepcopy(node.cond))
-        assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                   args=c_ast.ExprList(exprs=[aligned_cond]))
-        self._inserted.add(assertion)
-        node.stmt.block_items.insert(0, assertion)
-        self.generic_visit(node)
-        after_visit = self._types.copy()
-        self._types = before_types.copy()
-        self._types.merge(fixed_types)
+        if self._loop_level == 0:
+            self._inserted_query_assumes.append([])
+            logger.debug('Line {}: while({})'.format(node.coord.line, _code_generator.visit(node.cond)))
+            logger.debug('types(fixed point): {}'.format(self._types))
+            aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
+                copy.deepcopy(node.cond))
+            assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                       args=c_ast.ExprList(exprs=[aligned_cond]))
+            self._inserted.add(assertion)
+            node.stmt.block_items.insert(0, assertion)
+            self.generic_visit(node)
+            after_visit = self._types.copy()
+            self._types = before_types.copy()
+            self._types.merge(fixed_types)
 
-        c_s = self._instrument(before_types, self._types, self._pc)
-        while_index = self._parents[node].block_items.index(node)
-        self._parents[node].block_items[while_index:while_index] = c_s
-        for statement in c_s:
-            self._inserted.add(statement)
-        self._inserted.add(node)
+            c_s = self._instrument(before_types, self._types, self._pc)
+            while_index = self._parents[node].block_items.index(node)
+            self._parents[node].block_items[while_index:while_index] = c_s
+            for statement in c_s:
+                self._inserted.add(statement)
+            self._inserted.add(node)
 
-        update_statements = self._instrument(after_visit, self._types, self._pc)
-        node.stmt.block_items.extend(update_statements)
-        for statement in update_statements:
-            self._inserted.add(statement)
+            update_statements = self._instrument(after_visit, self._types, self._pc)
+            node.stmt.block_items.extend(update_statements)
+            for statement in update_statements:
+                self._inserted.add(statement)
 
-        # TODO: while shadow branch
-        if self._pc and not before_pc:
-            pass
+            # TODO: while shadow branch
+            if self._pc and not before_pc:
+                pass
+            self._inserted_query_assumes.pop()
+
         self._pc = before_pc
 
     def visit_Return(self, node):
