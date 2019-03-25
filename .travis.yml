@@ -23,6 +23,7 @@ script:
   - java -version
   - javac -version
   - tox
+  - bash ./scripts/benchmark.sh
   - python ./scripts/check.py ./examples/transformed
 
 after_success:
