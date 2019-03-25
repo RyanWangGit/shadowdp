@@ -689,7 +689,7 @@ class ShadowDPTransformer(NodeVisitor):
                 # insert assert(aligned_distance == 0);
                 assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
                                              args=c_ast.ExprList([c_ast.BinaryOp('==', convert_to_ast(align),
-                                                                                 c_ast.Constant(value=0))]))
+                                                                                 c_ast.Constant(type='int', value=0))]))
                 parent = self._parents[node]
                 parent.block_items.insert(parent.block_items.index(node), assert_node)
 
