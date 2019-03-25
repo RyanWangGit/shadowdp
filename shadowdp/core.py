@@ -243,28 +243,29 @@ class ShadowDPTransformer(NodeVisitor):
         query_var_checker = _ExpressionFinder(
             lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                          self._parameters[2] in node.name.name)
-        c_align, c_shadow = [], []
-        has_assume = False
-        for name, (align1, shadow1) in types1.variables(self._condition_stack):
+
+        assumes, inserted_statement = [], []
+        inserted_query = set()
+        for name, distances1 in types1.variables(self._condition_stack):
             if name not in types2:
                 continue
-            align2, shadow2 = types2.get_distance(name, self._condition_stack)
-            if align1 != '*' and align2 == '*':
-                query_nodes = query_var_checker.visit(convert_to_ast(align1))
-                if not has_assume and len(query_nodes) != 0:
-                    c_align.extend(self._assume_query(query_nodes[0]))
-                    has_assume = True
-                c_align.append(c_ast.Assignment(
-                    op='=', lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
-                    rvalue=convert_to_ast(align1)))
-            elif shadow1 != '*' and shadow2 == '*':
-                query_nodes = query_var_checker.visit(convert_to_ast(shadow1))
-                if not has_assume and len(query_nodes) != 0:
-                    c_shadow.extend(self._assume_query(query_nodes[0]))
-                c_shadow.append(c_ast.Assignment(
-                    op='=', lvalue=c_ast.ID('__SHADOWDP_SHADOW_DISTANCE_{}'.format(name)),
-                    rvalue=convert_to_ast(shadow1)))
-        return c_align if pc else c_align + c_shadow
+
+            distances2 = types2.get_distance(name, self._condition_stack)
+            for type_index in range(2):
+                version = 'ALIGNED' if type_index == 0 else 'SHADOW'
+                if distances1[type_index] != '*' and distances2[type_index] == '*':
+                    query_nodes = query_var_checker.visit(convert_to_ast(distances1[type_index]))
+                    for query in query_nodes:
+                        if any(is_node_equal(query, inserted) for inserted in inserted_query):
+                            continue
+                        assumes.append(self._assume_query(query))
+                        inserted_query.add(query)
+                    if type_index == 0 or (type_index == 1 and pc):
+                        inserted_statement.append(c_ast.Assignment(
+                            op='=', lvalue=c_ast.ID('__SHADOWDP_{}_DISTANCE_{}'.format(version, name)),
+                            rvalue=convert_to_ast(distances1[type_index])))
+
+        return assumes + inserted_statement
 
     def _assume_query(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
