@@ -70,8 +70,13 @@ def main(argv=sys.argv[1:]):
                             action='store', dest='function', type=str, default=None,
                             help='The function to verify.', required=False)
     arg_parser.add_argument('-e', '--epsilon',
-                            action='store', dest='epsilon', type=str, default=None,
+                            action='store_true', dest='epsilon', default=None,
                             help='Set epsilon = 1 to solve the non-linear issues.', required=False)
+    arg_parser.add_argument('-g', '--goal',
+                            action='store', dest='goal', type=str, default=None,
+                            help='The goal of the algorithm, default is epsilon-differential privacy, specify'
+                                 'this value to set different goal. '
+                                 'e.g., specify 2 to check for 2 * epsilon-differential privacy', required=False)
     results = arg_parser.parse_args(argv)
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
