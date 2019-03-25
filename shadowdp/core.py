@@ -237,16 +237,26 @@ class ShadowDPTransformer(NodeVisitor):
     def _instrument(self, types1, types2, pc):
         if not isinstance(types1, TypeSystem) or not isinstance(types2, TypeSystem):
             raise ValueError('types1 and types2 must be TypeSystem')
+
+        query_var_checker = _ExpressionFinder(
+            lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
+                         self._parameters[2] in node.name.name)
         c_align, c_shadow = [], []
         for name, (align1, shadow1) in types1.variables(self._condition_stack):
             if name not in types2:
                 continue
             align2, shadow2 = types2.get_distance(name, self._condition_stack)
             if align1 != '*' and align2 == '*':
+                query_nodes = query_var_checker.visit(convert_to_ast(align1))
+                if len(query_nodes) != 0:
+                    c_align.extend(self._assume_query(query_nodes[0]))
                 c_align.append(c_ast.Assignment(
                     op='=', lvalue=c_ast.ID('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(name)),
                     rvalue=convert_to_ast(align1)))
             elif shadow1 != '*' and shadow2 == '*':
+                query_nodes = query_var_checker.visit(convert_to_ast(shadow1))
+                if len(query_nodes) != 0:
+                    c_shadow.extend(self._assume_query(query_nodes[0]))
                 c_shadow.append(c_ast.Assignment(
                     op='=', lvalue=c_ast.ID('__SHADOWDP_SHADOW_DISTANCE_{}'.format(name)),
                     rvalue=convert_to_ast(shadow1)))
