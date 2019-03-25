@@ -411,9 +411,9 @@ class ShadowDPTransformer(NodeVisitor):
         # add declarations / new parameters for dynamically tracked variables
         for name, distances in self._types.variables():
             for index, distance in enumerate(distances):
-                if distance == '*':
+                version = 'ALIGNED' if index == 0 else 'SHADOW'
+                if distance == '*' or distance == '__SHADOWDP_{}_DISTANCE_{}'.format(version, name):
                     # if it is a dynamically tracked local variable, add declarations
-                    version = 'ALIGNED' if index == 0 else 'SHADOW'
                     if name not in self._parameters:
                         varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, name)
                         insert_statements.append(
