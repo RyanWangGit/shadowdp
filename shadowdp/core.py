@@ -180,12 +180,13 @@ class _DistanceGenerator(NodeVisitor):
 
 class ShadowDPTransformer(NodeVisitor):
     """ Traverse the AST and do necessary transformations on the AST according to the typing rules."""
-    def __init__(self, function_map=None, set_epsilon=None):
+    def __init__(self, function_map=None, set_epsilon=None, set_goal=None):
         """ Initialize the transformer.
         :param function_map: A dict containing a mapping from logical commands (assert / assume / havoc)
         to actual commands (e.g., __VERIFIER_assert in CPAChecker), this is an abstraction for use with other
         verification tools that may have other names for assert / assume / havoc commands.
         :param set_epsilon: boolean value indicating if we want to set epsilon to 1 to overcome the non-linearity issue.
+        :param set_goal: number indicating the goal to verify the algorithm, e.g., 2 means to verify 2 * epsilon-DP.
         """
         super().__init__()
 
@@ -204,6 +205,7 @@ class ShadowDPTransformer(NodeVisitor):
             self._func_map = function_map
 
         self._set_epsilon = set_epsilon
+        self._set_goal = set_goal
         self._types = TypeSystem()
         self._parameters = []
         self._random_variables = set()
@@ -528,7 +530,7 @@ class ShadowDPTransformer(NodeVisitor):
                     # incorporate epsilon = 1 approach
                     if self._set_epsilon:
                         epsilon, *_ = self._parameters
-                        scale = scale.replace(epsilon, self._set_epsilon)
+                        scale = scale.replace(epsilon, '1')
 
                     # TODO: maybe create a specialized simplifier for this scenario
                     # transform distance expression to cost expression,
@@ -766,11 +768,16 @@ class ShadowDPTransformer(NodeVisitor):
 
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
-        epsilon_node = c_ast.Constant(type='float', value=float(self._set_epsilon)) \
-            if self._set_epsilon else c_ast.ID(epsilon)
-        assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
-                                     args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
-                                                                         epsilon_node)]))
+        epsilon_node = c_ast.Constant(type='float', value=1) if self._set_epsilon else c_ast.ID(epsilon)
+        if self._set_goal:
+            assert_node = c_ast.FuncCall(
+                c_ast.ID(self._func_map['assert']), args=c_ast.ExprList(
+                    [c_ast.BinaryOp('<=', c_ast.ID(name='__SHADOWDP_v_epsilon'),
+                                    c_ast.BinaryOp(op='*', left=epsilon_node, right=convert_to_ast(self._set_goal)))]))
+        else:
+            assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
+                                         args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
+                                                                             epsilon_node)]))
         self._parents[node].block_items.insert(self._parents[node].block_items.index(node), assert_node)
         self._inserted.add(assert_node)
         # because we have inserted a statement before Return statement while iterating, it will be a forever loop
