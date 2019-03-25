@@ -226,7 +226,7 @@ class ShadowDPTransformer(NodeVisitor):
         # the generation of shadow branch
         self._pc = False
 
-    def _instrument_assume(self, query_node):
+    def _assume_query(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
         assume_functions = []
         shadow_distance_node = copy.deepcopy(query_node)
@@ -523,7 +523,7 @@ class ShadowDPTransformer(NodeVisitor):
                                                      self._parameters[2] in node.name.name)
                     query_nodes = expr_checker.visit(update_v_epsilon)
                     if len(query_nodes) != 0:
-                        assume_functions = self._instrument_assume(query_nodes[0])
+                        assume_functions = self._assume_query(query_nodes[0])
                         self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                         self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
                         for function in assume_functions:
@@ -644,7 +644,7 @@ class ShadowDPTransformer(NodeVisitor):
                 # add assume functions on __SHADOWDP_ALIGNED_DISTANCE_query and __SHADOWDP_SHADOW_DISTANCE_query
                 query_nodes = exp_checker.visit(aligned_cond)
                 if len(query_nodes) != 0:
-                    assume_functions = self._instrument_assume(query_nodes[0])
+                    assume_functions = self._assume_query(query_nodes[0])
                     block_node.block_items[0:0] = assume_functions
 
             # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)

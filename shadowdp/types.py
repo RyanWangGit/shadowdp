@@ -100,6 +100,9 @@ class TypeSystem:
                       )
         )
 
+    def __len__(self):
+        return len(self._types)
+
     def __repr__(self):
         return self._types.__repr__()
 
