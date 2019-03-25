@@ -258,7 +258,7 @@ class ShadowDPTransformer(NodeVisitor):
                     for query in query_nodes:
                         if any(is_node_equal(query, inserted) for inserted in inserted_query):
                             continue
-                        assumes.append(self._assume_query(query))
+                        assumes.extend(self._assume_query(query))
                         inserted_query.add(query)
                     if type_index == 0 or (type_index == 1 and pc):
                         inserted_statement.append(c_ast.Assignment(
