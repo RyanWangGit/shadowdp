@@ -41,3 +41,7 @@ class ReturnDistanceNotZero(ValueError):
         self.coord = coord
         self.name = name
         self.distance = distance
+
+
+class DistanceDependenceError(ValueError):
+    pass

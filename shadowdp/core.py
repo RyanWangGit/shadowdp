@@ -446,15 +446,16 @@ class ShadowDPTransformer(NodeVisitor):
 
     def visit_Assignment(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
+        varname = node.lvalue.name if isinstance(node.lvalue, c_ast.ID) else node.lvalue.name.name
         if self._loop_level == 0 and self._pc:
             # generate x^shadow = x + x^shadow - e according to (T-Asgn)
             parent = self._parents[node]
             if isinstance(parent, c_ast.Compound):
                 node_index = parent.block_items.index(node)
                 if isinstance(node.lvalue, c_ast.ID):
-                    shadow_distance = c_ast.ID(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(node.lvalue.name))
+                    shadow_distance = c_ast.ID(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(varname))
                 elif isinstance(node.lvalue, c_ast.ArrayRef):
-                    shadow_distance = c_ast.ArrayRef(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(node.lvalue.name.name),
+                    shadow_distance = c_ast.ArrayRef(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(varname),
                                                      subscript=node.lvalue.subscript)
                 else:
                     raise NotImplementedError('Assigned value type not supported {}'.format(type(node.lvalue)))
@@ -466,6 +467,19 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted.add(node)
             else:
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
+
+        """
+        # check the distance dependence
+        dependence_finder = _ExpressionFinder(
+            lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
+                             (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname))
+        for name, distances in self._types.variables(self._condition_stack):
+            if name not in self._random_variables:
+                for distance in distances:
+                    if distance != '*':
+                        if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
+                            raise DistanceDependenceError(varname, distance)
+        """
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
@@ -772,6 +786,7 @@ class ShadowDPTransformer(NodeVisitor):
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
         epsilon_node = c_ast.Constant(type='float', value=1) if self._set_epsilon else c_ast.ID(epsilon)
+
         if self._set_goal:
             assert_node = c_ast.FuncCall(
                 c_ast.ID(self._func_map['assert']), args=c_ast.ExprList(
