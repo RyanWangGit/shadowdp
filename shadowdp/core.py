@@ -537,7 +537,7 @@ class ShadowDPTransformer(NodeVisitor):
                         self._types.update_distance(
                             name,
                             selector.replace('SHADOW', '({})'.format(shadow)).replace('ALIGNED', '({})'.format(align)),
-                            shadow, False)
+                            shadow)
 
                 if self._loop_level == 0:
                     # insert cost variable update statement and transform sampling command to havoc command
