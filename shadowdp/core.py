@@ -425,6 +425,7 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted.add(node)
             else:
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
+
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
         self._types.update_distance(node.lvalue.name, aligned, shadow)
@@ -452,6 +453,7 @@ class ShadowDPTransformer(NodeVisitor):
                 aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.init)
                 self._types.update_distance(node.name, aligned, shadow)
             # if it is random variable declaration
+            # if it is random variable declaration (T-Laplace)
             elif isinstance(node.init, c_ast.FuncCall) and node.init.name.name == 'Lap':
                 self._random_variables.add(node.name)
                 logger.debug('Random variables: {}'.format(self._random_variables))
@@ -466,7 +468,7 @@ class ShadowDPTransformer(NodeVisitor):
 
                 # update distances of normal variables according to the selector
                 for name, (align, shadow) in self._types.variables(self._condition_stack):
-                    # first unwrap the star variables (T-Laplace)
+                    # first unwrap the star variables
                     align = '(__SHADOWDP_ALIGNED_DISTANCE_{0})'.format(name) if align == '*' else align
                     shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0})'.format(name) if shadow == '*' else shadow
                     # if the aligned distance and shadow distance are the same
@@ -479,7 +481,7 @@ class ShadowDPTransformer(NodeVisitor):
                             False)
 
                 if self._loop_level == 0:
-                    # insert cost variable update statement and transform sampling command to havoc command (T-Lap)
+                    # insert cost variable update statement and transform sampling command to havoc command
                     assert isinstance(self._parents[node], c_ast.Compound)
                     n_index = self._parents[node].block_items.index(node)
                     scale = _code_generator.visit(node.init.args.exprs[0])
@@ -511,6 +513,7 @@ class ShadowDPTransformer(NodeVisitor):
                     v_epsilon = _ExpressionSimplifier().visit(convert_to_ast(v_epsilon))
                     update_v_epsilon = c_ast.Assignment(op='=',
                                                         lvalue=c_ast.ID('__SHADOWDP_v_epsilon'), rvalue=v_epsilon)
+                    # insert assume functions on query variable if cost variable calculation contains it
                     expr_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
                                                      '__SHADOWDP_' in node.name.name and
                                                      self._parameters[2] in node.name.name)
@@ -533,9 +536,7 @@ class ShadowDPTransformer(NodeVisitor):
 
         elif isinstance(node.type, c_ast.ArrayDecl):
             # put array variable declaration into type dict
-            # TODO: fill in the type
-            self._types.update_distance(node.name, '0', '0')
-
+            raise NotImplementedError('Array declaration current not supported')
         else:
             raise NotImplementedError('Declaration statement currently not supported: {}'.format(node))
 
@@ -544,8 +545,10 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_If(self, n):
         logger.debug('types(before branch): {}'.format(self._types))
         logger.debug('Line {}: if({})'.format(n.coord.line, _code_generator.visit(n.cond)))
+
         # update pc value
         before_pc = self._pc
+        # TODO: use Z3 to solve constraints to decide this value
         star_variable_finder = _ExpressionFinder(
             lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
                           self._types.get_distance(node.name)[1] == '*'))
@@ -591,7 +594,6 @@ class ShadowDPTransformer(NodeVisitor):
         self._types.merge(true_types)
         logger.debug('types(after merge): {}'.format(self._types))
 
-        # TODO: use Z3 to solve constraints to decide this value
         exp_checker = _ExpressionFinder(
             lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                          self._parameters[2] in node.name.name)
