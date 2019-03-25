@@ -420,7 +420,7 @@ class ShadowDPTransformer(NodeVisitor):
                 # insert x^shadow = x + x^shadow - e;
                 insert_node = c_ast.Assignment(op='=', lvalue=shadow_distance, rvalue=c_ast.BinaryOp(
                     op='-', left=c_ast.BinaryOp(op='+', left=node.lvalue, right=shadow_distance), right=node.rvalue))
-                parent.block_items.insert(node_index - 1, insert_node)
+                parent.block_items.insert(node_index, insert_node)
                 self._inserted.add(insert_node)
                 self._inserted.add(node)
             else:
