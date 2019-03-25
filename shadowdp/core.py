@@ -230,8 +230,8 @@ class ShadowDPTransformer(NodeVisitor):
         # TODO: use Z3 to solve constraints to decide this value
         star_variable_finder = _ExpressionFinder(
             lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
-                          types.get_distance(node.name)[1] == '*'))
-        return not pc or star_variable_finder.visit(condition) is not None
+                          '__SHADOWDP_' in types.get_distance(node.name)[1]))
+        return pc or len(star_variable_finder.visit(condition)) != 0
 
     # Instrumentation rule
     def _instrument(self, types1, types2, pc):
