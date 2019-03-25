@@ -730,6 +730,7 @@ class ShadowDPTransformer(NodeVisitor):
         self._inserted.add(assertion)
         node.stmt.block_items.insert(0, assertion)
         self.generic_visit(node)
+        after_visit = self._types.copy()
         self._types = before_types.copy()
         self._types.merge(fixed_types)
 
@@ -740,7 +741,7 @@ class ShadowDPTransformer(NodeVisitor):
             self._inserted.add(statement)
         self._inserted.add(node)
 
-        update_statements = self._instrument(fixed_types, self._types, self._pc)
+        update_statements = self._instrument(after_visit, self._types, self._pc)
         node.stmt.block_items.extend(update_statements)
         for statement in update_statements:
             self._inserted.add(statement)
