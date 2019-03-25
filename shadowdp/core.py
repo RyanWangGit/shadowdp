@@ -681,7 +681,16 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_Return(self, node):
         align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
         if align != '0':
-            raise ReturnDistanceNotZero(node.coord, _code_generator.visit(node.expr), align)
+            if '__SHADOWDP_' not in align:
+                raise ReturnDistanceNotZero(node.coord, _code_generator.visit(node.expr), align)
+            else:
+                # insert assert(aligned_distance == 0);
+                assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
+                                             args=c_ast.ExprList([c_ast.BinaryOp('==', convert_to_ast(align),
+                                                                                 c_ast.Constant(value=0))]))
+                parent = self._parents[node]
+                parent.block_items.insert(parent.block_items.index(node), assert_node)
+
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
         epsilon_node = c_ast.Constant(type='float', value=float(self._set_epsilon)) \
