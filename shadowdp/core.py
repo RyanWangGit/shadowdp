@@ -234,7 +234,6 @@ class ShadowDPTransformer(NodeVisitor):
             lambda node: (isinstance(node, c_ast.ID) and
                           ('__SHADOWDP_' in types.get_distance(node.name)[1] or
                            types.get_distance(node.name)[1] == '*')))
-        print(star_variable_finder.visit(condition))
         return pc or len(star_variable_finder.visit(condition)) != 0
 
     # Instrumentation rule
