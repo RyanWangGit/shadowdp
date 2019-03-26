@@ -26,7 +26,7 @@ import re
 from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
-from shadowdp.types import TypeSystem, convert_to_ast, is_node_equal
+from shadowdp.typesystem import TypeSystem, convert_to_ast, is_node_equal
 from shadowdp.exceptions import *
 logger = logging.getLogger(__name__)
 
@@ -52,12 +52,12 @@ class _ExpressionFinder(NodeVisitor):
 
 class _ShadowBranchGenerator(NodeVisitor):
     """ this class generates the shadow branch statement"""
-    def __init__(self, shadow_variables, types, conditions):
+    def __init__(self, shadow_variables, types):
         """
         :param shadow_variables: the variable list whose shadow distances should be updated
         """
         self._shadow_variables = shadow_variables
-        self._expression_replacer = _ExpressionReplacer(types, False, conditions)
+        self._expression_replacer = _ExpressionReplacer(types, False)
 
     def visit_Decl(self, node):
         raise NotImplementedError('currently doesn\'t support declaration in branch')
@@ -79,17 +79,16 @@ class _ShadowBranchGenerator(NodeVisitor):
 
 class _ExpressionReplacer(NodeVisitor):
     """ this class returns the aligned or shadow version of an expression, e.g., returns e^aligned or e^shadow of e"""
-    def __init__(self, types, is_aligned, conditions):
+    def __init__(self, types, is_aligned):
         assert isinstance(types, TypeSystem)
         self._types = types
         self._is_aligned = is_aligned
-        self._conditions = conditions
 
     def _replace(self, node):
         if not isinstance(node, (c_ast.ArrayRef, c_ast.ID)):
             raise NotImplementedError('Expression type {} currently not supported.'.format(type(node)))
         varname = node.name.name if isinstance(node, c_ast.ArrayRef) else node.name
-        alignd, shadow = self._types.get_distance(varname, self._conditions)
+        alignd, shadow = self._types.get_distance(varname)
         distance = alignd if self._is_aligned else shadow
         if distance == '0':
             return node
@@ -142,9 +141,8 @@ class _ExpressionSimplifier(NodeVisitor):
 
 
 class _DistanceGenerator(NodeVisitor):
-    def __init__(self, types, conditions):
+    def __init__(self, types):
         self._types = types
-        self._conditions = conditions
         assert isinstance(self._types, TypeSystem)
 
     def try_simplify(self, expr):
@@ -161,14 +159,14 @@ class _DistanceGenerator(NodeVisitor):
         return '0', '0'
 
     def visit_ID(self, n):
-        align, shadow = self._types.get_distance(n.name, self._conditions)
+        align, shadow = self._types.get_distance(n.name)
         align = '(__SHADOWDP_ALIGNED_DISTANCE_{0})'.format(n.name) if align == '*' else align
         shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0})'.format(n.name) if shadow == '*' else shadow
         return align, shadow
 
     def visit_ArrayRef(self, n):
         varname, subscript = n.name.name, _code_generator.visit(n.subscript)
-        align, shadow = self._types.get_distance(n.name.name, self._conditions)
+        align, shadow = self._types.get_distance(n.name.name)
         align = '(__SHADOWDP_ALIGNED_DISTANCE_{0}[{1}])'.format(varname, subscript) if align == '*' else align
         shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0}[{1}])'.format(varname, subscript) if shadow == '*' else shadow
         return align, shadow
@@ -211,8 +209,6 @@ class ShadowDPTransformer(NodeVisitor):
         self._random_variables = set()
         # indicator that all at most one record can differ or records can differ
         self._one_differ = True
-        # use a stack to keep track of the conditions so that we know we're inside a true branch or false branch
-        self._condition_stack = []
         # we keep tracks of the parent of each node since pycparser doesn't provide this feature, this is useful
         # for easy trace back
         self._parents = {}
@@ -248,11 +244,11 @@ class ShadowDPTransformer(NodeVisitor):
                          self._parameters[2] in node.name.name)
 
         assumes, inserted_statement = [], []
-        for name, distances1 in types1.variables(self._condition_stack):
+        for name, distances1 in types1.variables():
             if name not in types2:
                 continue
 
-            distances2 = types2.get_distance(name, self._condition_stack)
+            distances2 = types2.get_distance(name)
             for type_index in range(2):
                 version = 'ALIGNED' if type_index == 0 else 'SHADOW'
                 if distances1[type_index] != '*' and distances2[type_index] == '*':
@@ -486,7 +482,7 @@ class ShadowDPTransformer(NodeVisitor):
         """
 
         # get new distance from the assignment expression (T-Asgn)
-        aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
+        aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
         if self._pc:
             self._types.update_distance(node.lvalue.name, aligned, '*')
         else:
@@ -512,7 +508,7 @@ class ShadowDPTransformer(NodeVisitor):
                 self._types.update_distance(node.name, '0', '0')
             # else update the distance to the distance of initial value (T-Asgn)
             elif isinstance(node.init, (c_ast.Constant, c_ast.BinaryOp, c_ast.BinaryOp, c_ast.UnaryOp)):
-                aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.init)
+                aligned, shadow = _DistanceGenerator(self._types).visit(node.init)
                 if self._pc:
                     self._types.update_distance(node.name, aligned, '*')
                 else:
@@ -528,10 +524,22 @@ class ShadowDPTransformer(NodeVisitor):
                 # get the annotation for sampling command
                 selector, distance_eta, *_ = map(lambda x: x.strip(), node.init.args.exprs[1].value[1:-1].split(';'))
                 # set the random variable distance
+                # replace the distance variables in annotation with the current distance
+                # e.g., replace __SHADOWDP_ALIGNED_DISTANCE_sum with 0 if Gamma = {sum: <0, ->}
+                regex = re.compile(r'(__SHADOWDP_(ALIGNED|SHADOW)_DISTANCE_([_a-zA-Z][_a-zA-Z0-9]*)([\[_a-zA-Z0-9\]]*))')
+                for distance_var, version, varname, subscript in regex.findall(distance_eta):
+                    if varname == self._parameters[2]:
+                        continue
+                    align, shadow = self._types.get_distance(varname)
+                    distance = align if version == 'ALIGNED' else shadow
+                    if distance == '*':
+                        continue
+                    distance_eta = distance_eta.replace(distance_var, distance)
+
                 self._types.update_distance(node.name, distance_eta, '0')
 
                 # update distances of normal variables according to the selector
-                for name, (align, shadow) in self._types.variables(self._condition_stack):
+                for name, (align, shadow) in self._types.variables():
                     # first unwrap the star variables
                     align = '(__SHADOWDP_ALIGNED_DISTANCE_{0})'.format(name) if align == '*' else align
                     shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0})'.format(name) if shadow == '*' else shadow
@@ -635,9 +643,9 @@ class ShadowDPTransformer(NodeVisitor):
 
         self._inserted_query_assumes.append([])
         # add current condition for simplification
-        self._condition_stack.append([n.cond, True])
+        self._types.apply(n.cond, True)
         # to be used in if branch transformation assert(e^aligned);
-        aligned_true_cond = _ExpressionReplacer(before_types, True, self._condition_stack).visit(
+        aligned_true_cond = _ExpressionReplacer(self._types, True).visit(
             copy.deepcopy(n.cond))
         self.visit(n.iftrue)
         true_types = self._types
@@ -647,13 +655,12 @@ class ShadowDPTransformer(NodeVisitor):
         self._inserted_query_assumes.append([])
         # revert current types back to enter the false branch
         self._types = cur_types
-        self._condition_stack[-1][1] = False
+        self._types.apply(n.cond, False)
         if n.iffalse:
             logger.debug('Line: {} else'.format(n.iffalse.coord.line))
             self.visit(n.iffalse)
         # to be used in else branch transformation assert(not (e^aligned));
-        aligned_false_cond = _ExpressionReplacer(before_types, True, self._condition_stack).visit(
-            copy.deepcopy(n.cond))
+        aligned_false_cond = _ExpressionReplacer(self._types, True).visit(copy.deepcopy(n.cond))
         logger.debug('types(false branch): {}'.format(self._types))
         false_types = self._types.copy()
         self._types.merge(true_types)
@@ -674,7 +681,7 @@ class ShadowDPTransformer(NodeVisitor):
                     self._inserted.add(statement)
                 self._inserted.add(n)
                 # insert c_shadow
-                shadow_cond = _ExpressionReplacer(types_0, False, self._condition_stack).visit(
+                shadow_cond = _ExpressionReplacer(types_0, False).visit(
                     copy.deepcopy(n.cond))
                 shadow_branch = c_ast.If(cond=shadow_cond,
                                          iftrue=c_ast.Compound(
@@ -683,8 +690,7 @@ class ShadowDPTransformer(NodeVisitor):
                                              block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
                     {name for name, (_, shadow) in types_0.variables() if shadow == '*'},
-                    types_0,
-                    self._condition_stack)
+                    types_0)
                 shadow_branch_generator.visit(shadow_branch)
                 if_index = self._parents[n].block_items.index(n)
                 self._parents[n].block_items.insert(if_index + 1, shadow_branch)
@@ -731,7 +737,6 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted_query_assumes.pop()
 
         self._pc = before_pc
-        self._condition_stack.pop()
 
     def visit_While(self, node):
         before_pc = self._pc
@@ -741,7 +746,7 @@ class ShadowDPTransformer(NodeVisitor):
 
         fixed_types = None
         # don't output logs while doing iterations
-        logger.disabled = True
+        #logger.disabled = True
         self._loop_level += 1
         while fixed_types != self._types:
             fixed_types = self._types.copy()
@@ -754,7 +759,7 @@ class ShadowDPTransformer(NodeVisitor):
             self._inserted_query_assumes.append([])
             logger.debug('Line {}: while({})'.format(node.coord.line, _code_generator.visit(node.cond)))
             logger.debug('types(fixed point): {}'.format(self._types))
-            aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
+            aligned_cond = _ExpressionReplacer(self._types, True).visit(
                 copy.deepcopy(node.cond))
             assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                        args=c_ast.ExprList(exprs=[aligned_cond]))
@@ -785,17 +790,9 @@ class ShadowDPTransformer(NodeVisitor):
         self._pc = before_pc
 
     def visit_Return(self, node):
-        align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
+        align, _ = _DistanceGenerator(self._types).visit(node.expr)
         if align != '0':
-            if '__SHADOWDP_' not in align:
-                raise ReturnDistanceNotZero(node.coord, _code_generator.visit(node.expr), align)
-            else:
-                # insert assert(aligned_distance == 0);
-                assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
-                                             args=c_ast.ExprList([c_ast.BinaryOp('==', convert_to_ast(align),
-                                                                                 c_ast.Constant(type='int', value=0))]))
-                parent = self._parents[node]
-                parent.block_items.insert(parent.block_items.index(node), assert_node)
+            raise ReturnDistanceNotZero(node.coord, _code_generator.visit(node.expr), align)
 
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters

@@ -48,3 +48,7 @@ output*/
 
 # virtual environment
 venv/
+
+# transformed code
+*_t.c
+!examples/transformed/

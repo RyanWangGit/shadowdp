@@ -20,5 +20,5 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from shadowdp.checker import check
-from shadowdp.types import TypeSystem
+from shadowdp.typesystem import TypeSystem
 from shadowdp.core import ShadowDPTransformer
