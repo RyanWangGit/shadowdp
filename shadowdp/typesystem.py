@@ -50,14 +50,14 @@ def is_node_equal(node_1, node_2):
 class _DistanceSimplifier(NodeVisitor):
     """Simplifies a given distance c_ast node using conditions.
     e.g. distance x + y > 0 ? 2 : 0 would be simplified to 2 if condition (x + y > 0) is given."""
-    def __init__(self, conditions):
-        self._conditions = conditions
+    def __init__(self, condition, is_true):
+        self._condition = condition
+        self._is_true = is_true
 
     def _simplify(self, ternary_node):
         assert isinstance(ternary_node, c_ast.TernaryOp)
-        for condition, is_true in self._conditions:
-            if is_node_equal(ternary_node.cond, condition):
-                return ternary_node.iftrue if is_true else ternary_node.iffalse
+        if is_node_equal(ternary_node.cond, self._condition):
+            return ternary_node.iftrue if self._is_true else ternary_node.iffalse
         return ternary_node
 
     def visit_BinaryOp(self, node):
@@ -121,9 +121,15 @@ class TypeSystem:
     def clear(self):
         self._types.clear()
 
-    def variables(self, conditions=None):
+    def variables(self):
         for name in self._types.keys():
-            yield name, self.get_distance(name, conditions)
+            yield name, self.get_distance(name)
+
+    def apply(self, condition, is_true):
+        simplifier = _DistanceSimplifier(condition, is_true)
+        for name in self._types.keys():
+            self._types[name] = \
+                [simplifier.simplify(distance) if distance != '*' else distance for distance in self._types[name]]
 
     def diff(self, other):
         assert isinstance(other, TypeSystem)
@@ -159,19 +165,12 @@ class TypeSystem:
         """
         return self._types[name]
 
-    def get_distance(self, name, conditions=None):
+    def get_distance(self, name):
         """ get the distance(align, shadow) of a variable. Simplifies the distance if conditions are given.
         :param name: The name of the variable.
-        :param conditions: The condition to apply, can either be `str` or `c_ast.Node`
         :return: (Aligned distance, Shadow distance) of the variable.
         """
-        simplifier = _DistanceSimplifier(conditions)
-        distances = self._types[name]
-
-        aligned, shadow = ('*' if distance == '*' else
-                           (_generator.visit(simplifier.simplify(distance)) if conditions and len(conditions) != 0
-                            else _generator.visit(distance)) for distance in distances)
-        return aligned, shadow
+        return tuple('*' if distance == '*' else _generator.visit(distance) for distance in self._types[name])
 
     def update_distance(self, name, align, shadow):
         # try simplify
