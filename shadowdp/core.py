@@ -26,7 +26,7 @@ import re
 from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
-from shadowdp.types import TypeSystem, convert_to_ast, is_node_equal
+from shadowdp.typesystem import TypeSystem, convert_to_ast, is_node_equal
 from shadowdp.exceptions import *
 logger = logging.getLogger(__name__)
 
