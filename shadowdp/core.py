@@ -524,6 +524,16 @@ class ShadowDPTransformer(NodeVisitor):
                 # get the annotation for sampling command
                 selector, distance_eta, *_ = map(lambda x: x.strip(), node.init.args.exprs[1].value[1:-1].split(';'))
                 # set the random variable distance
+                regex = re.compile(r'(__SHADOWDP_(ALIGNED|SHADOW)_DISTANCE_([_a-zA-Z][_a-zA-Z0-9]*)([\[_a-zA-Z0-9\]]*))')
+                for distance_var, version, varname, subscript in regex.findall(distance_eta):
+                    if varname == self._parameters[2]:
+                        continue
+                    align, shadow = self._types.get_distance(varname)
+                    distance = align if version == 'ALIGNED' else shadow
+                    if distance == '*':
+                        continue
+                    distance_eta = distance_eta.replace(distance_var, distance)
+
                 self._types.update_distance(node.name, distance_eta, '0')
 
                 # update distances of normal variables according to the selector
