@@ -128,8 +128,8 @@ class TypeSystem:
     def apply(self, condition, is_true):
         simplifier = _DistanceSimplifier(condition, is_true)
         for name in self._types.keys():
-            align, shadow = self._types[name]
-            self._types[name] = [simplifier.simplify(align), simplifier.simplify(shadow)]
+            self._types[name] = \
+                [simplifier.simplify(distance) if distance != '*' else distance for distance in self._types[name]]
 
     def diff(self, other):
         assert isinstance(other, TypeSystem)
