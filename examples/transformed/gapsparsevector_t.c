@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define Abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-int diffsparsevector(float epsilon, int size, float q[], float T, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
+int gapsparsevector(float epsilon, int size, float q[], float T, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
 {
   __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(size > 0);
