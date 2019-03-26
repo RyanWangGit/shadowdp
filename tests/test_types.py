@@ -29,5 +29,8 @@ def test_type_system():
     types.update_distance('a', 'b ? c: d', '*')
     assert types.get_distance('a') == ('(b) ? (c) : (d)', '*')
     # test on simplification
-    assert types.get_distance('a', [[convert_to_ast('b'), True]]) == ('c', '*')
-    assert types.get_distance('a', [[convert_to_ast('b'), False]]) == ('d', '*')
+    copy = types.copy()
+    copy.apply(convert_to_ast('b'), True)
+    assert copy.get_distance('a') == ('c', '*')
+    types.apply(convert_to_ast('b'), False)
+    assert types.get_distance('a') == ('d', '*')
