@@ -159,14 +159,14 @@ class TypeSystem:
                     self._types[name][1] = '*'
 
     def get_raw_distance(self, name):
-        """ return the raw distance, without simplification and contains '*' type.
+        """ return the raw distance, in AST node representation.
         :param name: The name of the variable.
         :return: (Aligned raw distance, Shadow raw distance), both of ast node type.
         """
         return self._types[name]
 
     def get_distance(self, name):
-        """ get the distance(align, shadow) of a variable. Simplifies the distance if conditions are given.
+        """ get the distance(align, shadow) of a variable, in str representation.
         :param name: The name of the variable.
         :return: (Aligned distance, Shadow distance) of the variable.
         """
