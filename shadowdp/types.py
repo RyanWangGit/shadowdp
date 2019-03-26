@@ -100,6 +100,9 @@ class TypeSystem:
                       )
         )
 
+    def __len__(self):
+        return len(self._types)
+
     def __repr__(self):
         return self._types.__repr__()
 
@@ -140,8 +143,7 @@ class TypeSystem:
         assert isinstance(other, TypeSystem)
         for name, *_ in other.variables():
             if name not in self._types:
-                # TODO: break PEP8, maybe expose an interface to access internal dict
-                self._types[name] = other._types[name]
+                self._types[name] = other.get_raw_distance(name)
             else:
                 cur_align, cur_shadow = self._types[name]
                 other_align, other_shadow = other.get_raw_distance(name)
@@ -171,7 +173,7 @@ class TypeSystem:
                             else _generator.visit(distance)) for distance in distances)
         return aligned, shadow
 
-    def update_distance(self, name, align, shadow, is_assign=True):
+    def update_distance(self, name, align, shadow):
         # try simplify
         from sympy import simplify
 
@@ -187,9 +189,6 @@ class TypeSystem:
             pass
         align = str(align).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
         shadow = str(shadow).replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
-        if is_assign:
-            align = '0' if align == '__SHADOWDP_ALIGNED_{0} - {0}'.format(name) else align
-            shadow = '0' if shadow == '__SHADOWDP_SHADOW_{0} - {0}'.format(name) else shadow
         # convert to internal AST representation
         align = convert_to_ast(align) if align != '*' else '*'
         shadow = convert_to_ast(shadow) if shadow != '*' else '*'

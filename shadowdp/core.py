@@ -37,15 +37,17 @@ class _ExpressionFinder(NodeVisitor):
     """ this class find a specific node in the expression"""
     def __init__(self, check_func):
         self._check_func = check_func
+        self._nodes = []
+
+    def visit(self, node):
+        super().visit(node)
+        return self._nodes
 
     def generic_visit(self, node):
         if self._check_func(node):
-            return node
-        else:
-            for child in node:
-                node = self.generic_visit(child)
-                if node:
-                    return node
+            self._nodes.append(node)
+        for child in node:
+            self.generic_visit(child)
 
 
 class _ShadowBranchGenerator(NodeVisitor):
@@ -67,8 +69,10 @@ class _ShadowBranchGenerator(NodeVisitor):
                             if isinstance(child, c_ast.Assignment) and child.lvalue.name in self._shadow_variables]
         for child in node:
             if isinstance(child, c_ast.Assignment):
-                child.lvalue.name = '__SHADOWDP_SHADOW_{}'.format(child.lvalue.name)
-                child.rvalue = self._expression_replacer.visit(child.rvalue)
+                child.rvalue = c_ast.BinaryOp(op='-', left=self._expression_replacer.visit(child.rvalue),
+                                              right=c_ast.ID(name=child.lvalue.name))
+                # change the assignment variable name to shadow distance variable
+                child.lvalue.name = '__SHADOWDP_SHADOW_DISTANCE_{}'.format(child.lvalue.name)
             else:
                 self.visit(child)
 
@@ -82,34 +86,20 @@ class _ExpressionReplacer(NodeVisitor):
         self._conditions = conditions
 
     def _replace(self, node):
-        if isinstance(node, c_ast.ArrayRef):
-            alignd, shadow = self._types.get_distance(node.name.name, self._conditions)
-            distance = alignd if self._is_aligned else shadow
-            if distance == '0':
-                return node
-            elif distance == '*':
-                return c_ast.ArrayRef(
-                    name=c_ast.ID(
-                        name='__SHADOWDP_{}_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', node.name.name)),
-                    subscript=node.subscript
-                )
-            else:
-                return c_ast.BinaryOp(op='+',
-                                      left=node,
-                                      right=convert_to_ast(distance))
-        elif isinstance(node, c_ast.ID):
-            aligned, shadow = self._types.get_distance(node.name, self._conditions)
-            distance = aligned if self._is_aligned else shadow
-            if distance == '0':
-                return node
-            elif distance == '*':
-                return c_ast.ID(name='__SHADOWDP_{}_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', node.name))
-            else:
-                return c_ast.BinaryOp(op='+',
-                                      left=node,
-                                      right=c_ast.ID(name=aligned if self._is_aligned else shadow))
+        if not isinstance(node, (c_ast.ArrayRef, c_ast.ID)):
+            raise NotImplementedError('Expression type {} currently not supported.'.format(type(node)))
+        varname = node.name.name if isinstance(node, c_ast.ArrayRef) else node.name
+        alignd, shadow = self._types.get_distance(varname, self._conditions)
+        distance = alignd if self._is_aligned else shadow
+        if distance == '0':
+            return node
+        elif distance == '*':
+            distance_varname = '__SHADOWDP_{}_DISTANCE_{}'.format('ALIGNED' if self._is_aligned else 'SHADOW', varname)
+            distance_var = c_ast.ArrayRef(name=c_ast.ID(name=distance_varname), subscript=node.subscript) \
+                if isinstance(node, c_ast.ArrayRef) else c_ast.ID(name=distance_varname)
+            return c_ast.BinaryOp(op='+', left=node, right=distance_var)
         else:
-            raise NotImplementedError
+            return c_ast.BinaryOp(op='+', left=node, right=convert_to_ast(distance))
 
     def visit_BinaryOp(self, node):
         if isinstance(node.left, (c_ast.ArrayRef, c_ast.ID)):
@@ -172,15 +162,15 @@ class _DistanceGenerator(NodeVisitor):
 
     def visit_ID(self, n):
         align, shadow = self._types.get_distance(n.name, self._conditions)
-        align = '(__SHADOWDP_ALIGNED_{0} - {0})'.format(n.name) if align == '*' else align
-        shadow = '(__SHADOWDP_SHADOW_{0} - {0})'.format(n.name) if shadow == '*' else shadow
+        align = '(__SHADOWDP_ALIGNED_DISTANCE_{0})'.format(n.name) if align == '*' else align
+        shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0})'.format(n.name) if shadow == '*' else shadow
         return align, shadow
 
     def visit_ArrayRef(self, n):
         varname, subscript = n.name.name, _code_generator.visit(n.subscript)
         align, shadow = self._types.get_distance(n.name.name, self._conditions)
-        align = '(__SHADOWDP_ALIGNED_{0}[{1}] - {0}[{1}])'.format(varname, subscript) if align == '*' else align
-        shadow = '(__SHADOWDP_SHADOW_{0}[{1}] - {0}[{1}])'.format(varname, subscript) if shadow == '*' else shadow
+        align = '(__SHADOWDP_ALIGNED_DISTANCE_{0}[{1}])'.format(varname, subscript) if align == '*' else align
+        shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0}[{1}])'.format(varname, subscript) if shadow == '*' else shadow
         return align, shadow
 
     def visit_BinaryOp(self, n):
@@ -190,12 +180,13 @@ class _DistanceGenerator(NodeVisitor):
 
 class ShadowDPTransformer(NodeVisitor):
     """ Traverse the AST and do necessary transformations on the AST according to the typing rules."""
-    def __init__(self, function_map=None, set_epsilon=None):
+    def __init__(self, function_map=None, set_epsilon=None, set_goal=None):
         """ Initialize the transformer.
         :param function_map: A dict containing a mapping from logical commands (assert / assume / havoc)
         to actual commands (e.g., __VERIFIER_assert in CPAChecker), this is an abstraction for use with other
         verification tools that may have other names for assert / assume / havoc commands.
         :param set_epsilon: boolean value indicating if we want to set epsilon to 1 to overcome the non-linearity issue.
+        :param set_goal: number indicating the goal to verify the algorithm, e.g., 2 means to verify 2 * epsilon-DP.
         """
         super().__init__()
 
@@ -214,6 +205,7 @@ class ShadowDPTransformer(NodeVisitor):
             self._func_map = function_map
 
         self._set_epsilon = set_epsilon
+        self._set_goal = set_goal
         self._types = TypeSystem()
         self._parameters = []
         self._random_variables = set()
@@ -232,46 +224,81 @@ class ShadowDPTransformer(NodeVisitor):
         # we shouldn't visit the `_v_epsilon = ...;` statement node, so we keep track of the inserted statements
         # to avoid them
         self._inserted = set()
+        # pc corresponds to the pc value in paper, which means if the shadow execution diverges or not, and controls
+        # the generation of shadow branch
+        self._pc = False
+        # to track the inserted assume functions so that we don't have to insert redundent assumes
+        self._inserted_query_assumes = [[]]
 
-    def _instrument_assume(self, query_node):
+    def _update_pc(self, pc, types, condition):
+        # TODO: use Z3 to solve constraints to decide this value
+        star_variable_finder = _ExpressionFinder(
+            lambda node: (isinstance(node, c_ast.ID) and
+                          ('__SHADOWDP_' in types.get_distance(node.name)[1] or
+                           types.get_distance(node.name)[1] == '*')))
+        return pc or len(star_variable_finder.visit(condition)) != 0
+
+    # Instrumentation rule
+    def _instrument(self, types1, types2, pc):
+        if not isinstance(types1, TypeSystem) or not isinstance(types2, TypeSystem):
+            raise ValueError('types1 and types2 must be TypeSystem')
+
+        query_var_checker = _ExpressionFinder(
+            lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
+                         self._parameters[2] in node.name.name)
+
+        assumes, inserted_statement = [], []
+        for name, distances1 in types1.variables(self._condition_stack):
+            if name not in types2:
+                continue
+
+            distances2 = types2.get_distance(name, self._condition_stack)
+            for type_index in range(2):
+                version = 'ALIGNED' if type_index == 0 else 'SHADOW'
+                if distances1[type_index] != '*' and distances2[type_index] == '*':
+                    for query in query_var_checker.visit(convert_to_ast(distances1[type_index])):
+                        assumes.extend(self._assume_query(query))
+                        self._inserted_query_assumes[-1].append(query)
+                    if type_index == 0 or (type_index == 1 and pc):
+                        inserted_statement.append(c_ast.Assignment(
+                            op='=', lvalue=c_ast.ID('__SHADOWDP_{}_DISTANCE_{}'.format(version, name)),
+                            rvalue=convert_to_ast(distances1[type_index])))
+
+        return assumes + inserted_statement
+
+    def _assume_query(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
         assume_functions = []
-        shadow_query_node = copy.deepcopy(query_node)
-        align_query_node = copy.deepcopy(query_node)
-        original_query_node = copy.deepcopy(query_node)
-        regex = re.compile(r'__SHADOWDP_[A-Z]+_([_a-zA-Z][a-zA-Z0-9\[\]]*)')
-        align_query_node.name.name = regex.sub(r'__SHADOWDP_ALIGNED_\g<1>', query_node.name.name)
-        shadow_query_node.name.name = regex.sub(r'__SHADOWDP_SHADOW_\g<1>', query_node.name.name)
-        original_query_node.name.name = regex.sub(r'\g<1>', query_node.name.name)
+        shadow_distance_node = copy.deepcopy(query_node)
+        align_distance_node = copy.deepcopy(query_node)
+        regex = re.compile(r'__SHADOWDP_[A-Z]+_DISTANCE_([_a-zA-Z][a-zA-Z0-9\[\]]*)')
+        align_distance_node.name.name = regex.sub(r'__SHADOWDP_ALIGNED_DISTANCE_\g<1>', query_node.name.name)
+        shadow_distance_node.name.name = regex.sub(r'__SHADOWDP_SHADOW_DISTANCE_\g<1>', query_node.name.name)
         common_assume = [
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='<=',
-                                                              left=c_ast.BinaryOp('-',
-                                                                                  left=align_query_node,
-                                                                                  right=original_query_node),
+                                                              left=align_distance_node,
                                                               right=c_ast.Constant('int', '1'))])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='>=',
-                                                              left=c_ast.BinaryOp('-',
-                                                                                  left=align_query_node,
-                                                                                  right=original_query_node),
+                                                              left=align_distance_node,
                                                               right=c_ast.Constant('int', '-1'))])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
-                                                              left=shadow_query_node,
-                                                              right=align_query_node)]))
+                                                              left=shadow_distance_node,
+                                                              right=align_distance_node)]))
             ]
         # insert following statements:
         # if (i == __SHADOWDP_index) {
-        #   assume(__SHADOWDP_ALIGNED_q[i] - q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] - q[i] <= 1);
-        #   assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+        #   assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1); assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
+        #   assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         # }
         # else {
-        #   assume(__SHADOWDP_ALIGNED_q[i] - q[i] == 0);
-        #   assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+        #   assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] == 0);
+        #   assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         # }
         if self._one_differ:
             if_block = c_ast.If(cond=c_ast.BinaryOp('==',
@@ -284,23 +311,26 @@ class ShadowDPTransformer(NodeVisitor):
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
-                                                              left=shadow_query_node,
-                                                              right=align_query_node)])),
+                                                              left=shadow_distance_node,
+                                                              right=align_distance_node)])),
                 c_ast.FuncCall(
                     name=c_ast.ID(self._func_map['assume']),
                     args=c_ast.ExprList(exprs=[c_ast.BinaryOp(op='==',
-                                                              left=c_ast.BinaryOp('-',
-                                                                                  left=align_query_node,
-                                                                                  right=original_query_node),
+                                                              left=align_distance_node,
                                                               right=c_ast.Constant('int', '0'))]))
 
             ]
             assume_functions.append(if_block)
         # insert following statements:
-        # assume(__SHADOWDP_ALIGNED_q[i] - q[i] >= -1); assume(__SHADOWDP_ALIGNED_q[i] - q[i] <= 1);
-        # assume(__SHADOWDP_SHADOW_q[i] == __SHADOWDP_ALIGNED_q[i]);
+        # assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1); assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
+        # assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         else:
             assume_functions = common_assume
+        # if assume function has already been inserted in this scope
+        for inserted in self._inserted_query_assumes[-1]:
+            if is_node_equal(assume_functions, inserted):
+                return []
+        self._inserted_query_assumes[-1].append(assume_functions)
         return assume_functions
 
     def visit(self, node):
@@ -390,11 +420,11 @@ class ShadowDPTransformer(NodeVisitor):
         # add declarations / new parameters for dynamically tracked variables
         for name, distances in self._types.variables():
             for index, distance in enumerate(distances):
-                if distance == '*':
+                version = 'ALIGNED' if index == 0 else 'SHADOW'
+                if distance == '*' or distance == '__SHADOWDP_{}_DISTANCE_{}'.format(version, name):
                     # if it is a dynamically tracked local variable, add declarations
-                    version = 'ALIGNED' if index == 0 else 'SHADOW'
                     if name not in self._parameters:
-                        varname = '__SHADOWDP_{}_{}'.format(version, name)
+                        varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, name)
                         insert_statements.append(
                             c_ast.Decl(name=varname,
                                        type=c_ast.TypeDecl(declname=varname,
@@ -405,7 +435,7 @@ class ShadowDPTransformer(NodeVisitor):
                         # TODO: should be able to detect the type of parameters
                         if name != q:
                             raise NotImplementedError('Currently only supports * types for query variables')
-                        varname = '__SHADOWDP_{}_{}'.format(version, q)
+                        varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, q)
                         node.decl.type.args.params.append(
                             c_ast.Decl(name=varname,
                                        type=c_ast.ArrayDecl(
@@ -420,9 +450,47 @@ class ShadowDPTransformer(NodeVisitor):
 
     def visit_Assignment(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
+        varname = node.lvalue.name if isinstance(node.lvalue, c_ast.ID) else node.lvalue.name.name
+        if self._loop_level == 0 and self._pc:
+            # generate x^shadow = x + x^shadow - e according to (T-Asgn)
+            parent = self._parents[node]
+            if isinstance(parent, c_ast.Compound):
+                node_index = parent.block_items.index(node)
+                if isinstance(node.lvalue, c_ast.ID):
+                    shadow_distance = c_ast.ID(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(varname))
+                elif isinstance(node.lvalue, c_ast.ArrayRef):
+                    shadow_distance = c_ast.ArrayRef(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(varname),
+                                                     subscript=node.lvalue.subscript)
+                else:
+                    raise NotImplementedError('Assigned value type not supported {}'.format(type(node.lvalue)))
+                # insert x^shadow = x + x^shadow - e;
+                insert_node = c_ast.Assignment(op='=', lvalue=shadow_distance, rvalue=c_ast.BinaryOp(
+                    op='-', left=c_ast.BinaryOp(op='+', left=node.lvalue, right=shadow_distance), right=node.rvalue))
+                parent.block_items.insert(node_index, insert_node)
+                self._inserted.add(insert_node)
+                self._inserted.add(node)
+            else:
+                raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
+
+        """
+        # check the distance dependence
+        dependence_finder = _ExpressionFinder(
+            lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
+                             (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname))
+        for name, distances in self._types.variables(self._condition_stack):
+            if name not in self._random_variables:
+                for distance in distances:
+                    if distance != '*':
+                        if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
+                            raise DistanceDependenceError(varname, distance)
+        """
+
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.rvalue)
-        self._types.update_distance(node.lvalue.name, aligned, shadow)
+        if self._pc:
+            self._types.update_distance(node.lvalue.name, aligned, '*')
+        else:
+            self._types.update_distance(node.lvalue.name, aligned, shadow)
         logger.debug('types: {}'.format(self._types))
 
     def visit_Decl(self, node):
@@ -445,8 +513,11 @@ class ShadowDPTransformer(NodeVisitor):
             # else update the distance to the distance of initial value (T-Asgn)
             elif isinstance(node.init, (c_ast.Constant, c_ast.BinaryOp, c_ast.BinaryOp, c_ast.UnaryOp)):
                 aligned, shadow = _DistanceGenerator(self._types, self._condition_stack).visit(node.init)
-                self._types.update_distance(node.name, aligned, shadow)
-            # if it is random variable declaration
+                if self._pc:
+                    self._types.update_distance(node.name, aligned, '*')
+                else:
+                    self._types.update_distance(node.name, aligned, shadow)
+            # if it is random variable declaration (T-Laplace)
             elif isinstance(node.init, c_ast.FuncCall) and node.init.name.name == 'Lap':
                 self._random_variables.add(node.name)
                 logger.debug('Random variables: {}'.format(self._random_variables))
@@ -461,27 +532,26 @@ class ShadowDPTransformer(NodeVisitor):
 
                 # update distances of normal variables according to the selector
                 for name, (align, shadow) in self._types.variables(self._condition_stack):
-                    # first unwrap the star variables (T-Laplace)
-                    align = '(__SHADOWDP_ALIGNED_{0} - {0})'.format(name) if align == '*' else align
-                    shadow = '(__SHADOWDP_SHADOW_{0} - {0})'.format(name) if shadow == '*' else shadow
+                    # first unwrap the star variables
+                    align = '(__SHADOWDP_ALIGNED_DISTANCE_{0})'.format(name) if align == '*' else align
+                    shadow = '(__SHADOWDP_SHADOW_DISTANCE_{0})'.format(name) if shadow == '*' else shadow
                     # if the aligned distance and shadow distance are the same
                     # then there's no need to update the distances
                     if align != shadow and name not in self._random_variables and name not in self._parameters:
                         self._types.update_distance(
                             name,
                             selector.replace('SHADOW', '({})'.format(shadow)).replace('ALIGNED', '({})'.format(align)),
-                            shadow,
-                            False)
+                            shadow)
 
                 if self._loop_level == 0:
-                    # insert cost variable update statement and transform sampling command to havoc command (T-Lap)
+                    # insert cost variable update statement and transform sampling command to havoc command
                     assert isinstance(self._parents[node], c_ast.Compound)
                     n_index = self._parents[node].block_items.index(node)
                     scale = _code_generator.visit(node.init.args.exprs[0])
                     # incorporate epsilon = 1 approach
                     if self._set_epsilon:
                         epsilon, *_ = self._parameters
-                        scale = scale.replace(epsilon, self._set_epsilon)
+                        scale = scale.replace(epsilon, '1')
 
                     # TODO: maybe create a specialized simplifier for this scenario
                     # transform distance expression to cost expression,
@@ -489,8 +559,8 @@ class ShadowDPTransformer(NodeVisitor):
                     pieces = re.split('([?:])', distance_eta)
                     transformed = []
                     for piece in pieces:
-                        if len(re.findall(r'[=><\\|&?|:]', piece)) == 0:
-                            cost_expr = '(abs({}) * (1/({})))'.format(piece, scale)\
+                        if len(re.findall(r'[=><\\|&?:]', piece)) == 0:
+                            cost_expr = '(Abs({}) * (1/({})))'.format(piece, scale)\
                                 .replace('[', '__LEFTBRACE__').replace(']', '__RIGHTBRACE__')
                             cost = str(sp.simplify(cost_expr))
                             cost = cost.replace('__LEFTBRACE__', '[').replace('__RIGHTBRACE__', ']')
@@ -506,21 +576,19 @@ class ShadowDPTransformer(NodeVisitor):
                     v_epsilon = _ExpressionSimplifier().visit(convert_to_ast(v_epsilon))
                     update_v_epsilon = c_ast.Assignment(op='=',
                                                         lvalue=c_ast.ID('__SHADOWDP_v_epsilon'), rvalue=v_epsilon)
-                    expr_checker = _ExpressionFinder(lambda node: isinstance(node, c_ast.ArrayRef) and
-                                                     '__SHADOWDP_' in node.name.name and
-                                                     self._parameters[2] in node.name.name)
-                    query_node = expr_checker.visit(update_v_epsilon)
-                    if query_node:
-                        assume_functions = self._instrument_assume(query_node)
-                        self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+                    # insert assume functions on query variable if cost variable calculation contains it
+                    query_var_checker = _ExpressionFinder(
+                        lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
+                                     self._parameters[2] in node.name.name)
+
+                    self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
+                    for query_node in query_var_checker.visit(update_v_epsilon):
+                        assume_functions = self._assume_query(query_node)
                         self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
                         for function in assume_functions:
                             self._inserted.add(function)
-                    else:
-                        self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
 
                     self._inserted.add(update_v_epsilon)
-
 
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
@@ -529,9 +597,7 @@ class ShadowDPTransformer(NodeVisitor):
 
         elif isinstance(node.type, c_ast.ArrayDecl):
             # put array variable declaration into type dict
-            # TODO: fill in the type
-            self._types.update_distance(node.name, '0', '0')
-
+            raise NotImplementedError('Array declaration current not supported')
         else:
             raise NotImplementedError('Declaration statement currently not supported: {}'.format(node))
 
@@ -540,9 +606,34 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_If(self, n):
         logger.debug('types(before branch): {}'.format(self._types))
         logger.debug('Line {}: if({})'.format(n.coord.line, _code_generator.visit(n.cond)))
-        # backup the current types before entering the true or false branch
-        before_types = self._types.copy()
 
+        # update pc value updPC
+        before_pc = self._pc
+        self._pc = self._update_pc(self._pc, self._types, n.cond)
+
+        before_types = self._types.copy()
+        # corresponds to \Gamma_0 in paper
+        types_0 = self._types.copy()
+        # promote the shadow distances of the assigned variables to *
+        shadow_finder = _ExpressionFinder(lambda node: isinstance(node, c_ast.Assignment) and node.lvalue)
+        for assign_node in shadow_finder.visit(n):
+            if isinstance(assign_node.lvalue, c_ast.ID):
+                varname = assign_node.lvalue.name
+            elif isinstance(assign_node.lvalue, c_ast.ArrayRef):
+                varname = assign_node.lvalue.name.name
+            else:
+                raise NotImplementedError(
+                    'Assign node lvalue type not supported {}'.format(type(assign_node.lvalue)))
+            align, shadow = types_0.get_distance(varname)
+            types_0.update_distance(varname, align, '*')
+
+        if self._pc and not before_pc:
+            self._types = types_0
+
+        # backup the current types before entering the true or false branch
+        cur_types = self._types.copy()
+
+        self._inserted_query_assumes.append([])
         # add current condition for simplification
         self._condition_stack.append([n.cond, True])
         # to be used in if branch transformation assert(e^aligned);
@@ -551,9 +642,11 @@ class ShadowDPTransformer(NodeVisitor):
         self.visit(n.iftrue)
         true_types = self._types
         logger.debug('types(true branch): {}'.format(true_types))
+        true_assumes = self._inserted_query_assumes.pop()
 
+        self._inserted_query_assumes.append([])
         # revert current types back to enter the false branch
-        self._types = before_types.copy()
+        self._types = cur_types
         self._condition_stack[-1][1] = False
         if n.iffalse:
             logger.debug('Line: {} else'.format(n.iffalse.coord.line))
@@ -565,20 +658,23 @@ class ShadowDPTransformer(NodeVisitor):
         false_types = self._types.copy()
         self._types.merge(true_types)
         logger.debug('types(after merge): {}'.format(self._types))
+        false_assumes = self._inserted_query_assumes.pop()
 
-        # TODO: use Z3 to solve constraints to decide this value
         exp_checker = _ExpressionFinder(
             lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                          self._parameters[2] in node.name.name)
 
         if self._loop_level == 0:
-            # have to generate separate shadow branch
-            star_variable_finder = _ExpressionFinder(
-                lambda node: (isinstance(node, c_ast.ID) and node.name != self._parameters[2] and
-                              self._types.get_distance(node.name)[1] == '*'))
-            to_generate_shadow = star_variable_finder.visit(n.cond) is not None
-            if to_generate_shadow:
-                shadow_cond = _ExpressionReplacer(self._types, False, self._condition_stack).visit(
+            if self._pc and not before_pc:
+                # insert c_s
+                c_s = self._instrument(before_types, types_0, before_pc)
+                if_index = self._parents[n].block_items.index(n)
+                self._parents[n].block_items[if_index:if_index] = c_s
+                for statement in c_s:
+                    self._inserted.add(statement)
+                self._inserted.add(n)
+                # insert c_shadow
+                shadow_cond = _ExpressionReplacer(types_0, False, self._condition_stack).visit(
                     copy.deepcopy(n.cond))
                 shadow_branch = c_ast.If(cond=shadow_cond,
                                          iftrue=c_ast.Compound(
@@ -586,17 +682,17 @@ class ShadowDPTransformer(NodeVisitor):
                                          iffalse=c_ast.Compound(
                                              block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
-                    {name for name, (_, shadow) in self._types.variables() if shadow == '*'},
-                    self._types,
+                    {name for name, (_, shadow) in types_0.variables() if shadow == '*'},
+                    types_0,
                     self._condition_stack)
                 shadow_branch_generator.visit(shadow_branch)
+                if_index = self._parents[n].block_items.index(n)
+                self._parents[n].block_items.insert(if_index + 1, shadow_branch)
                 self._inserted.add(shadow_branch)
-                self._parents[n].block_items.insert(self._parents[n].block_items.index(n) + 1, shadow_branch)
 
                 # insert assume functions before the shadow branch
-                query_node = exp_checker.visit(shadow_cond)
-                if query_node:
-                    assume_functions = self._instrument_assume(query_node)
+                for query_node in exp_checker.visit(shadow_cond):
+                    assume_functions = self._assume_query(query_node)
                     index = self._parents[n].block_items.index(n) + 1
                     self._parents[n].block_items[index:index] = assume_functions
                     for assume_function in assume_functions:
@@ -615,59 +711,105 @@ class ShadowDPTransformer(NodeVisitor):
                 block_node.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                                                 args=assert_body))
                 # if the expression contains `query` variable,
-                # add assume functions on __SHADOWDP_ALIGNED_query and __SHADOWDP_SHADOW_query
-                query_node = exp_checker.visit(aligned_cond)
-                if query_node:
-                    assume_functions = self._instrument_assume(query_node)
+                # add assume functions on __SHADOWDP_ALIGNED_DISTANCE_query and __SHADOWDP_SHADOW_DISTANCE_query
+                inserted = true_assumes if aligned_cond is aligned_true_cond else false_assumes
+                self._inserted_query_assumes.append(inserted)
+                for query_node in exp_checker.visit(aligned_cond):
+                    assume_functions = self._assume_query(query_node)
                     block_node.block_items[0:0] = assume_functions
+                self._inserted_query_assumes.pop()
 
-            # instrument statements for updating aligned or shadow variables (Instrumentation rule)
+            # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)
             for types in (true_types, false_types):
                 block_node = n.iftrue if types is true_types else n.iffalse
-                # TODO: should handle more cases
-                for name, is_aligned in self._types.diff(types):
-                    if is_aligned:
-                        block_node.block_items.append(
-                            c_ast.Assignment(op='=',
-                                             lvalue=c_ast.ID('__SHADOWDP_ALIGNED_{}'.format(name)),
-                                             rvalue=c_ast.BinaryOp(op='+',
-                                                                   left=c_ast.ID(name=name),
-                                                                   right=types.get_raw_distance(name)[0])))
+                inserted = true_assumes if types is true_types else false_assumes
+                self._inserted_query_assumes.append(inserted)
+                instruments = self._instrument(types, self._types, self._pc)
+                block_node.block_items.extend(instruments)
+                for instrument in instruments:
+                    self._inserted.add(instrument)
+                self._inserted_query_assumes.pop()
 
+        self._pc = before_pc
         self._condition_stack.pop()
 
     def visit_While(self, node):
-        cur_types = None
+        before_pc = self._pc
+        self._pc = self._update_pc(self._pc, self._types, node.cond)
+
+        before_types = self._types.copy()
+
+        fixed_types = None
         # don't output logs while doing iterations
         logger.disabled = True
         self._loop_level += 1
-        while cur_types != self._types:
-            cur_types = self._types.copy()
+        while fixed_types != self._types:
+            fixed_types = self._types.copy()
             self.generic_visit(node)
-            self._types.merge(cur_types)
+            self._types.merge(fixed_types)
         logger.disabled = False
         self._loop_level -= 1
-        logger.debug('Line {}: while({})'.format(node.coord.line, _code_generator.visit(node.cond)))
-        logger.debug('types(fixed point): {}'.format(self._types))
-        aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
-            copy.deepcopy(node.cond))
-        assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                   args=c_ast.ExprList(exprs=[aligned_cond]))
-        self._inserted.add(assertion)
-        node.stmt.block_items.insert(0, assertion)
-        self.generic_visit(node)
+
+        if self._loop_level == 0:
+            self._inserted_query_assumes.append([])
+            logger.debug('Line {}: while({})'.format(node.coord.line, _code_generator.visit(node.cond)))
+            logger.debug('types(fixed point): {}'.format(self._types))
+            aligned_cond = _ExpressionReplacer(self._types, True, self._condition_stack).visit(
+                copy.deepcopy(node.cond))
+            assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                       args=c_ast.ExprList(exprs=[aligned_cond]))
+            self._inserted.add(assertion)
+            node.stmt.block_items.insert(0, assertion)
+            self.generic_visit(node)
+            after_visit = self._types.copy()
+            self._types = before_types.copy()
+            self._types.merge(fixed_types)
+
+            c_s = self._instrument(before_types, self._types, self._pc)
+            while_index = self._parents[node].block_items.index(node)
+            self._parents[node].block_items[while_index:while_index] = c_s
+            for statement in c_s:
+                self._inserted.add(statement)
+            self._inserted.add(node)
+
+            update_statements = self._instrument(after_visit, self._types, self._pc)
+            node.stmt.block_items.extend(update_statements)
+            for statement in update_statements:
+                self._inserted.add(statement)
+
+            # TODO: while shadow branch
+            if self._pc and not before_pc:
+                pass
+            self._inserted_query_assumes.pop()
+
+        self._pc = before_pc
 
     def visit_Return(self, node):
         align, _ = _DistanceGenerator(self._types, self._condition_stack).visit(node.expr)
         if align != '0':
-            raise ReturnDistanceNotZero()
+            if '__SHADOWDP_' not in align:
+                raise ReturnDistanceNotZero(node.coord, _code_generator.visit(node.expr), align)
+            else:
+                # insert assert(aligned_distance == 0);
+                assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
+                                             args=c_ast.ExprList([c_ast.BinaryOp('==', convert_to_ast(align),
+                                                                                 c_ast.Constant(type='int', value=0))]))
+                parent = self._parents[node]
+                parent.block_items.insert(parent.block_items.index(node), assert_node)
+
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
-        epsilon_node = c_ast.Constant(type='float', value=float(self._set_epsilon)) \
-            if self._set_epsilon else c_ast.ID(epsilon)
-        assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
-                                     args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
-                                                                         epsilon_node)]))
+        epsilon_node = c_ast.Constant(type='float', value=1) if self._set_epsilon else c_ast.ID(epsilon)
+
+        if self._set_goal:
+            assert_node = c_ast.FuncCall(
+                c_ast.ID(self._func_map['assert']), args=c_ast.ExprList(
+                    [c_ast.BinaryOp('<=', c_ast.ID(name='__SHADOWDP_v_epsilon'),
+                                    c_ast.BinaryOp(op='*', left=epsilon_node, right=convert_to_ast(self._set_goal)))]))
+        else:
+            assert_node = c_ast.FuncCall(c_ast.ID(self._func_map['assert']),
+                                         args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
+                                                                             epsilon_node)]))
         self._parents[node].block_items.insert(self._parents[node].block_items.index(node), assert_node)
         self._inserted.add(assert_node)
         # because we have inserted a statement before Return statement while iterating, it will be a forever loop

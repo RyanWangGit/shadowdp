@@ -7,14 +7,14 @@ void smartsum(float epsilon, int size, float q[], float T, int M)
   {
     if ((i + 1) % M == 0)
     {
-      float eta_1 = Lap(1.0 / epsilon, "ALIGNED; -(__SHADOWDP_ALIGNED_sum - sum) -(__SHADOWDP_ALIGNED_q[i] - q[i]);");
+      float eta_1 = Lap(1.0 / epsilon, "ALIGNED; -__SHADOWDP_ALIGNED_DISTANCE_sum - __SHADOWDP_ALIGNED_DISTANCE_q[i];");
       next = next + sum + q[i] + eta_1;
       sum = 0;
       out = next;
     }
     else
     {
-      float eta_2 = Lap(1.0 / epsilon, "ALIGNED; -(__SHADOWDP_ALIGNED_q[i] - q[i]);");
+      float eta_2 = Lap(1.0 / epsilon, "ALIGNED; -__SHADOWDP_ALIGNED_DISTANCE_q[i];");
       next = next + q[i] + eta_2;
       sum = sum + q[i];
       out = next;

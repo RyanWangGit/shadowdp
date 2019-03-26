@@ -41,7 +41,7 @@ extern int __VERIFIER_nondet_int();
 extern void __VERIFIER_assume(int);
 extern void __assert_fail();
 #define __VERIFIER_assert(cond) { if(!(cond)) { __assert_fail(); } }
-#define abs(x) ((x) < 0 ? -(x) : (x))
+#define Abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
 """
@@ -70,8 +70,13 @@ def main(argv=sys.argv[1:]):
                             action='store', dest='function', type=str, default=None,
                             help='The function to verify.', required=False)
     arg_parser.add_argument('-e', '--epsilon',
-                            action='store', dest='epsilon', type=str, default=None,
+                            action='store_true', dest='epsilon', default=None,
                             help='Set epsilon = 1 to solve the non-linear issues.', required=False)
+    arg_parser.add_argument('-g', '--goal',
+                            action='store', dest='goal', type=str, default=None,
+                            help='The goal of the algorithm, default is epsilon-differential privacy, specify'
+                                 'this value to set different goal. '
+                                 'e.g., specify 2 to check for 2 * epsilon-differential privacy', required=False)
     results = arg_parser.parse_args(argv)
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
@@ -86,7 +91,8 @@ def main(argv=sys.argv[1:]):
         logger.info('Parsing {}'.format(results.file))
         start = time.time()
         ast = parse_file(results.file, use_cpp=True, cpp_path='gcc', cpp_args=['-E'])
-        transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP, set_epsilon=results.epsilon)
+        transformer = ShadowDPTransformer(function_map=__FUNCTION_MAP,
+                                          set_epsilon=results.epsilon, set_goal=results.goal)
 
         try:
             transformer.visit(ast)
@@ -96,6 +102,9 @@ def main(argv=sys.argv[1:]):
         except NoSamplingAnnotationError as e:
             logger.error('{} Sampling command lack annotation'.format(str(e.coord)))
             return 1
+        except ReturnDistanceNotZero as e:
+            logger.error('{}: Aligned distance of return variable {} is not zero ({})'
+                         .format(str(e.coord), e.name, e.distance))
         else:
             # write the transformed code
             with open(results.out, 'w') as f:

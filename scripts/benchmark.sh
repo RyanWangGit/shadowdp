@@ -25,9 +25,13 @@ echo ''
 shadowdp check examples/original/sparsevector.c
 echo ''
 # apply epsilon = 1 technique to solve non-linearity
-shadowdp check examples/original/diffsparsevector.c -e 1
+shadowdp check examples/original/gapsparsevector.c -e
 echo ''
-shadowdp check examples/original/partialsum.c -e 1
+shadowdp check examples/original/numsparsevector.c -e
 echo ''
-# apply epsilon = 2 technique to solve non-linearity
-shadowdp check examples/original/smartsum.c -e 2
+shadowdp check examples/original/partialsum.c -e
+echo ''
+shadowdp check examples/original/prefixsum.c -e
+echo ''
+# use goal=2 for checking 2 * epsilon-differential privacy
+shadowdp check examples/original/smartsum.c -e -g 2

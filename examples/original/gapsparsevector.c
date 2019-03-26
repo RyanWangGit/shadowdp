@@ -1,4 +1,4 @@
-int diffsparsevector(float epsilon, int size, float q[], float T)
+int gapsparsevector(float epsilon, int size, float q[], float T)
 {
   "ALL_DIFFER; epsilon: <0, 0>; size: <0, 0>; q: <*, *>; T: <0, 0>";
   int out = 0;
@@ -9,7 +9,7 @@ int diffsparsevector(float epsilon, int size, float q[], float T)
 
   while (c_1 < 1 && i < size)
   {
-    float eta_2 = Lap((4.0 * 1) / epsilon, "ALIGNED; (q[i] + eta_2 >= T_bar) ? (1 - (__SHADOWDP_ALIGNED_q[i] - q[i])) : 0;");
+    float eta_2 = Lap((4.0 * 1) / epsilon, "ALIGNED; (q[i] + eta_2 >= T_bar) ? (1 - __SHADOWDP_ALIGNED_DISTANCE_q[i]) : 0;");
 
     if (q[i] + eta_2 >= T_bar)
     {

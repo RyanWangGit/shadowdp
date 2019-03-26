@@ -19,10 +19,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from shadowdp.types import TypeSystem
+from shadowdp.types import TypeSystem, convert_to_ast
 
 
 def test_type_system():
     types = TypeSystem()
     types.update_distance('a', '*', '*')
-    assert types.get_distance('a') == ('__LANG_distance_a', '__LANG_distance_shadow_a')
+    assert types.get_distance('a') == ('*', '*')
+    types.update_distance('a', 'b ? c: d', '*')
+    assert types.get_distance('a') == ('(b) ? (c) : (d)', '*')
+    # test on simplification
+    assert types.get_distance('a', [[convert_to_ast('b'), True]]) == ('c', '*')
+    assert types.get_distance('a', [[convert_to_ast('b'), False]]) == ('d', '*')
