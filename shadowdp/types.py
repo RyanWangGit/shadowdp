@@ -170,7 +170,7 @@ class TypeSystem:
         :param name: The name of the variable.
         :return: (Aligned distance, Shadow distance) of the variable.
         """
-        return ('*' if distance == '*' else _generator.visit(distance) for distance in self._types[name])
+        return tuple('*' if distance == '*' else _generator.visit(distance) for distance in self._types[name])
 
     def update_distance(self, name, align, shadow):
         # try simplify
