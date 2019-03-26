@@ -24,7 +24,6 @@ script:
   - javac -version
   - tox
   - bash ./scripts/benchmark.sh
-  #- python ./scripts/check.py ./examples/transformed
 
 after_success:
   pip install codecov && codecov
@@ -37,7 +36,7 @@ jobs:
         # test docker build
         - docker build . -t cmlapsu/shadowdp
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
-        #- docker run -it cmlapsu/shadowdp python3 /shadowdp/scripts/check.py /shadowdp/examples/transformed
+
       after_success:
         # only deploy on stable master branch
         - if [[ "$TRAVIS_BRANCH" = "master" && $TRAVIS_PULL_REQUEST = "false" ]]; then
