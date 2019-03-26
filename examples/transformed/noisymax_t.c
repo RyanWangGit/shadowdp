@@ -26,8 +26,6 @@ int noisymax(float epsilon, int size, float q[], float __SHADOWDP_ALIGNED_DISTAN
     __VERIFIER_assert(i < size);
     float eta = __VERIFIER_nondet_float();
     __SHADOWDP_v_epsilon = (((q[i] + eta) > bq) || (i == 0)) ? (0 + epsilon) : (__SHADOWDP_v_epsilon + 0);
-    __SHADOWDP_SHADOW_DISTANCE_max = __SHADOWDP_SHADOW_DISTANCE_max;
-    __SHADOWDP_SHADOW_DISTANCE_bq = __SHADOWDP_SHADOW_DISTANCE_bq;
     if (((q[i] + eta) > bq) || (i == 0))
     {
       __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
@@ -39,9 +37,6 @@ int noisymax(float epsilon, int size, float q[], float __SHADOWDP_ALIGNED_DISTAN
       __SHADOWDP_SHADOW_DISTANCE_bq = (bq + __SHADOWDP_SHADOW_DISTANCE_bq) - (q[i] + eta);
       bq = q[i] + eta;
       __SHADOWDP_ALIGNED_DISTANCE_max = 0;
-      __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
-      __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1);
-      __VERIFIER_assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
       __SHADOWDP_ALIGNED_DISTANCE_bq = __SHADOWDP_ALIGNED_DISTANCE_q[i] + 2;
     }
     else

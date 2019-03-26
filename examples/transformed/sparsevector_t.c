@@ -12,6 +12,9 @@ int sparsevector(float epsilon, int size, float q[], float T, float __SHADOWDP_A
   __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(size > 0);
   float __SHADOWDP_v_epsilon = 0;
+  float __SHADOWDP_SHADOW_DISTANCE_out = 0;
+  float __SHADOWDP_SHADOW_DISTANCE_c_1 = 0;
+  float __SHADOWDP_SHADOW_DISTANCE_c_2 = 0;
   int out = 0;
   float eta_1 = __VERIFIER_nondet_float();
   __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + (0.5 * epsilon);
@@ -30,7 +33,9 @@ int sparsevector(float epsilon, int size, float q[], float T, float __SHADOWDP_A
       __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1);
       __VERIFIER_assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
       __VERIFIER_assert(((q[i] + __SHADOWDP_ALIGNED_DISTANCE_q[i]) + (eta_2 + 2)) >= (T_bar + 1));
+      __SHADOWDP_SHADOW_DISTANCE_out = (out + __SHADOWDP_SHADOW_DISTANCE_out) - 1;
       out = 1;
+      __SHADOWDP_SHADOW_DISTANCE_c_1 = (c_1 + __SHADOWDP_SHADOW_DISTANCE_c_1) - (c_1 + 1);
       c_1 = c_1 + 1;
     }
     else
@@ -39,8 +44,24 @@ int sparsevector(float epsilon, int size, float q[], float T, float __SHADOWDP_A
       __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1);
       __VERIFIER_assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
       __VERIFIER_assert(!((((q[i] + __SHADOWDP_ALIGNED_DISTANCE_q[i]) + eta_2) >= (T_bar + 1))));
+      __SHADOWDP_SHADOW_DISTANCE_out = (out + __SHADOWDP_SHADOW_DISTANCE_out) - 0;
       out = 0;
+      __SHADOWDP_SHADOW_DISTANCE_c_2 = (c_2 + __SHADOWDP_SHADOW_DISTANCE_c_2) - (c_2 + 1);
       c_2 = c_2 + 1;
+    }
+
+    __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
+    __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] >= -1);
+    __VERIFIER_assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
+    if (((q[i] + __SHADOWDP_SHADOW_DISTANCE_q[i]) + eta_2) >= T_bar)
+    {
+      __SHADOWDP_SHADOW_DISTANCE_out = 1 - out;
+      __SHADOWDP_SHADOW_DISTANCE_c_1 = ((c_1 + __SHADOWDP_SHADOW_DISTANCE_c_1) + 1) - c_1;
+    }
+    else
+    {
+      __SHADOWDP_SHADOW_DISTANCE_out = 0 - out;
+      __SHADOWDP_SHADOW_DISTANCE_c_2 = ((c_2 + __SHADOWDP_SHADOW_DISTANCE_c_2) + 1) - c_2;
     }
 
     i = i + 1;
