@@ -26,11 +26,10 @@ def test_check():
     assert check('./cpachecker', './examples/transformed/noisymax.c', 'noisymax')
     assert check('./cpachecker', './examples/transformed/sparsevector.c', 'sparsevector')
     assert check('./cpachecker', './examples/transformed/sparsevectorN.c', 'sparsevectorN')
+    assert check('./cpachecker', './examples/transformed/numsparsevector.c', 'numsparsevector')
     assert check('./cpachecker', './examples/transformed/numsparsevectorN.c', 'numsparsevectorN')
-    assert check('./cpachecker', './examples/transformed/numsparsevector_rewrite.c', 'numsparsevector_rewrite')
     assert check('./cpachecker', './examples/transformed/gapsparsevector.c', 'gapsparsevector')
-    assert check('./cpachecker', './examples/transformed/partialsum_rewrite.c', 'partialsum_rewrite')
+    assert check('./cpachecker', './examples/transformed/partialsum.c', 'partialsum')
     assert check('./cpachecker', './examples/transformed/prefixsum.c', 'prefixsum')
     assert check('./cpachecker', './examples/transformed/smartsum.c', 'smartsum')
-    assert check('./cpachecker', './examples/transformed/smartsum_rewrite.c', 'smartsum_rewrite')
 
