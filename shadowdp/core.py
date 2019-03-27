@@ -35,8 +35,9 @@ _code_generator = CGenerator()
 
 class _ExpressionFinder(NodeVisitor):
     """ this class find a specific node in the expression"""
-    def __init__(self, check_func):
+    def __init__(self, check_func, ignores=None):
         self._check_func = check_func
+        self._ignores = ignores
         self._nodes = []
 
     def visit(self, node):
@@ -44,6 +45,8 @@ class _ExpressionFinder(NodeVisitor):
         return self._nodes
 
     def generic_visit(self, node):
+        if self._ignores and not self._ignores(node):
+            return
         if self._check_func(node):
             self._nodes.append(node)
         for child in node:
@@ -343,14 +346,18 @@ class ShadowDPTransformer(NodeVisitor):
         logger.info('Start transforming function {} ...'.format(node.decl.name))
 
         # first pickup the annotation for parameters
-        first_statement = node.body.block_items.pop(0)
-        if not (isinstance(first_statement, c_ast.Constant) and first_statement.type == 'string'):
-            raise NoParameterAnnotationError(first_statement.coord)
-        sensitivity, *parameter_distances = first_statement.value[1:-1].strip().split(';')
+        assume_statement, type_statement = node.body.block_items.pop(0), node.body.block_items.pop(0)
+        if not all((isinstance(assume_statement, c_ast.Constant),
+                   assume_statement.type == 'string',
+                   isinstance(type_statement, c_ast.Constant),
+                   type_statement.type == 'string')):
+            raise NoParameterAnnotationError(assume_statement.coord)
+        sensitivity, *other_assumes = assume_statement.value[1:-1].strip().split(';')
         if sensitivity not in ('ALL_DIFFER', 'ONE_DIFFER'):
             raise ValueError('Annotation for sensitivity should be either \'ALL_DIFFER\' or \'ONE_DIFFER\'')
 
         # get distances from annotation string and store to type system
+        parameter_distances = type_statement.value[1:-1].strip().split(';')
         for parameter in parameter_distances:
             results = re.findall(r'([a-zA-Z_]+):\s*<([*a-zA-Z0-9\[\]]+),\s*([*a-zA-Z0-9\[\]]+)>', parameter)
             if len(results) == 0:
@@ -379,15 +386,25 @@ class ShadowDPTransformer(NodeVisitor):
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
                                                                c_ast.Constant('int', 0))])),
+        ]
 
+        # add user-defined assume
+        regex = re.compile(r'assume\(([\sa-zA-Z+\-*\\0-9_><=&|]+)\)')
+        for assume in other_assumes:
+            if 'assume' in assume:
+                for expression in regex.findall(assume):
+                    insert_statements.append(c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                                                            args=convert_to_ast(expression)))
+
+        insert_statements.append(
             # insert float __SHADOWDP_v_epsilon = 0;
             c_ast.Decl(name='__SHADOWDP_v_epsilon',
                        type=c_ast.TypeDecl(declname='__SHADOWDP_v_epsilon',
                                            type=c_ast.IdentifierType(names=['float']),
                                            quals=[]),
                        init=c_ast.Constant('int', '0'),
-                       quals=[], funcspec=[], bitsize=[], storage=[]),
-        ]
+                       quals=[], funcspec=[], bitsize=[], storage=[])
+        )
 
         # setup different sensitivity settings
         if self._one_differ:
@@ -468,18 +485,18 @@ class ShadowDPTransformer(NodeVisitor):
             else:
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
 
-        """
         # check the distance dependence
         dependence_finder = _ExpressionFinder(
             lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
-                             (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname))
-        for name, distances in self._types.variables(self._condition_stack):
+                             (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname),
+            lambda to_ignore: isinstance(to_ignore, c_ast.ArrayRef) and to_ignore.name.name == self._parameters[2]
+        )
+        for name, distances in self._types.variables():
             if name not in self._random_variables:
                 for distance in distances:
                     if distance != '*':
                         if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
-                            raise DistanceDependenceError(varname, distance)
-        """
+                            raise DistanceDependenceError(node.coord, varname, distance)
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
@@ -515,6 +532,8 @@ class ShadowDPTransformer(NodeVisitor):
                     self._types.update_distance(node.name, aligned, shadow)
             # if it is random variable declaration (T-Laplace)
             elif isinstance(node.init, c_ast.FuncCall) and node.init.name.name == 'Lap':
+                if self._pc:
+                    raise SamplingCommandMisplaceError(node.coord)
                 self._random_variables.add(node.name)
                 logger.debug('Random variables: {}'.format(self._random_variables))
                 if not (isinstance(node.init.args.exprs[1], c_ast.Constant) and
@@ -559,7 +578,7 @@ class ShadowDPTransformer(NodeVisitor):
                     # incorporate epsilon = 1 approach
                     if self._set_epsilon:
                         epsilon, *_ = self._parameters
-                        scale = scale.replace(epsilon, '1')
+                        scale = scale.replace(epsilon, self._set_epsilon)
 
                     # TODO: maybe create a specialized simplifier for this scenario
                     # transform distance expression to cost expression,
@@ -796,7 +815,12 @@ class ShadowDPTransformer(NodeVisitor):
 
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
-        epsilon_node = c_ast.Constant(type='float', value=1) if self._set_epsilon else c_ast.ID(epsilon)
+        if self._set_epsilon and self._set_epsilon.isdigit():
+            epsilon_node = c_ast.Constant(type='float', value=self._set_epsilon)
+        elif self._set_epsilon and not self._set_epsilon.isdigit():
+            epsilon_node = c_ast.ID(name=self._set_epsilon)
+        else:
+            epsilon_node = c_ast.ID(epsilon)
 
         if self._set_goal:
             assert_node = c_ast.FuncCall(

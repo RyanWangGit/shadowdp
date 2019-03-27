@@ -70,8 +70,8 @@ def main(argv=sys.argv[1:]):
                             action='store', dest='function', type=str, default=None,
                             help='The function to verify.', required=False)
     arg_parser.add_argument('-e', '--epsilon',
-                            action='store_true', dest='epsilon', default=None,
-                            help='Set epsilon = 1 to solve the non-linear issues.', required=False)
+                            action='store', dest='epsilon', default=None,
+                            help='Set epsilon to a specific value to solve the non-linear issues.', required=False)
     arg_parser.add_argument('-g', '--goal',
                             action='store', dest='goal', type=str, default=None,
                             help='The goal of the algorithm, default is epsilon-differential privacy, specify'
@@ -105,6 +105,14 @@ def main(argv=sys.argv[1:]):
         except ReturnDistanceNotZero as e:
             logger.error('{}: Aligned distance of return variable {} is not zero ({})'
                          .format(str(e.coord), e.name, e.distance))
+            return 1
+        except SamplingCommandMisplaceError as e:
+            logger.error('{}: Cannot use sampling command in diverging branch.'.format(e.coord))
+            return 1
+        except DistanceDependenceError as e:
+            logger.error('{}: Distance dependence found at assignment for {} with distance dependence {}.'
+                         .format(e.coord, e.name, e.distance))
+            return 1
         else:
             # write the transformed code
             with open(results.out, 'w') as f:
