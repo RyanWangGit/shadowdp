@@ -5,7 +5,7 @@ int numsparsevector(float epsilon, int size, float q[], float T)
   int out = 0;
   float eta_1 = Lap(3.0 / epsilon, "ALIGNED; 1");
   float T_bar = T + eta_1;
-  int count = 0;
+  float count = 0;
   int i = 0;
 
   while (count < 1 && i < size)
