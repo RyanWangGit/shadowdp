@@ -86,6 +86,10 @@ def main(argv=sys.argv[1:]):
         logger.error('Option should be check / transform / verify')
         return 1
 
+    if not os.path.exists(results.file):
+        logger.error('File {} doesn\'t exists'.format(results.file))
+        return 1
+
     if results.option[0] == 'check' or results.option[0] == 'transform':
         # parse the source code
         logger.info('Parsing {}'.format(results.file))
