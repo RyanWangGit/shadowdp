@@ -755,7 +755,7 @@ class ShadowDPTransformer(NodeVisitor):
 
         fixed_types = None
         # don't output logs while doing iterations
-        #logger.disabled = True
+        logger.disabled = True
         self._loop_level += 1
         while fixed_types != self._types:
             fixed_types = self._types.copy()
