@@ -779,6 +779,7 @@ class ShadowDPTransformer(NodeVisitor):
             self._types = before_types.copy()
             self._types.merge(fixed_types)
 
+            # instrument c_s part
             c_s = self._instrument(before_types, self._types, self._pc)
             while_index = self._parents[node].block_items.index(node)
             self._parents[node].block_items[while_index:while_index] = c_s
@@ -786,6 +787,7 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted.add(statement)
             self._inserted.add(node)
 
+            # instrument c'' part
             update_statements = self._instrument(after_visit, self._types, self._pc)
             node.stmt.block_items.extend(update_statements)
             for statement in update_statements:
