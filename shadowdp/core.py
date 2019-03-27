@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
-class _ExpressionFinder(NodeVisitor):
+class _NodeFinder(NodeVisitor):
     """ this class find a specific node in the expression"""
     def __init__(self, check_func, ignores=None):
         self._check_func = check_func
@@ -226,12 +226,15 @@ class ShadowDPTransformer(NodeVisitor):
         # pc corresponds to the pc value in paper, which means if the shadow execution diverges or not, and controls
         # the generation of shadow branch
         self._pc = False
+        self._no_shadow = False
         # to track the inserted assume functions so that we don't have to insert redundent assumes
         self._inserted_query_assumes = [[]]
 
     def _update_pc(self, pc, types, condition):
+        if self._no_shadow:
+            return False
         # TODO: use Z3 to solve constraints to decide this value
-        star_variable_finder = _ExpressionFinder(
+        star_variable_finder = _NodeFinder(
             lambda node: (isinstance(node, c_ast.ID) and
                           ('__SHADOWDP_' in types.get_distance(node.name)[1] or
                            types.get_distance(node.name)[1] == '*')))
@@ -242,7 +245,7 @@ class ShadowDPTransformer(NodeVisitor):
         if not isinstance(types1, TypeSystem) or not isinstance(types2, TypeSystem):
             raise ValueError('types1 and types2 must be TypeSystem')
 
-        query_var_checker = _ExpressionFinder(
+        query_var_checker = _NodeFinder(
             lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                          self._parameters[2] in node.name.name)
 
@@ -258,7 +261,7 @@ class ShadowDPTransformer(NodeVisitor):
                     for query in query_var_checker.visit(convert_to_ast(distances1[type_index])):
                         assumes.extend(self._assume_query(query))
                         self._inserted_query_assumes[-1].append(query)
-                    if type_index == 0 or (type_index == 1 and not pc):
+                    if type_index == 0 or (type_index == 1 and not pc and not self._no_shadow):
                         inserted_statement.append(c_ast.Assignment(
                             op='=', lvalue=c_ast.ID('__SHADOWDP_{}_DISTANCE_{}'.format(version, name)),
                             rvalue=convert_to_ast(distances1[type_index])))
@@ -345,7 +348,18 @@ class ShadowDPTransformer(NodeVisitor):
         self._types.clear()
         logger.info('Start transforming function {} ...'.format(node.decl.name))
 
-        # first pickup the annotation for parameters
+        # first go through the function to see if shadow execution is used or not
+        regex = re.compile(r'(?<!_)SHADOW')
+        shadow_checker = _NodeFinder(
+            lambda to_check: isinstance(to_check, c_ast.FuncCall) and to_check.name.name == 'Lap' and
+                             isinstance(to_check.args.exprs[1], c_ast.Constant) and
+                             to_check.args.exprs[1].type == 'string' and
+                             len(to_check.args.exprs[1].value[1:-1].split(';')) > 2 and
+                             len(regex.findall(to_check.args.exprs[1].value[1:-1].split(';')[0])) > 0
+        )
+        self._no_shadow = len(shadow_checker.visit(node)) == 0
+
+        # pickup the annotation for parameters
         assume_statement, type_statement = node.body.block_items.pop(0), node.body.block_items.pop(0)
         if not all((isinstance(assume_statement, c_ast.Constant),
                    assume_statement.type == 'string',
@@ -437,6 +451,8 @@ class ShadowDPTransformer(NodeVisitor):
                 if distance == '*' or distance == '__SHADOWDP_{}_DISTANCE_{}'.format(version, name):
                     # if it is a dynamically tracked local variable, add declarations
                     if name not in self._parameters:
+                        if version == 'SHADOW' and self._no_shadow:
+                            continue
                         varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, name)
                         insert_statements.append(
                             c_ast.Decl(name=varname,
@@ -486,10 +502,10 @@ class ShadowDPTransformer(NodeVisitor):
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
 
         # check the distance dependence
-        dependence_finder = _ExpressionFinder(
+        dependence_finder = _NodeFinder(
             lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
                              (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname),
-            lambda to_ignore: isinstance(to_ignore, c_ast.ArrayRef) and to_ignore.name.name == self._parameters[2]
+            lambda to_ignore: isinstance(to_ignore, c_ast.ID) and to_ignore.name in self._random_variables
         )
         for name, distances in self._types.variables():
             if name not in self._random_variables:
@@ -532,7 +548,7 @@ class ShadowDPTransformer(NodeVisitor):
                     self._types.update_distance(node.name, aligned, shadow)
             # if it is random variable declaration (T-Laplace)
             elif isinstance(node.init, c_ast.FuncCall) and node.init.name.name == 'Lap':
-                if self._pc:
+                if self._pc and not self._no_shadow:
                     raise SamplingCommandMisplaceError(node.coord)
                 self._random_variables.add(node.name)
                 logger.debug('Random variables: {}'.format(self._random_variables))
@@ -604,7 +620,7 @@ class ShadowDPTransformer(NodeVisitor):
                     update_v_epsilon = c_ast.Assignment(op='=',
                                                         lvalue=c_ast.ID('__SHADOWDP_v_epsilon'), rvalue=v_epsilon)
                     # insert assume functions on query variable if cost variable calculation contains it
-                    query_var_checker = _ExpressionFinder(
+                    query_var_checker = _NodeFinder(
                         lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                                      self._parameters[2] in node.name.name)
 
@@ -638,27 +654,8 @@ class ShadowDPTransformer(NodeVisitor):
         before_pc = self._pc
         self._pc = self._update_pc(self._pc, self._types, n.cond)
 
-        before_types = self._types.copy()
-        # corresponds to \Gamma_0 in paper
-        types_0 = self._types.copy()
-        # promote the shadow distances of the assigned variables to *
-        shadow_finder = _ExpressionFinder(lambda node: isinstance(node, c_ast.Assignment) and node.lvalue)
-        for assign_node in shadow_finder.visit(n):
-            if isinstance(assign_node.lvalue, c_ast.ID):
-                varname = assign_node.lvalue.name
-            elif isinstance(assign_node.lvalue, c_ast.ArrayRef):
-                varname = assign_node.lvalue.name.name
-            else:
-                raise NotImplementedError(
-                    'Assign node lvalue type not supported {}'.format(type(assign_node.lvalue)))
-            align, shadow = types_0.get_distance(varname)
-            types_0.update_distance(varname, align, '*')
-
-        if self._pc and not before_pc:
-            self._types = types_0
-
         # backup the current types before entering the true or false branch
-        cur_types = self._types.copy()
+        before_types = self._types.copy()
 
         self._inserted_query_assumes.append([])
         # add current condition for simplification
@@ -673,7 +670,7 @@ class ShadowDPTransformer(NodeVisitor):
 
         self._inserted_query_assumes.append([])
         # revert current types back to enter the false branch
-        self._types = cur_types
+        self._types = before_types
         self._types.apply(n.cond, False)
         if n.iffalse:
             logger.debug('Line: {} else'.format(n.iffalse.coord.line))
@@ -686,21 +683,14 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(after merge): {}'.format(self._types))
         false_assumes = self._inserted_query_assumes.pop()
 
-        exp_checker = _ExpressionFinder(
-            lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
-                         self._parameters[2] in node.name.name)
-
         if self._loop_level == 0:
+            # find the usage of query variables, for inserting the assume functions for them
+            exp_checker = _NodeFinder(
+                lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
+                             self._parameters[2] in node.name.name)
             if self._pc and not before_pc:
-                # insert c_s
-                c_s = self._instrument(before_types, types_0, before_pc)
-                if_index = self._parents[n].block_items.index(n)
-                self._parents[n].block_items[if_index:if_index] = c_s
-                for statement in c_s:
-                    self._inserted.add(statement)
-                self._inserted.add(n)
                 # insert c_shadow
-                shadow_cond = _ExpressionReplacer(types_0, False).visit(
+                shadow_cond = _ExpressionReplacer(self._types, False).visit(
                     copy.deepcopy(n.cond))
                 shadow_branch = c_ast.If(cond=shadow_cond,
                                          iftrue=c_ast.Compound(
@@ -708,8 +698,8 @@ class ShadowDPTransformer(NodeVisitor):
                                          iffalse=c_ast.Compound(
                                              block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
-                    {name for name, (_, shadow) in types_0.variables() if shadow == '*'},
-                    types_0)
+                    {name for name, (_, shadow) in self._types.variables() if shadow == '*'},
+                    self._types)
                 shadow_branch_generator.visit(shadow_branch)
                 if_index = self._parents[n].block_items.index(n)
                 self._parents[n].block_items.insert(if_index + 1, shadow_branch)
@@ -765,7 +755,7 @@ class ShadowDPTransformer(NodeVisitor):
 
         fixed_types = None
         # don't output logs while doing iterations
-        #logger.disabled = True
+        logger.disabled = True
         self._loop_level += 1
         while fixed_types != self._types:
             fixed_types = self._types.copy()
@@ -789,6 +779,7 @@ class ShadowDPTransformer(NodeVisitor):
             self._types = before_types.copy()
             self._types.merge(fixed_types)
 
+            # instrument c_s part
             c_s = self._instrument(before_types, self._types, self._pc)
             while_index = self._parents[node].block_items.index(node)
             self._parents[node].block_items[while_index:while_index] = c_s
@@ -796,6 +787,7 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted.add(statement)
             self._inserted.add(node)
 
+            # instrument c'' part
             update_statements = self._instrument(after_visit, self._types, self._pc)
             node.stmt.block_items.extend(update_statements)
             for statement in update_statements:

@@ -19,17 +19,21 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from shadowdp.checker import check
-
-
-def test_check():
-    assert check('./cpachecker', './examples/transformed/noisymax.c', 'noisymax')
-    assert check('./cpachecker', './examples/transformed/sparsevector.c', 'sparsevector')
-    assert check('./cpachecker', './examples/transformed/sparsevectorN.c', 'sparsevectorN')
-    assert check('./cpachecker', './examples/transformed/numsparsevector.c', 'numsparsevector')
-    assert check('./cpachecker', './examples/transformed/numsparsevectorN.c', 'numsparsevectorN')
-    assert check('./cpachecker', './examples/transformed/gapsparsevector.c', 'gapsparsevector')
-    assert check('./cpachecker', './examples/transformed/partialsum.c', 'partialsum')
-    assert check('./cpachecker', './examples/transformed/prefixsum.c', 'prefixsum')
-    assert check('./cpachecker', './examples/transformed/smartsum.c', 'smartsum')
-
+#!/bin/sh
+shadowdp verify examples/transformed/noisymax.c
+echo ''
+shadowdp verify examples/transformed/sparsevector.c
+echo ''
+shadowdp verify examples/transformed/sparsevectorN.c
+echo ''
+shadowdp verify examples/transformed/gapsparsevector.c
+echo ''
+shadowdp verify examples/transformed/numsparsevector.c
+echo ''
+shadowdp verify examples/transformed/numsparsevectorN.c
+echo ''
+shadowdp verify examples/transformed/partialsum.c
+echo ''
+shadowdp verify examples/transformed/prefixsum.c
+echo ''
+shadowdp verify examples/transformed/smartsum.c
