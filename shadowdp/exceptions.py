@@ -21,27 +21,33 @@
 # SOFTWARE.
 
 
-class NoAnnotationError(ValueError):
+class ShadowDPError(ValueError):
     def __init__(self, coord):
         self.coord = coord
+
+
+class NoAnnotationError(ShadowDPError):
+    pass
 
 
 class NoParameterAnnotationError(NoAnnotationError):
-    def __init__(self, coord):
-        super().__init__(coord)
+    pass
 
 
 class NoSamplingAnnotationError(NoAnnotationError):
-    def __init__(self, coord):
-        super().__init__(coord)
+    pass
 
 
-class ReturnDistanceNotZero(ValueError):
+class ReturnDistanceNotZero(ShadowDPError):
     def __init__(self, coord, name, distance):
-        self.coord = coord
+        super().__init__(coord)
         self.name = name
         self.distance = distance
 
 
-class DistanceDependenceError(ValueError):
+class DistanceDependenceError(ShadowDPError):
+    pass
+
+
+class SamplingCommandMisplaceError(ShadowDPError):
     pass

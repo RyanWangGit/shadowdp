@@ -105,6 +105,10 @@ def main(argv=sys.argv[1:]):
         except ReturnDistanceNotZero as e:
             logger.error('{}: Aligned distance of return variable {} is not zero ({})'
                          .format(str(e.coord), e.name, e.distance))
+            return 1
+        except SamplingCommandMisplaceError as e:
+            logger.error('{}: Cannot use sampling command in diverging branch.'.format(e.coord))
+            return 1
         else:
             # write the transformed code
             with open(results.out, 'w') as f:

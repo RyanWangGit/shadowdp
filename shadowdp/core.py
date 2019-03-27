@@ -515,6 +515,8 @@ class ShadowDPTransformer(NodeVisitor):
                     self._types.update_distance(node.name, aligned, shadow)
             # if it is random variable declaration (T-Laplace)
             elif isinstance(node.init, c_ast.FuncCall) and node.init.name.name == 'Lap':
+                if self._pc:
+                    raise SamplingCommandMisplaceError(node.coord)
                 self._random_variables.add(node.name)
                 logger.debug('Random variables: {}'.format(self._random_variables))
                 if not (isinstance(node.init.args.exprs[1], c_ast.Constant) and
