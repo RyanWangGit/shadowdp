@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define Abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-int partialsum(float epsilon, int size, float q[], int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
+int partialsum_rewrite(float epsilon, int size, float q[], int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
 {
   __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(size > 0);
@@ -20,6 +20,7 @@ int partialsum(float epsilon, int size, float q[], int __SHADOWDP_index, float _
   float sum = 0;
   int i = 0;
   __SHADOWDP_ALIGNED_DISTANCE_sum = 0;
+  __SHADOWDP_SHADOW_DISTANCE_sum = 0;
   while (i < size)
   {
     __VERIFIER_assert(i < size);
@@ -38,12 +39,14 @@ int partialsum(float epsilon, int size, float q[], int __SHADOWDP_index, float _
     }
 
     __SHADOWDP_ALIGNED_DISTANCE_sum = __SHADOWDP_ALIGNED_DISTANCE_q[i] + __SHADOWDP_ALIGNED_DISTANCE_sum;
+    __SHADOWDP_SHADOW_DISTANCE_sum = __SHADOWDP_SHADOW_DISTANCE_q[i] + __SHADOWDP_SHADOW_DISTANCE_sum;
   }
 
   float eta = __VERIFIER_nondet_float();
-  __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + (1.0 * Abs(__SHADOWDP_ALIGNED_DISTANCE_sum));
+  __VERIFIER_assert(Abs(__SHADOWDP_ALIGNED_DISTANCE_sum) <= 1.0);
+  __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + ((1.0 * epsilon));
   out = sum + eta;
-  __VERIFIER_assert(__SHADOWDP_v_epsilon <= 1);
+  __VERIFIER_assert(__SHADOWDP_v_epsilon <= epsilon);
   return out;
 }
 
