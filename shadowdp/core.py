@@ -346,14 +346,18 @@ class ShadowDPTransformer(NodeVisitor):
         logger.info('Start transforming function {} ...'.format(node.decl.name))
 
         # first pickup the annotation for parameters
-        first_statement = node.body.block_items.pop(0)
-        if not (isinstance(first_statement, c_ast.Constant) and first_statement.type == 'string'):
-            raise NoParameterAnnotationError(first_statement.coord)
-        sensitivity, *parameter_distances = first_statement.value[1:-1].strip().split(';')
+        assume_statement, type_statement = node.body.block_items.pop(0), node.body.block_items.pop(0)
+        if not all((isinstance(assume_statement, c_ast.Constant),
+                   assume_statement.type == 'string',
+                   isinstance(type_statement, c_ast.Constant),
+                   type_statement.type == 'string')):
+            raise NoParameterAnnotationError(assume_statement.coord)
+        sensitivity, *other_assumes = assume_statement.value[1:-1].strip().split(';')
         if sensitivity not in ('ALL_DIFFER', 'ONE_DIFFER'):
             raise ValueError('Annotation for sensitivity should be either \'ALL_DIFFER\' or \'ONE_DIFFER\'')
 
         # get distances from annotation string and store to type system
+        parameter_distances = type_statement.value[1:-1].strip().split(';')
         for parameter in parameter_distances:
             results = re.findall(r'([a-zA-Z_]+):\s*<([*a-zA-Z0-9\[\]]+),\s*([*a-zA-Z0-9\[\]]+)>', parameter)
             if len(results) == 0:
@@ -382,15 +386,25 @@ class ShadowDPTransformer(NodeVisitor):
             c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
                            args=c_ast.ExprList([c_ast.BinaryOp('>', c_ast.ID(size),
                                                                c_ast.Constant('int', 0))])),
+        ]
 
+        # add user-defined assume
+        regex = re.compile(r'assume\(([\sa-zA-Z+\-*\\0-9_><=&|]+)\)')
+        for assume in other_assumes:
+            if 'assume' in assume:
+                for expression in regex.findall(assume):
+                    insert_statements.append(c_ast.FuncCall(c_ast.ID(self._func_map['assume']),
+                                                            args=convert_to_ast(expression)))
+
+        insert_statements.append(
             # insert float __SHADOWDP_v_epsilon = 0;
             c_ast.Decl(name='__SHADOWDP_v_epsilon',
                        type=c_ast.TypeDecl(declname='__SHADOWDP_v_epsilon',
                                            type=c_ast.IdentifierType(names=['float']),
                                            quals=[]),
                        init=c_ast.Constant('int', '0'),
-                       quals=[], funcspec=[], bitsize=[], storage=[]),
-        ]
+                       quals=[], funcspec=[], bitsize=[], storage=[])
+        )
 
         # setup different sensitivity settings
         if self._one_differ:
@@ -564,7 +578,7 @@ class ShadowDPTransformer(NodeVisitor):
                     # incorporate epsilon = 1 approach
                     if self._set_epsilon:
                         epsilon, *_ = self._parameters
-                        scale = scale.replace(epsilon, '1')
+                        scale = scale.replace(epsilon, self._set_epsilon)
 
                     # TODO: maybe create a specialized simplifier for this scenario
                     # transform distance expression to cost expression,
@@ -801,7 +815,12 @@ class ShadowDPTransformer(NodeVisitor):
 
         # insert assert(__SHADOWDP_v_epsilon <= epsilon);
         epsilon, *_ = self._parameters
-        epsilon_node = c_ast.Constant(type='float', value=1) if self._set_epsilon else c_ast.ID(epsilon)
+        if self._set_epsilon and self._set_epsilon.isdigit():
+            epsilon_node = c_ast.Constant(type='float', value=self._set_epsilon)
+        elif self._set_epsilon and not self._set_epsilon.isdigit():
+            epsilon_node = c_ast.ID(name=self._set_epsilon)
+        else:
+            epsilon_node = c_ast.ID(epsilon)
 
         if self._set_goal:
             assert_node = c_ast.FuncCall(
