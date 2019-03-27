@@ -109,6 +109,10 @@ def main(argv=sys.argv[1:]):
         except SamplingCommandMisplaceError as e:
             logger.error('{}: Cannot use sampling command in diverging branch.'.format(e.coord))
             return 1
+        except DistanceDependenceError as e:
+            logger.error('{}: Distance dependence found at assignment for {} with distance dependence {}.'
+                         .format(e.coord, e.name, e.distance))
+            return 1
         else:
             # write the transformed code
             with open(results.out, 'w') as f:
