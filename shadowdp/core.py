@@ -23,6 +23,7 @@ import sympy as sp
 import logging
 import copy
 import re
+import z3
 from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
@@ -31,6 +32,18 @@ from shadowdp.exceptions import *
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
+
+
+class _Z3ExpressionGenerator(NodeVisitor):
+    def visit(self, node):
+        return self.generic_visit(node)
+
+    def visit_ID(self, node):
+        return z3.Real(node.name)
+
+    def visit_ArrayRef(self, node):
+        assert isinstance(node, c_ast.ArrayRef)
+        return z3.ArrayRef(node.name, self.visit(node.subscript))
 
 
 class _NodeFinder(NodeVisitor):
@@ -231,14 +244,23 @@ class ShadowDPTransformer(NodeVisitor):
         self._inserted_query_assumes = [[]]
 
     def _update_pc(self, pc, types, condition):
+        z3_generator = _Z3ExpressionGenerator()
+        original = z3_generator.visit(condition)
+        shadow_distances = z3_generator.visit(convert_to_ast(_DistanceGenerator(types).visit(condition)[1]))
+        print(original, shadow_distances)
+
         if self._no_shadow:
             return False
-        # TODO: use Z3 to solve constraints to decide this value
+        elif pc:
+            return True
         star_variable_finder = _NodeFinder(
             lambda node: (isinstance(node, c_ast.ID) and
                           ('__SHADOWDP_' in types.get_distance(node.name)[1] or
                            types.get_distance(node.name)[1] == '*')))
-        return pc or len(star_variable_finder.visit(condition)) != 0
+        if len(star_variable_finder.visit(condition)) != 0:
+            return True
+
+        return False
 
     # Instrumentation rule
     def _instrument(self, types1, types2, pc):
