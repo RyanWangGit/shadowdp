@@ -35,8 +35,9 @@ _code_generator = CGenerator()
 
 class _ExpressionFinder(NodeVisitor):
     """ this class find a specific node in the expression"""
-    def __init__(self, check_func):
+    def __init__(self, check_func, ignores=None):
         self._check_func = check_func
+        self._ignores = ignores
         self._nodes = []
 
     def visit(self, node):
@@ -44,6 +45,8 @@ class _ExpressionFinder(NodeVisitor):
         return self._nodes
 
     def generic_visit(self, node):
+        if self._ignores and not self._ignores(node):
+            return
         if self._check_func(node):
             self._nodes.append(node)
         for child in node:
