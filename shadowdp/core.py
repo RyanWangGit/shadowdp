@@ -471,18 +471,18 @@ class ShadowDPTransformer(NodeVisitor):
             else:
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
 
-        """
         # check the distance dependence
         dependence_finder = _ExpressionFinder(
             lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
-                             (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname))
-        for name, distances in self._types.variables(self._condition_stack):
+                             (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname),
+            lambda to_ignore: isinstance(to_ignore, c_ast.ArrayRef) and to_ignore.name.name == self._parameters[2]
+        )
+        for name, distances in self._types.variables():
             if name not in self._random_variables:
                 for distance in distances:
                     if distance != '*':
                         if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
-                            raise DistanceDependenceError(varname, distance)
-        """
+                            raise DistanceDependenceError(node.coord, varname, distance)
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
