@@ -683,11 +683,11 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(after merge): {}'.format(self._types))
         false_assumes = self._inserted_query_assumes.pop()
 
-        exp_checker = _NodeFinder(
-            lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
-                         self._parameters[2] in node.name.name)
-
         if self._loop_level == 0:
+            # find the usage of query variables, for inserting the assume functions for them
+            exp_checker = _NodeFinder(
+                lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
+                             self._parameters[2] in node.name.name)
             if self._pc and not before_pc:
                 # insert c_shadow
                 shadow_cond = _ExpressionReplacer(self._types, False).visit(
