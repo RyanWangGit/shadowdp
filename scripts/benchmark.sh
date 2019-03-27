@@ -24,14 +24,18 @@ shadowdp check examples/original/noisymax.c
 echo ''
 shadowdp check examples/original/sparsevector.c
 echo ''
-# apply epsilon = 1 technique to solve non-linearity
-shadowdp check examples/original/gapsparsevector.c -e
+shadowdp check examples/original/sparsevectorN.c -e NN
 echo ''
-shadowdp check examples/original/numsparsevector.c -e
+# apply setting epsilon technique to solve non-linearity
+shadowdp check examples/original/gapsparsevector.c -e NN
 echo ''
-shadowdp check examples/original/partialsum.c -e
+shadowdp check examples/original/numsparsevector.c -e 1
 echo ''
-shadowdp check examples/original/prefixsum.c -e
+shadowdp check examples/original/numsparsevectorN.c -e NN
+echo ''
+shadowdp check examples/original/partialsum.c -e 1
+echo ''
+shadowdp check examples/original/prefixsum.c -e 1
 echo ''
 # use goal=2 for checking 2 * epsilon-differential privacy
-shadowdp check examples/original/smartsum.c -e -g 2
+shadowdp check examples/original/smartsum.c -e 1 -g 2
