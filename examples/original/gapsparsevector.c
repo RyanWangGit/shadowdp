@@ -1,6 +1,7 @@
 int gapsparsevector(float epsilon, int size, float q[], float T)
 {
-  "ALL_DIFFER; epsilon: <0, 0>; size: <0, 0>; q: <*, *>; T: <0, 0>";
+  "ALL_DIFFER;";
+  "epsilon: <0, 0>; size: <0, 0>; q: <*, *>; T: <0, 0>";
   int out = 0;
   float eta_1 = Lap(2.0 / epsilon, "ALIGNED; 1");
   float T_bar = T + eta_1;
