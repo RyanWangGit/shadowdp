@@ -654,27 +654,8 @@ class ShadowDPTransformer(NodeVisitor):
         before_pc = self._pc
         self._pc = self._update_pc(self._pc, self._types, n.cond)
 
-        before_types = self._types.copy()
-        # corresponds to \Gamma_0 in paper
-        types_0 = self._types.copy()
-        # promote the shadow distances of the assigned variables to *
-        shadow_finder = _NodeFinder(lambda node: isinstance(node, c_ast.Assignment) and node.lvalue)
-        for assign_node in shadow_finder.visit(n):
-            if isinstance(assign_node.lvalue, c_ast.ID):
-                varname = assign_node.lvalue.name
-            elif isinstance(assign_node.lvalue, c_ast.ArrayRef):
-                varname = assign_node.lvalue.name.name
-            else:
-                raise NotImplementedError(
-                    'Assign node lvalue type not supported {}'.format(type(assign_node.lvalue)))
-            align, shadow = types_0.get_distance(varname)
-            types_0.update_distance(varname, align, '*')
-
-        if self._pc and not before_pc:
-            self._types = types_0
-
         # backup the current types before entering the true or false branch
-        cur_types = self._types.copy()
+        before_types = self._types.copy()
 
         self._inserted_query_assumes.append([])
         # add current condition for simplification
@@ -689,7 +670,7 @@ class ShadowDPTransformer(NodeVisitor):
 
         self._inserted_query_assumes.append([])
         # revert current types back to enter the false branch
-        self._types = cur_types
+        self._types = before_types
         self._types.apply(n.cond, False)
         if n.iffalse:
             logger.debug('Line: {} else'.format(n.iffalse.coord.line))
@@ -708,15 +689,8 @@ class ShadowDPTransformer(NodeVisitor):
 
         if self._loop_level == 0:
             if self._pc and not before_pc:
-                # insert c_s
-                c_s = self._instrument(before_types, types_0, before_pc)
-                if_index = self._parents[n].block_items.index(n)
-                self._parents[n].block_items[if_index:if_index] = c_s
-                for statement in c_s:
-                    self._inserted.add(statement)
-                self._inserted.add(n)
                 # insert c_shadow
-                shadow_cond = _ExpressionReplacer(types_0, False).visit(
+                shadow_cond = _ExpressionReplacer(self._types, False).visit(
                     copy.deepcopy(n.cond))
                 shadow_branch = c_ast.If(cond=shadow_cond,
                                          iftrue=c_ast.Compound(
@@ -724,8 +698,8 @@ class ShadowDPTransformer(NodeVisitor):
                                          iffalse=c_ast.Compound(
                                              block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
-                    {name for name, (_, shadow) in types_0.variables() if shadow == '*'},
-                    types_0)
+                    {name for name, (_, shadow) in self._types.variables() if shadow == '*'},
+                    self._types)
                 shadow_branch_generator.visit(shadow_branch)
                 if_index = self._parents[n].block_items.index(n)
                 self._parents[n].block_items.insert(if_index + 1, shadow_branch)
