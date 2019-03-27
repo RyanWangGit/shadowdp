@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
-class _ExpressionFinder(NodeVisitor):
+class _NodeFinder(NodeVisitor):
     """ this class find a specific node in the expression"""
     def __init__(self, check_func, ignores=None):
         self._check_func = check_func
@@ -231,7 +231,7 @@ class ShadowDPTransformer(NodeVisitor):
 
     def _update_pc(self, pc, types, condition):
         # TODO: use Z3 to solve constraints to decide this value
-        star_variable_finder = _ExpressionFinder(
+        star_variable_finder = _NodeFinder(
             lambda node: (isinstance(node, c_ast.ID) and
                           ('__SHADOWDP_' in types.get_distance(node.name)[1] or
                            types.get_distance(node.name)[1] == '*')))
@@ -242,7 +242,7 @@ class ShadowDPTransformer(NodeVisitor):
         if not isinstance(types1, TypeSystem) or not isinstance(types2, TypeSystem):
             raise ValueError('types1 and types2 must be TypeSystem')
 
-        query_var_checker = _ExpressionFinder(
+        query_var_checker = _NodeFinder(
             lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                          self._parameters[2] in node.name.name)
 
@@ -486,7 +486,7 @@ class ShadowDPTransformer(NodeVisitor):
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
 
         # check the distance dependence
-        dependence_finder = _ExpressionFinder(
+        dependence_finder = _NodeFinder(
             lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
                              (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname),
             lambda to_ignore: isinstance(to_ignore, c_ast.ID) and to_ignore.name in self._random_variables
@@ -604,7 +604,7 @@ class ShadowDPTransformer(NodeVisitor):
                     update_v_epsilon = c_ast.Assignment(op='=',
                                                         lvalue=c_ast.ID('__SHADOWDP_v_epsilon'), rvalue=v_epsilon)
                     # insert assume functions on query variable if cost variable calculation contains it
-                    query_var_checker = _ExpressionFinder(
+                    query_var_checker = _NodeFinder(
                         lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                                      self._parameters[2] in node.name.name)
 
@@ -642,7 +642,7 @@ class ShadowDPTransformer(NodeVisitor):
         # corresponds to \Gamma_0 in paper
         types_0 = self._types.copy()
         # promote the shadow distances of the assigned variables to *
-        shadow_finder = _ExpressionFinder(lambda node: isinstance(node, c_ast.Assignment) and node.lvalue)
+        shadow_finder = _NodeFinder(lambda node: isinstance(node, c_ast.Assignment) and node.lvalue)
         for assign_node in shadow_finder.visit(n):
             if isinstance(assign_node.lvalue, c_ast.ID):
                 varname = assign_node.lvalue.name
@@ -686,7 +686,7 @@ class ShadowDPTransformer(NodeVisitor):
         logger.debug('types(after merge): {}'.format(self._types))
         false_assumes = self._inserted_query_assumes.pop()
 
-        exp_checker = _ExpressionFinder(
+        exp_checker = _NodeFinder(
             lambda node: isinstance(node, c_ast.ArrayRef) and '__SHADOWDP_' in node.name.name and
                          self._parameters[2] in node.name.name)
 
