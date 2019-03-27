@@ -489,7 +489,7 @@ class ShadowDPTransformer(NodeVisitor):
         dependence_finder = _ExpressionFinder(
             lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
                              (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname),
-            lambda to_ignore: isinstance(to_ignore, c_ast.ArrayRef) and to_ignore.name.name == self._parameters[2]
+            lambda to_ignore: isinstance(to_ignore, c_ast.ID) and to_ignore.name in self._random_variables
         )
         for name, distances in self._types.variables():
             if name not in self._random_variables:
