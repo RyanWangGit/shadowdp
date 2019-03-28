@@ -46,10 +46,9 @@ class ReturnDistanceNotZero(ShadowDPError):
 
 
 class DistanceDependenceError(ShadowDPError):
-    def __init__(self, coord, variable_name, depend_name, distance):
+    def __init__(self, coord, name, distance):
         super().__init__(coord)
-        self.variable_name = variable_name
-        self.depend_name = depend_name
+        self.name = name
         self.distance = distance
 
 
