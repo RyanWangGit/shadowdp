@@ -23,6 +23,7 @@ import sympy as sp
 import logging
 import copy
 import re
+import z3
 from pycparser import c_ast
 from pycparser.c_generator import CGenerator
 from pycparser.c_ast import NodeVisitor
@@ -31,6 +32,65 @@ from shadowdp.exceptions import *
 logger = logging.getLogger(__name__)
 
 _code_generator = CGenerator()
+
+
+class _Z3ExpressionGenerator(NodeVisitor):
+    BINARYOP_MAP = {
+        '+': lambda x, y: x + y,
+        '-': lambda x, y: x - y,
+        '/': lambda x, y: x / y,
+        '*': lambda x, y: x * y,
+        '>': lambda x, y: x > y,
+        '>=': lambda x, y: x >= y,
+        '<': lambda x, y: x < y,
+        '<=': lambda x, y: x <= y,
+        '==': lambda x, y: x == y,
+        '&&': lambda x, y: z3.And(x, y),
+        '||': lambda x, y: z3.Or(x, y)
+    }
+    UNARYOP_MAP = {
+        '!': lambda x: not x,
+    }
+
+    def __init__(self, types):
+        self._types = types
+
+    def visit(self, node):
+        return super().visit(node)
+
+    def visit_ID(self, node):
+        align, shadow = self._types.get_raw_distance(node.name)
+        align_distance = self.visit(align)[0]
+        shadow_distance = self.visit(shadow)[0]
+        assert align != '*' and shadow != '*'
+        return z3.Real(node.name), z3.Real(node.name) + align_distance, z3.Real(node.name) + shadow_distance
+
+    def visit_Constant(self, node):
+        assert isinstance(node, c_ast.Constant)
+        return z3.RealVal(node.value), z3.RealVal(node.value), z3.RealVal(node.value)
+
+    def visit_ArrayRef(self, node):
+        # TODO: handle ArrayRef case
+        raise NotImplementedError('ArrayRef currentlt not supported')
+        assert isinstance(node, c_ast.ArrayRef)
+        return z3.Array(node.name, self.visit(node.subscript))
+
+    def visit_BinaryOp(self, node):
+        assert isinstance(node, c_ast.BinaryOp)
+        lefts = self.visit(node.left)
+        rights = self.visit(node.right)
+        return tuple(_Z3ExpressionGenerator.BINARYOP_MAP[node.op](left, right) for left, right in zip(lefts, rights))
+
+    def visit_UnaryOp(self, node):
+        assert isinstance(node, c_ast.UnaryOp)
+        return tuple(_Z3ExpressionGenerator.UNARYOP_MAP[node.op](expr) for expr in self.visit(node.expr))
+
+    def visit_TernaryOp(self, node):
+        assert isinstance(node, c_ast.TernaryOp)
+        conds = self.visit(node.cond)
+        trues = self.visit(node.iftrue)
+        falses = self.visit(node.iffalse)
+        return tuple(z3.If(cond, true, false) for cond, true, false in zip(conds, trues, falses))
 
 
 class _NodeFinder(NodeVisitor):
@@ -233,12 +293,21 @@ class ShadowDPTransformer(NodeVisitor):
     def _update_pc(self, pc, types, condition):
         if self._no_shadow:
             return False
-        # TODO: use Z3 to solve constraints to decide this value
+        if pc:
+            return True
+        # if the condition contains star variable, no need to use z3 to check
         star_variable_finder = _NodeFinder(
             lambda node: (isinstance(node, c_ast.ID) and
                           ('__SHADOWDP_' in types.get_distance(node.name)[1] or
                            types.get_distance(node.name)[1] == '*')))
-        return pc or len(star_variable_finder.visit(condition)) != 0
+        if len(star_variable_finder.visit(condition)) != 0:
+            return True
+        precondition = self._z3_precondition()
+        z3_generator = _Z3ExpressionGenerator(types)
+        original, align, shadow = z3_generator.visit(condition)
+        solver = z3.Solver()
+        solver.add(z3.Not(z3.Implies(precondition, original == shadow)))
+        return solver.check() == z3.unsat
 
     # Instrumentation rule
     def _instrument(self, types1, types2, pc):
@@ -267,6 +336,21 @@ class ShadowDPTransformer(NodeVisitor):
                             rvalue=convert_to_ast(distances1[type_index])))
 
         return assumes + inserted_statement
+
+    def _z3_precondition(self):
+        _, _, q, *_ = self._parameters
+        aligned_distance_query = z3.Array('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(q), z3.IntSort(), z3.RealSort())
+        shadow_distance_query = z3.Array('__SHADOWDP_SHADOW_DISTANCE_{}'.format(q), z3.IntSort(), z3.RealSort())
+        i, j = z3.Ints('i j')
+        if self._one_differ:
+            return z3.ForAll(i, z3.And(z3.And(-1 <= aligned_distance_query[i], aligned_distance_query[i] <= 1),
+                                       shadow_distance_query[i] == aligned_distance_query[i],
+                                       z3.Implies(aligned_distance_query[i] != 0,
+                                                  z3.ForAll(j, z3.And(j > i, aligned_distance_query[j] == 0)))
+                                       ))
+        else:
+            return z3.ForAll(i, z3.And(z3.And(-1 <= aligned_distance_query[i], aligned_distance_query[i] <= 1),
+                                       shadow_distance_query[i] == aligned_distance_query[i]))
 
     def _assume_query(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
@@ -514,7 +598,7 @@ class ShadowDPTransformer(NodeVisitor):
                 for distance in distances:
                     if distance != '*':
                         if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
-                            raise DistanceDependenceError(node.coord, varname, distance)
+                            raise DistanceDependenceError(node.coord, varname, name, distance)
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
