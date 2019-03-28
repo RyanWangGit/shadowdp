@@ -808,13 +808,10 @@ class ShadowDPTransformer(NodeVisitor):
                              self._parameters[2] in node.name.name)
             if self._pc and not before_pc:
                 # insert c_shadow
-                shadow_cond = _ExpressionReplacer(self._types, False).visit(
-                    copy.deepcopy(n.cond))
-                shadow_branch = c_ast.If(cond=shadow_cond,
-                                         iftrue=c_ast.Compound(
-                                             block_items=copy.deepcopy(n.iftrue.block_items)),
-                                         iffalse=c_ast.Compound(
-                                             block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
+                shadow_cond = _ExpressionReplacer(self._types, False).visit(copy.deepcopy(n.cond))
+                shadow_branch = c_ast.If(
+                    cond=shadow_cond, iftrue=c_ast.Compound(block_items=copy.deepcopy(n.iftrue.block_items)),
+                    iffalse=c_ast.Compound(block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
                     {name for name, (_, shadow) in self._types.variables() if shadow == '*'},
                     self._types)
