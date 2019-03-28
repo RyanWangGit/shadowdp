@@ -50,6 +50,7 @@ class SamplingCommandMisplaceError(ShadowDPError):
 
 
 class SamplingCommandInjectivityError(ShadowDPError):
-    def __init__(self, coord, annotation):
+    def __init__(self, coord, eta, annotation):
         super().__init__(coord)
+        self.eta = eta
         self.annotation = annotation

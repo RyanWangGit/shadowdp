@@ -113,6 +113,8 @@ def main(argv=sys.argv[1:]):
         except SamplingCommandMisplaceError as e:
             logger.error('{}: Cannot use sampling command in diverging branch.'.format(e.coord))
             return 1
+        except SamplingCommandInjectivityError as e:
+            logger.error('{}: Distance annotation {} for {} isn\'t injective'.format(e.coord, e.eta, e.annotation))
         else:
             # write the transformed code
             with open(results.out, 'w') as f:
