@@ -45,7 +45,7 @@ class _NodeFinder(NodeVisitor):
         return self._nodes
 
     def generic_visit(self, node):
-        if self._ignores and not self._ignores(node):
+        if self._ignores and self._ignores(node):
             return
         if self._check_func(node):
             self._nodes.append(node)
