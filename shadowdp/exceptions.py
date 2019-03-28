@@ -45,13 +45,5 @@ class ReturnDistanceNotZero(ShadowDPError):
         self.distance = distance
 
 
-class DistanceDependenceError(ShadowDPError):
-    def __init__(self, coord, assignvar, dependvar, distance):
-        super().__init__(coord)
-        self.assignvar = assignvar
-        self.dependevar = dependvar
-        self.distance = distance
-
-
 class SamplingCommandMisplaceError(ShadowDPError):
     pass

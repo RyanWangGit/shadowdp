@@ -565,11 +565,13 @@ class ShadowDPTransformer(NodeVisitor):
     def visit_Assignment(self, node):
         logger.debug('Line {}: {}'.format(str(node.coord.line), _code_generator.visit(node)))
         varname = node.lvalue.name if isinstance(node.lvalue, c_ast.ID) else node.lvalue.name.name
-        if self._loop_level == 0 and self._pc:
-            # generate x^shadow = x + x^shadow - e according to (T-Asgn)
+        if self._loop_level == 0:
             parent = self._parents[node]
-            if isinstance(parent, c_ast.Compound):
-                node_index = parent.block_items.index(node)
+            node_index = parent.block_items.index(node)
+            if not isinstance(parent, c_ast.Compound):
+                raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
+            if self._pc:
+                # generate x^shadow = x + x^shadow - e according to (T-Asgn)
                 if isinstance(node.lvalue, c_ast.ID):
                     shadow_distance = c_ast.ID(name='__SHADOWDP_SHADOW_DISTANCE_{}'.format(varname))
                 elif isinstance(node.lvalue, c_ast.ArrayRef):
@@ -583,23 +585,33 @@ class ShadowDPTransformer(NodeVisitor):
                 parent.block_items.insert(node_index, insert_node)
                 self._inserted.add(insert_node)
                 self._inserted.add(node)
-            else:
-                raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
 
-        # check the distance dependence
-        dependence_finder = _NodeFinder(
-            lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
-                             (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname),
-            lambda to_ignore: isinstance(to_ignore, c_ast.ID) and to_ignore.name in self._random_variables
-        )
-        for name, distances in self._types.variables():
-            if name not in self._random_variables:
-                # if shadow version is never used, only check the aligned distance
-                distances = (distances[0], ) if self._no_shadow else distances
-                for distance in distances:
-                    if distance != '*':
-                        if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
-                            raise DistanceDependenceError(node.coord, varname, name, distance)
+            # check the distance dependence
+            dependence_finder = _NodeFinder(
+                lambda to_check: (isinstance(to_check, c_ast.ID) and to_check.name == varname) or
+                                 (isinstance(to_check, c_ast.ArrayRef) and to_check.name.name == varname),
+                lambda to_ignore: isinstance(to_ignore, c_ast.ID) and to_ignore.name in self._random_variables
+            )
+            for name, (align, shadow) in self._types.variables():
+                if name not in self._random_variables:
+                    is_align_dependent = False if align == '*' \
+                        else len(dependence_finder.visit(convert_to_ast(align))) != 0
+                    # no need to check shadow dependence if shadow execution is never used
+                    is_shadow_dependent = False if self._no_shadow or shadow == '*' \
+                        else len(dependence_finder.visit(convert_to_ast(shadow))) != 0
+                    # if check fails, promote the distance to *
+                    new_distances = '*' if is_align_dependent else align, '*' if is_shadow_dependent else shadow
+                    if is_align_dependent or is_shadow_dependent:
+                        before = self._types.copy()
+                        self._types.update_distance(name, *new_distances)
+                        inserts = self._instrument(before, self._types, self._pc)
+                        parent.block_items[node_index:node_index] = inserts
+                        for insert in inserts:
+                            self._inserted.add(insert)
+                        self._inserted.add(node)
+                        logger.debug('Distance dependence encountered (distance of {0} depends on {1}: {{{0}: {2}}})'
+                                       ', resolved by promoting to *'
+                                       .format(name, varname, align if is_align_dependent else shadow))
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
