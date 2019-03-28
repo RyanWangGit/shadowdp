@@ -36,17 +36,9 @@ _code_generator = CGenerator()
 
 class _Z3ExpressionGenerator(NodeVisitor):
     BINARYOP_MAP = {
-        '+': lambda x, y: x + y,
-        '-': lambda x, y: x - y,
-        '/': lambda x, y: x / y,
-        '*': lambda x, y: x * y,
-        '>': lambda x, y: x > y,
-        '>=': lambda x, y: x >= y,
-        '<': lambda x, y: x < y,
-        '<=': lambda x, y: x <= y,
-        '==': lambda x, y: x == y,
-        '&&': lambda x, y: z3.And(x, y),
-        '||': lambda x, y: z3.Or(x, y)
+        '+': lambda x, y: x + y, '-': lambda x, y: x - y, '/': lambda x, y: x / y, '*': lambda x, y: x * y,
+        '>': lambda x, y: x > y, '>=': lambda x, y: x >= y, '<': lambda x, y: x < y, '<=': lambda x, y: x <= y,
+        '==': lambda x, y: x == y, '&&': lambda x, y: z3.And(x, y), '||': lambda x, y: z3.Or(x, y)
     }
     UNARYOP_MAP = {
         '!': lambda x: not x,
