@@ -512,7 +512,7 @@ class ShadowDPTransformer(NodeVisitor):
                 for distance in distances:
                     if distance != '*':
                         if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
-                            raise DistanceDependenceError(node.coord, varname, distance)
+                            raise DistanceDependenceError(node.coord, varname, name, distance)
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
