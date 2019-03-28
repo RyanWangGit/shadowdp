@@ -509,6 +509,8 @@ class ShadowDPTransformer(NodeVisitor):
         )
         for name, distances in self._types.variables():
             if name not in self._random_variables:
+                # if shadow version is never used, only check the aligned distance
+                distances = (distances[0], ) if self._no_shadow else distances
                 for distance in distances:
                     if distance != '*':
                         if len(dependence_finder.visit(convert_to_ast(distance))) != 0:
