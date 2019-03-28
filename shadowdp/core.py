@@ -307,7 +307,7 @@ class ShadowDPTransformer(NodeVisitor):
         original, align, shadow = z3_generator.visit(condition)
         solver = z3.Solver()
         solver.add(z3.Not(z3.Implies(precondition, original == shadow)))
-        return solver.check() == z3.unsat
+        return solver.check() != z3.unsat
 
     # Instrumentation rule
     def _instrument(self, types1, types2, pc):
