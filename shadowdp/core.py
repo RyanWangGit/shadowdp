@@ -101,6 +101,7 @@ class _NodeFinder(NodeVisitor):
         self._nodes = []
 
     def visit(self, node):
+        self._nodes.clear()
         super().visit(node)
         return self._nodes
 
