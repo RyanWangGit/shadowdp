@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
+# TODO: refactor the z3 constraint generation for better structure
 class _Z3ExpressionGenerator(NodeVisitor):
     BINARYOP_MAP = {
         '+': lambda x, y: x + y, '-': lambda x, y: x - y, '/': lambda x, y: x / y, '*': lambda x, y: x * y,
@@ -41,31 +42,45 @@ class _Z3ExpressionGenerator(NodeVisitor):
         '==': lambda x, y: x == y, '&&': lambda x, y: z3.And(x, y), '||': lambda x, y: z3.Or(x, y)
     }
     UNARYOP_MAP = {
-        '!': lambda x: not x,
+        '!': lambda x: z3.Not(x),
+        '-': lambda x: -x
     }
 
-    def __init__(self, types):
+    def __init__(self, types, replaces=None):
         self._types = types
+        if replaces and not isinstance(replaces, dict):
+            raise ValueError('`replaces` variable must be a dict')
+        self._replaces = replaces
 
     def visit(self, node):
         return super().visit(node)
-
-    def visit_ID(self, node):
-        align, shadow = self._types.get_raw_distance(node.name)
-        align_distance = self.visit(align)[0]
-        shadow_distance = self.visit(shadow)[0]
-        assert align != '*' and shadow != '*'
-        return z3.Real(node.name), z3.Real(node.name) + align_distance, z3.Real(node.name) + shadow_distance
 
     def visit_Constant(self, node):
         assert isinstance(node, c_ast.Constant)
         return z3.RealVal(node.value), z3.RealVal(node.value), z3.RealVal(node.value)
 
+    # TODO: the following two methods should be refactored to support more scenarios
+    def visit_ID(self, node):
+        if node.name not in self._types or (self._replaces and node.name in self._replaces):
+            align, shadow = '*', '*'
+        else:
+            align, shadow = self._types.get_raw_distance(node.name)
+        variable_name = self._replaces[node.name] if self._replaces and node.name in self._replaces else node.name
+        align_distance = self.visit(align)[0] if align != '*' else z3.IntVal('0')
+        shadow_distance = self.visit(shadow)[0] if shadow != '*' else z3.IntVal('0')
+        return z3.Real(variable_name), z3.Real(variable_name) + align_distance, z3.Real(variable_name) + shadow_distance
+
     def visit_ArrayRef(self, node):
-        # TODO: handle ArrayRef case
-        raise NotImplementedError('ArrayRef currentlt not supported')
         assert isinstance(node, c_ast.ArrayRef)
-        return z3.Array(node.name, self.visit(node.subscript))
+        if node.name.name not in self._types:
+            align, shadow = '*', '*'
+        else:
+            align, shadow = self._types.get_raw_distance(node.name.name)
+        align_distance = self.visit(align)[0] if align != '*' else z3.IntVal('0')
+        shadow_distance = self.visit(shadow)[0] if shadow != '*' else z3.IntVal('0')
+        array = z3.Array(node.name.name, z3.RealSort(), z3.RealSort())
+        subscript = self.visit(node.subscript)[0]
+        return array[subscript], array[subscript] + align_distance, array[subscript] + shadow_distance
 
     def visit_BinaryOp(self, node):
         assert isinstance(node, c_ast.BinaryOp)
@@ -649,6 +664,18 @@ class ShadowDPTransformer(NodeVisitor):
 
                 # get the annotation for sampling command
                 selector, distance_eta, *_ = map(lambda x: x.strip(), node.init.args.exprs[1].value[1:-1].split(';'))
+
+                # do injectivity check
+                distance_node = convert_to_ast(distance_eta)
+                (z3_distance_1, *_), (z3_distance_2, *_) = \
+                    _Z3ExpressionGenerator(self._types, {node.name: '__SHADOWDP_eta_1'}).visit(distance_node), \
+                    _Z3ExpressionGenerator(self._types, {node.name: '__SHADOWDP_eta_2'}).visit(distance_node)
+                eta1, eta2 = z3.Reals('__SHADOWDP_eta_1 __SHADOWDP_eta_2')
+                solver = z3.Solver()
+                solver.add(z3.Not(z3.Implies(eta1 + z3_distance_1 == eta2 + z3_distance_2, eta1 == eta2)))
+                if solver.check() != z3.unsat:
+                    raise SamplingCommandInjectivityError(node.coord, node.name, distance_eta)
+
                 # set the random variable distance
                 # replace the distance variables in annotation with the current distance
                 # e.g., replace __SHADOWDP_ALIGNED_DISTANCE_sum with 0 if Gamma = {sum: <0, ->}
