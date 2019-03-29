@@ -416,9 +416,9 @@ class ShadowDPTransformer(NodeVisitor):
             assume_functions = common_assume
         # if assume function has already been inserted in this scope
         for inserted in self._inserted_query_assumes[-1]:
-            if is_node_equal(assume_functions, inserted):
+            if is_node_equal(query_node.subscript, inserted):
                 return []
-        self._inserted_query_assumes[-1].append(query_node)
+        self._inserted_query_assumes[-1].append(query_node.subscript)
         return assume_functions
 
     def visit_Compound(self, node):
