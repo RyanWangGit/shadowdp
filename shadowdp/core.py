@@ -332,7 +332,6 @@ class ShadowDPTransformer(NodeVisitor):
                 if distances1[type_index] != '*' and distances2[type_index] == '*':
                     for query in query_var_checker.visit(convert_to_ast(distances1[type_index])):
                         assumes.extend(self._assume_query(query))
-                        self._inserted_query_assumes[-1].append(query)
                     if type_index == 0 or (type_index == 1 and not pc and not self._no_shadow):
                         inserted_statement.append(c_ast.Assignment(
                             op='=', lvalue=c_ast.ID('__SHADOWDP_{}_DISTANCE_{}'.format(version, name)),
