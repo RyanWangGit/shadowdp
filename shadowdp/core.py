@@ -558,12 +558,9 @@ class ShadowDPTransformer(NodeVisitor):
                             raise NotImplementedError('Currently only supports * types for query variables')
                         varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, q)
                         node.decl.type.args.params.append(
-                            c_ast.Decl(name=varname,
-                                       type=c_ast.ArrayDecl(
-                                           type=c_ast.TypeDecl(declname=varname, type=c_ast.IdentifierType(
-                                               names=['float']), quals=[]), dim=None, dim_quals=[]),
-                                       init=None,
-                                       quals=[], funcspec=[], bitsize=[], storage=[])
+                            c_ast.Decl(name=varname, type=c_ast.ArrayDecl(type=c_ast.TypeDecl(
+                                    declname=varname, type=c_ast.IdentifierType(names=['float']), quals=[]),
+                                dim=None, dim_quals=[]), init=None, quals=[], funcspec=[], bitsize=[], storage=[])
                         )
 
         # prepend the inserted statements
