@@ -427,13 +427,13 @@ class ShadowDPTransformer(NodeVisitor):
         self._inserted_query_assumes[-1].append(assume_functions)
         return assume_functions
 
-    def visit(self, node):
-        if node in self._inserted:
-            # ignore the inserted statement
-            return
-        for child in node:
+    def visit_Compound(self, node):
+        # this is needed as we will modify the lists while we're still traversing
+        # make a shallow copy of its children and start traverse
+        for child in tuple(node.block_items):
+            # meanwhile, mark this node as its children's parent, as they may need to modify this block_items list
             self._parents[child] = node
-        return super().visit(node)
+            self.visit(child)
 
     def visit_FuncDef(self, node):
         # the start of the transformation
