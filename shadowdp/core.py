@@ -419,7 +419,7 @@ class ShadowDPTransformer(NodeVisitor):
         for inserted in self._inserted_query_assumes[-1]:
             if is_node_equal(assume_functions, inserted):
                 return []
-        self._inserted_query_assumes[-1].append(assume_functions)
+        self._inserted_query_assumes[-1].append(query_node)
         return assume_functions
 
     def visit_Compound(self, node):
