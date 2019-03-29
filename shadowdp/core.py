@@ -338,7 +338,7 @@ class ShadowDPTransformer(NodeVisitor):
                             op='=', lvalue=c_ast.ID('__SHADOWDP_{}_DISTANCE_{}'.format(version, name)),
                             rvalue=convert_to_ast(distances1[type_index])))
 
-        return assumes + inserted_statement
+        return assumes, inserted_statement
 
     def _z3_precondition(self):
         _, _, q, *_ = self._parameters
@@ -566,7 +566,6 @@ class ShadowDPTransformer(NodeVisitor):
         varname = node.lvalue.name if isinstance(node.lvalue, c_ast.ID) else node.lvalue.name.name
         if self._loop_level == 0:
             parent = self._parents[node]
-            node_index = parent.block_items.index(node)
             if not isinstance(parent, c_ast.Compound):
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
             if self._pc:
@@ -581,6 +580,7 @@ class ShadowDPTransformer(NodeVisitor):
                 # insert x^shadow = x + x^shadow - e;
                 insert_node = c_ast.Assignment(op='=', lvalue=shadow_distance, rvalue=c_ast.BinaryOp(
                     op='-', left=c_ast.BinaryOp(op='+', left=node.lvalue, right=shadow_distance), right=node.rvalue))
+                node_index = parent.block_items.index(node)
                 parent.block_items.insert(node_index, insert_node)
 
             # check the distance dependence
@@ -601,11 +601,13 @@ class ShadowDPTransformer(NodeVisitor):
                     if is_align_dependent or is_shadow_dependent:
                         before = self._types.copy()
                         self._types.update_distance(name, *new_distances)
-                        inserts = self._instrument(before, self._types, self._pc)
+                        assumes, inserts = self._instrument(before, self._types, self._pc)
+                        parent.block_items[0:0] = assumes
+                        node_index = parent.block_items.index(node)
                         parent.block_items[node_index:node_index] = inserts
                         logger.debug('Distance dependence encountered (distance of {0} depends on {1}: {{{0}: {2}}})'
-                                       ', resolved by promoting to *'
-                                       .format(name, varname, align if is_align_dependent else shadow))
+                                     ', resolved by promoting to *'
+                                     .format(name, varname, align if is_align_dependent else shadow))
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
@@ -732,7 +734,7 @@ class ShadowDPTransformer(NodeVisitor):
                     self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                     for query_node in query_var_checker.visit(update_v_epsilon):
                         assume_functions = self._assume_query(query_node)
-                        self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
+                        self._parents[node].block_items[0:0] = assume_functions
 
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
@@ -802,11 +804,10 @@ class ShadowDPTransformer(NodeVisitor):
                 if_index = self._parents[n].block_items.index(n)
                 self._parents[n].block_items.insert(if_index + 1, shadow_branch)
 
-                # insert assume functions before the shadow branch
+                # insert assume functions in the begining of the scope
                 for query_node in exp_checker.visit(shadow_cond):
                     assume_functions = self._assume_query(query_node)
-                    index = self._parents[n].block_items.index(n) + 1
-                    self._parents[n].block_items[index:index] = assume_functions
+                    self._parents[n].block_items[0:0] = assume_functions
 
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
@@ -834,8 +835,8 @@ class ShadowDPTransformer(NodeVisitor):
                 block_node = n.iftrue if types is true_types else n.iffalse
                 inserted = true_assumes if types is true_types else false_assumes
                 self._inserted_query_assumes.append(inserted)
-                instruments = self._instrument(types, self._types, self._pc)
-                block_node.block_items.extend(instruments)
+                assumes, inserts = self._instrument(types, self._types, self._pc)
+                block_node.block_items[0:0] = assumes
                 block_node.block_items.extend(inserts)
                 self._inserted_query_assumes.pop()
 
@@ -874,14 +875,15 @@ class ShadowDPTransformer(NodeVisitor):
             self._types.merge(fixed_types)
 
             # instrument c_s part
-            c_s = self._instrument(before_types, self._types, self._pc)
-            while_index = self._parents[node].block_items.index(node)
-            self._parents[node].block_items[while_index:while_index] = c_s
+            assumes, c_s = self._instrument(before_types, self._types, self._pc)
+            block_items = self._parents[node].block_items
+            block_items[0:0] = assumes
             while_index = block_items.index(node)
             block_items[while_index:while_index] = c_s
 
             # instrument c'' part
-            update_statements = self._instrument(after_visit, self._types, self._pc)
+            assumes, update_statements = self._instrument(after_visit, self._types, self._pc)
+            node.stmt.block_items[0:0] = assumes
             node.stmt.block_items.extend(update_statements)
 
             # TODO: while shadow branch
