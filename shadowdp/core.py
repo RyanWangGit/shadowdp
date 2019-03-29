@@ -286,11 +286,6 @@ class ShadowDPTransformer(NodeVisitor):
         # indicate if level of loop statements, this is needed since in While statement we might loop until convergence,
         # before convergence we shouldn't do transformation
         self._loop_level = 0
-        # this is needed if we add some statements next to the current statement
-        # e.g. float eta = havoc(); _v_epsilon = ...;
-        # we shouldn't visit the `_v_epsilon = ...;` statement node, so we keep track of the inserted statements
-        # to avoid them
-        self._inserted = set()
         # pc corresponds to the pc value in paper, which means if the shadow execution diverges or not, and controls
         # the generation of shadow branch
         self._pc = False
@@ -587,8 +582,6 @@ class ShadowDPTransformer(NodeVisitor):
                 insert_node = c_ast.Assignment(op='=', lvalue=shadow_distance, rvalue=c_ast.BinaryOp(
                     op='-', left=c_ast.BinaryOp(op='+', left=node.lvalue, right=shadow_distance), right=node.rvalue))
                 parent.block_items.insert(node_index, insert_node)
-                self._inserted.add(insert_node)
-                self._inserted.add(node)
 
             # check the distance dependence
             dependence_finder = _NodeFinder(
@@ -610,9 +603,6 @@ class ShadowDPTransformer(NodeVisitor):
                         self._types.update_distance(name, *new_distances)
                         inserts = self._instrument(before, self._types, self._pc)
                         parent.block_items[node_index:node_index] = inserts
-                        for insert in inserts:
-                            self._inserted.add(insert)
-                        self._inserted.add(node)
                         logger.debug('Distance dependence encountered (distance of {0} depends on {1}: {{{0}: {2}}})'
                                        ', resolved by promoting to *'
                                        .format(name, varname, align if is_align_dependent else shadow))
@@ -743,10 +733,6 @@ class ShadowDPTransformer(NodeVisitor):
                     for query_node in query_var_checker.visit(update_v_epsilon):
                         assume_functions = self._assume_query(query_node)
                         self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
-                        for function in assume_functions:
-                            self._inserted.add(function)
-
-                    self._inserted.add(update_v_epsilon)
 
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
@@ -815,15 +801,12 @@ class ShadowDPTransformer(NodeVisitor):
                 shadow_branch_generator.visit(shadow_branch)
                 if_index = self._parents[n].block_items.index(n)
                 self._parents[n].block_items.insert(if_index + 1, shadow_branch)
-                self._inserted.add(shadow_branch)
 
                 # insert assume functions before the shadow branch
                 for query_node in exp_checker.visit(shadow_cond):
                     assume_functions = self._assume_query(query_node)
                     index = self._parents[n].block_items.index(n) + 1
                     self._parents[n].block_items[index:index] = assume_functions
-                    for assume_function in assume_functions:
-                        self._inserted.add(assume_function)
 
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
@@ -853,8 +836,7 @@ class ShadowDPTransformer(NodeVisitor):
                 self._inserted_query_assumes.append(inserted)
                 instruments = self._instrument(types, self._types, self._pc)
                 block_node.block_items.extend(instruments)
-                for instrument in instruments:
-                    self._inserted.add(instrument)
+                block_node.block_items.extend(inserts)
                 self._inserted_query_assumes.pop()
 
         self._pc = before_pc
@@ -884,7 +866,7 @@ class ShadowDPTransformer(NodeVisitor):
                 copy.deepcopy(node.cond))
             assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                        args=c_ast.ExprList(exprs=[aligned_cond]))
-            self._inserted.add(assertion)
+
             node.stmt.block_items.insert(0, assertion)
             self.generic_visit(node)
             after_visit = self._types.copy()
@@ -895,15 +877,12 @@ class ShadowDPTransformer(NodeVisitor):
             c_s = self._instrument(before_types, self._types, self._pc)
             while_index = self._parents[node].block_items.index(node)
             self._parents[node].block_items[while_index:while_index] = c_s
-            for statement in c_s:
-                self._inserted.add(statement)
-            self._inserted.add(node)
+            while_index = block_items.index(node)
+            block_items[while_index:while_index] = c_s
 
             # instrument c'' part
             update_statements = self._instrument(after_visit, self._types, self._pc)
             node.stmt.block_items.extend(update_statements)
-            for statement in update_statements:
-                self._inserted.add(statement)
 
             # TODO: while shadow branch
             if self._pc and not before_pc:
@@ -936,7 +915,3 @@ class ShadowDPTransformer(NodeVisitor):
                                          args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
                                                                              epsilon_node)]))
         self._parents[node].block_items.insert(self._parents[node].block_items.index(node), assert_node)
-        self._inserted.add(assert_node)
-        # because we have inserted a statement before Return statement while iterating, it will be a forever loop
-        # add the current node to the set to not visit this same node again
-        self._inserted.add(node)
