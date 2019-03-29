@@ -804,7 +804,7 @@ class ShadowDPTransformer(NodeVisitor):
                 if_index = self._parents[n].block_items.index(n)
                 self._parents[n].block_items.insert(if_index + 1, shadow_branch)
 
-                # insert assume functions in the begining of the scope
+                # insert assume functions at the beginning of the scope
                 for query_node in exp_checker.visit(shadow_cond):
                     assume_functions = self._assume_query(query_node)
                     self._parents[n].block_items[0:0] = assume_functions
