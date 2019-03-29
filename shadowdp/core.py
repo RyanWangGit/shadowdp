@@ -339,6 +339,13 @@ class ShadowDPTransformer(NodeVisitor):
 
         return assumes, inserted_statement
 
+    def _start_index(self, block_item):
+        """ find the start index of block_item that is not assume function"""
+        for index, node in enumerate(block_item):
+            if not (isinstance(node, c_ast.FuncCall) and node.name.name == self._func_map['assume']):
+                return index
+        return 0
+
     def _z3_precondition(self):
         _, _, q, *_ = self._parameters
         aligned_distance_query = z3.Array('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(q), z3.IntSort(), z3.RealSort())
@@ -601,9 +608,11 @@ class ShadowDPTransformer(NodeVisitor):
                         before = self._types.copy()
                         self._types.update_distance(name, *new_distances)
                         assumes, inserts = self._instrument(before, self._types, self._pc)
-                        parent.block_items[0:0] = assumes
-                        node_index = parent.block_items.index(node)
-                        parent.block_items[node_index:node_index] = inserts
+                        block_items = parent.block_items
+                        start_index = self._start_index(block_items)
+                        block_items[start_index:start_index] = assumes
+                        node_index = block_items.index(node)
+                        block_items[node_index:node_index] = inserts
                         logger.debug('Distance dependence encountered (distance of {0} depends on {1}: {{{0}: {2}}})'
                                      ', resolved by promoting to *'
                                      .format(name, varname, align if is_align_dependent else shadow))
@@ -733,7 +742,9 @@ class ShadowDPTransformer(NodeVisitor):
                     self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                     for query_node in query_var_checker.visit(update_v_epsilon):
                         assume_functions = self._assume_query(query_node)
-                        self._parents[node].block_items[0:0] = assume_functions
+                        block_item = self._parents[node].block_items
+                        start_index = self._start_index(block_item)
+                        block_item[start_index:start_index] = assume_functions
 
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
@@ -806,37 +817,42 @@ class ShadowDPTransformer(NodeVisitor):
                 # insert assume functions at the beginning of the scope
                 for query_node in exp_checker.visit(shadow_cond):
                     assume_functions = self._assume_query(query_node)
-                    self._parents[n].block_items[0:0] = assume_functions
+                    block_item = self._parents[n].block_items
+                    start_index = self._start_index(block_item)
+                    block_item[start_index:start_index] = assume_functions
 
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
 
             # insert assert and assume functions to corresponding branch
             for aligned_cond in (aligned_true_cond, aligned_false_cond):
-                block_node = n.iftrue if aligned_cond is aligned_true_cond else n.iffalse
+                block_items = n.iftrue.block_items if aligned_cond is aligned_true_cond else n.iffalse.block_items
                 # insert the assertion
                 assert_body = c_ast.ExprList(exprs=[aligned_cond]) if aligned_cond is aligned_true_cond else \
                     c_ast.UnaryOp(op='!', expr=c_ast.ExprList(exprs=[aligned_cond]))
 
-                block_node.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                                                args=assert_body))
+                start_index = self._start_index(block_items)
+                block_items.insert(start_index, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                                               args=assert_body))
                 # if the expression contains `query` variable,
                 # add assume functions on __SHADOWDP_ALIGNED_DISTANCE_query and __SHADOWDP_SHADOW_DISTANCE_query
                 inserted = true_assumes if aligned_cond is aligned_true_cond else false_assumes
                 self._inserted_query_assumes.append(inserted)
                 for query_node in exp_checker.visit(aligned_cond):
                     assume_functions = self._assume_query(query_node)
-                    block_node.block_items[0:0] = assume_functions
+                    start_index = self._start_index(block_items)
+                    block_items[start_index:start_index] = assume_functions
                 self._inserted_query_assumes.pop()
 
             # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)
             for types in (true_types, false_types):
-                block_node = n.iftrue if types is true_types else n.iffalse
+                block_items = n.iftrue.block_items if types is true_types else n.iffalse.block_items
                 inserted = true_assumes if types is true_types else false_assumes
                 self._inserted_query_assumes.append(inserted)
                 assumes, inserts = self._instrument(types, self._types, self._pc)
-                block_node.block_items[0:0] = assumes
-                block_node.block_items.extend(inserts)
+                start_index = self._start_index(block_items)
+                block_items[start_index:start_index] = assumes
+                block_items.extend(inserts)
                 self._inserted_query_assumes.pop()
 
         self._pc = before_pc
@@ -876,14 +892,17 @@ class ShadowDPTransformer(NodeVisitor):
             # instrument c_s part
             assumes, c_s = self._instrument(before_types, self._types, self._pc)
             block_items = self._parents[node].block_items
-            block_items[0:0] = assumes
+            start_index = self._start_index(block_items)
+            block_items[start_index:start_index] = assumes
             while_index = block_items.index(node)
             block_items[while_index:while_index] = c_s
 
             # instrument c'' part
             assumes, update_statements = self._instrument(after_visit, self._types, self._pc)
-            node.stmt.block_items[0:0] = assumes
-            node.stmt.block_items.extend(update_statements)
+            block_items = node.stmt.block_items
+            start_index = self._start_index(block_items)
+            block_items[start_index:start_index] = assumes
+            block_items.extend(update_statements)
 
             # TODO: while shadow branch
             if self._pc and not before_pc:
