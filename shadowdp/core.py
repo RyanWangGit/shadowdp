@@ -34,46 +34,54 @@ logger = logging.getLogger(__name__)
 _code_generator = CGenerator()
 
 
+# TODO: refactor the z3 constraint generation for better structure
 class _Z3ExpressionGenerator(NodeVisitor):
     BINARYOP_MAP = {
-        '+': lambda x, y: x + y,
-        '-': lambda x, y: x - y,
-        '/': lambda x, y: x / y,
-        '*': lambda x, y: x * y,
-        '>': lambda x, y: x > y,
-        '>=': lambda x, y: x >= y,
-        '<': lambda x, y: x < y,
-        '<=': lambda x, y: x <= y,
-        '==': lambda x, y: x == y,
-        '&&': lambda x, y: z3.And(x, y),
-        '||': lambda x, y: z3.Or(x, y)
+        '+': lambda x, y: x + y, '-': lambda x, y: x - y, '/': lambda x, y: x / y, '*': lambda x, y: x * y,
+        '>': lambda x, y: x > y, '>=': lambda x, y: x >= y, '<': lambda x, y: x < y, '<=': lambda x, y: x <= y,
+        '==': lambda x, y: x == y, '&&': lambda x, y: z3.And(x, y), '||': lambda x, y: z3.Or(x, y)
     }
     UNARYOP_MAP = {
-        '!': lambda x: not x,
+        '!': lambda x: z3.Not(x),
+        '-': lambda x: -x
     }
 
-    def __init__(self, types):
+    def __init__(self, types, replaces=None):
         self._types = types
+        if replaces and not isinstance(replaces, dict):
+            raise ValueError('`replaces` variable must be a dict')
+        self._replaces = replaces
 
     def visit(self, node):
         return super().visit(node)
-
-    def visit_ID(self, node):
-        align, shadow = self._types.get_raw_distance(node.name)
-        align_distance = self.visit(align)[0]
-        shadow_distance = self.visit(shadow)[0]
-        assert align != '*' and shadow != '*'
-        return z3.Real(node.name), z3.Real(node.name) + align_distance, z3.Real(node.name) + shadow_distance
 
     def visit_Constant(self, node):
         assert isinstance(node, c_ast.Constant)
         return z3.RealVal(node.value), z3.RealVal(node.value), z3.RealVal(node.value)
 
+    # TODO: the following two methods should be refactored to support more scenarios
+    def visit_ID(self, node):
+        if node.name not in self._types or (self._replaces and node.name in self._replaces):
+            align, shadow = '*', '*'
+        else:
+            align, shadow = self._types.get_raw_distance(node.name)
+        variable = self._replaces[node.name] if self._replaces and node.name in self._replaces else z3.Real(node.name)
+        align_distance = self.visit(align)[0] if align != '*' else z3.IntVal('0')
+        shadow_distance = self.visit(shadow)[0] if shadow != '*' else z3.IntVal('0')
+        return variable, variable + align_distance, variable + shadow_distance
+
     def visit_ArrayRef(self, node):
-        # TODO: handle ArrayRef case
-        raise NotImplementedError('ArrayRef currentlt not supported')
         assert isinstance(node, c_ast.ArrayRef)
-        return z3.Array(node.name, self.visit(node.subscript))
+        if node.name.name not in self._types:
+            align, shadow = '*', '*'
+        else:
+            align, shadow = self._types.get_raw_distance(node.name.name)
+        align_distance = self.visit(align)[0] if align != '*' else z3.IntVal('0')
+        shadow_distance = self.visit(shadow)[0] if shadow != '*' else z3.IntVal('0')
+        array = self._replaces[node.name.name] if node.name.name in self._replaces else \
+            z3.Array(node.name.name, z3.RealSort(), z3.RealSort())
+        subscript = self.visit(node.subscript)[0]
+        return array[subscript], array[subscript] + align_distance, array[subscript] + shadow_distance
 
     def visit_BinaryOp(self, node):
         assert isinstance(node, c_ast.BinaryOp)
@@ -279,11 +287,6 @@ class ShadowDPTransformer(NodeVisitor):
         # indicate if level of loop statements, this is needed since in While statement we might loop until convergence,
         # before convergence we shouldn't do transformation
         self._loop_level = 0
-        # this is needed if we add some statements next to the current statement
-        # e.g. float eta = havoc(); _v_epsilon = ...;
-        # we shouldn't visit the `_v_epsilon = ...;` statement node, so we keep track of the inserted statements
-        # to avoid them
-        self._inserted = set()
         # pc corresponds to the pc value in paper, which means if the shadow execution diverges or not, and controls
         # the generation of shadow branch
         self._pc = False
@@ -303,9 +306,8 @@ class ShadowDPTransformer(NodeVisitor):
                            types.get_distance(node.name)[1] == '*')))
         if len(star_variable_finder.visit(condition)) != 0:
             return True
-        precondition = self._z3_precondition()
-        z3_generator = _Z3ExpressionGenerator(types)
-        original, align, shadow = z3_generator.visit(condition)
+        precondition, replaces = self._z3_precondition()
+        original, align, shadow = _Z3ExpressionGenerator(types, replaces).visit(condition)
         solver = z3.Solver()
         solver.add(z3.Not(z3.Implies(precondition, original == shadow)))
         return solver.check() != z3.unsat
@@ -330,28 +332,36 @@ class ShadowDPTransformer(NodeVisitor):
                 if distances1[type_index] != '*' and distances2[type_index] == '*':
                     for query in query_var_checker.visit(convert_to_ast(distances1[type_index])):
                         assumes.extend(self._assume_query(query))
-                        self._inserted_query_assumes[-1].append(query)
                     if type_index == 0 or (type_index == 1 and not pc and not self._no_shadow):
                         inserted_statement.append(c_ast.Assignment(
                             op='=', lvalue=c_ast.ID('__SHADOWDP_{}_DISTANCE_{}'.format(version, name)),
                             rvalue=convert_to_ast(distances1[type_index])))
 
-        return assumes + inserted_statement
+        return assumes, inserted_statement
+
+    def _start_index(self, block_item):
+        """ find the start index of block_item that is not assume function"""
+        for index, node in enumerate(block_item):
+            if not (isinstance(node, c_ast.FuncCall) and node.name.name == self._func_map['assume']):
+                return index
+        return 0
 
     def _z3_precondition(self):
         _, _, q, *_ = self._parameters
-        aligned_distance_query = z3.Array('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(q), z3.IntSort(), z3.RealSort())
-        shadow_distance_query = z3.Array('__SHADOWDP_SHADOW_DISTANCE_{}'.format(q), z3.IntSort(), z3.RealSort())
-        i, j = z3.Ints('i j')
+        aligned_distance_query = z3.Array('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(q), z3.RealSort(), z3.RealSort())
+        shadow_distance_query = z3.Array('__SHADOWDP_SHADOW_DISTANCE_{}'.format(q), z3.RealSort(), z3.RealSort())
+        i, j = z3.Reals('__SHADOWDP_Z3_i __SHADOWDP_Z3_j')
+        replaces = {str(aligned_distance_query): aligned_distance_query,
+                    str(shadow_distance_query): shadow_distance_query}
         if self._one_differ:
             return z3.ForAll(i, z3.And(z3.And(-1 <= aligned_distance_query[i], aligned_distance_query[i] <= 1),
                                        shadow_distance_query[i] == aligned_distance_query[i],
                                        z3.Implies(aligned_distance_query[i] != 0,
                                                   z3.ForAll(j, z3.And(j > i, aligned_distance_query[j] == 0)))
-                                       ))
+                                       )), replaces
         else:
             return z3.ForAll(i, z3.And(z3.And(-1 <= aligned_distance_query[i], aligned_distance_query[i] <= 1),
-                                       shadow_distance_query[i] == aligned_distance_query[i]))
+                                       shadow_distance_query[i] == aligned_distance_query[i])), replaces
 
     def _assume_query(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
@@ -415,18 +425,18 @@ class ShadowDPTransformer(NodeVisitor):
             assume_functions = common_assume
         # if assume function has already been inserted in this scope
         for inserted in self._inserted_query_assumes[-1]:
-            if is_node_equal(assume_functions, inserted):
+            if is_node_equal(query_node.subscript, inserted):
                 return []
-        self._inserted_query_assumes[-1].append(assume_functions)
+        self._inserted_query_assumes[-1].append(query_node.subscript)
         return assume_functions
 
-    def visit(self, node):
-        if node in self._inserted:
-            # ignore the inserted statement
-            return
-        for child in node:
+    def visit_Compound(self, node):
+        # this is needed as we will modify the lists while we're still traversing
+        # make a shallow copy of its children and start traverse
+        for child in tuple(node.block_items):
+            # meanwhile, mark this node as its children's parent, as they may need to modify this block_items list
             self._parents[child] = node
-        return super().visit(node)
+            self.visit(child)
 
     def visit_FuncDef(self, node):
         # the start of the transformation
@@ -551,12 +561,9 @@ class ShadowDPTransformer(NodeVisitor):
                             raise NotImplementedError('Currently only supports * types for query variables')
                         varname = '__SHADOWDP_{}_DISTANCE_{}'.format(version, q)
                         node.decl.type.args.params.append(
-                            c_ast.Decl(name=varname,
-                                       type=c_ast.ArrayDecl(
-                                           type=c_ast.TypeDecl(declname=varname, type=c_ast.IdentifierType(
-                                               names=['float']), quals=[]), dim=None, dim_quals=[]),
-                                       init=None,
-                                       quals=[], funcspec=[], bitsize=[], storage=[])
+                            c_ast.Decl(name=varname, type=c_ast.ArrayDecl(type=c_ast.TypeDecl(
+                                    declname=varname, type=c_ast.IdentifierType(names=['float']), quals=[]),
+                                dim=None, dim_quals=[]), init=None, quals=[], funcspec=[], bitsize=[], storage=[])
                         )
 
         # prepend the inserted statements
@@ -567,7 +574,6 @@ class ShadowDPTransformer(NodeVisitor):
         varname = node.lvalue.name if isinstance(node.lvalue, c_ast.ID) else node.lvalue.name.name
         if self._loop_level == 0:
             parent = self._parents[node]
-            node_index = parent.block_items.index(node)
             if not isinstance(parent, c_ast.Compound):
                 raise NotImplementedError('Parent of assignment node not supported {}'.format(type(parent)))
             if self._pc:
@@ -582,9 +588,8 @@ class ShadowDPTransformer(NodeVisitor):
                 # insert x^shadow = x + x^shadow - e;
                 insert_node = c_ast.Assignment(op='=', lvalue=shadow_distance, rvalue=c_ast.BinaryOp(
                     op='-', left=c_ast.BinaryOp(op='+', left=node.lvalue, right=shadow_distance), right=node.rvalue))
+                node_index = parent.block_items.index(node)
                 parent.block_items.insert(node_index, insert_node)
-                self._inserted.add(insert_node)
-                self._inserted.add(node)
 
             # check the distance dependence
             dependence_finder = _NodeFinder(
@@ -604,14 +609,15 @@ class ShadowDPTransformer(NodeVisitor):
                     if is_align_dependent or is_shadow_dependent:
                         before = self._types.copy()
                         self._types.update_distance(name, *new_distances)
-                        inserts = self._instrument(before, self._types, self._pc)
-                        parent.block_items[node_index:node_index] = inserts
-                        for insert in inserts:
-                            self._inserted.add(insert)
-                        self._inserted.add(node)
+                        assumes, inserts = self._instrument(before, self._types, self._pc)
+                        block_items = parent.block_items
+                        start_index = self._start_index(block_items)
+                        block_items[start_index:start_index] = assumes
+                        node_index = block_items.index(node)
+                        block_items[node_index:node_index] = inserts
                         logger.debug('Distance dependence encountered (distance of {0} depends on {1}: {{{0}: {2}}})'
-                                       ', resolved by promoting to *'
-                                       .format(name, varname, align if is_align_dependent else shadow))
+                                     ', resolved by promoting to *'
+                                     .format(name, varname, align if is_align_dependent else shadow))
 
         # get new distance from the assignment expression (T-Asgn)
         aligned, shadow = _DistanceGenerator(self._types).visit(node.rvalue)
@@ -657,6 +663,21 @@ class ShadowDPTransformer(NodeVisitor):
 
                 # get the annotation for sampling command
                 selector, distance_eta, *_ = map(lambda x: x.strip(), node.init.args.exprs[1].value[1:-1].split(';'))
+
+                # do injectivity check
+                distance_node = convert_to_ast(distance_eta)
+                precondition, replaces = self._z3_precondition()
+                eta1, eta2 = z3.Reals('__SHADOWDP_Z3_eta_1 __SHADOWDP_Z3_eta_2')
+                (z3_distance_1, *_), (z3_distance_2, *_) = \
+                    _Z3ExpressionGenerator(self._types, {node.name: eta1, **replaces}).visit(distance_node), \
+                    _Z3ExpressionGenerator(self._types, {node.name: eta2, **replaces}).visit(distance_node)
+                solver = z3.Solver()
+                solver.add(z3.Not(
+                    z3.Implies(precondition, z3.Implies(eta1 + z3_distance_1 == eta2 + z3_distance_2, eta1 == eta2))
+                ))
+                if solver.check() != z3.unsat:
+                    raise SamplingCommandInjectivityError(node.coord, node.name, distance_eta)
+
                 # set the random variable distance
                 # replace the distance variables in annotation with the current distance
                 # e.g., replace __SHADOWDP_ALIGNED_DISTANCE_sum with 0 if Gamma = {sum: <0, ->}
@@ -726,11 +747,9 @@ class ShadowDPTransformer(NodeVisitor):
                     self._parents[node].block_items.insert(n_index + 1, update_v_epsilon)
                     for query_node in query_var_checker.visit(update_v_epsilon):
                         assume_functions = self._assume_query(query_node)
-                        self._parents[node].block_items[n_index + 1:n_index + 1] = assume_functions
-                        for function in assume_functions:
-                            self._inserted.add(function)
-
-                    self._inserted.add(update_v_epsilon)
+                        block_item = self._parents[node].block_items
+                        start_index = self._start_index(block_item)
+                        block_item[start_index:start_index] = assume_functions
 
                     # transform sampling command to havoc command
                     node.init = c_ast.FuncCall(c_ast.ID(self._func_map['havoc']), args=None)
@@ -789,59 +808,56 @@ class ShadowDPTransformer(NodeVisitor):
                              self._parameters[2] in node.name.name)
             if self._pc and not before_pc:
                 # insert c_shadow
-                shadow_cond = _ExpressionReplacer(self._types, False).visit(
-                    copy.deepcopy(n.cond))
-                shadow_branch = c_ast.If(cond=shadow_cond,
-                                         iftrue=c_ast.Compound(
-                                             block_items=copy.deepcopy(n.iftrue.block_items)),
-                                         iffalse=c_ast.Compound(
-                                             block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
+                shadow_cond = _ExpressionReplacer(self._types, False).visit(copy.deepcopy(n.cond))
+                shadow_branch = c_ast.If(
+                    cond=shadow_cond, iftrue=c_ast.Compound(block_items=copy.deepcopy(n.iftrue.block_items)),
+                    iffalse=c_ast.Compound(block_items=copy.deepcopy(n.iffalse.block_items)) if n.iffalse else None)
                 shadow_branch_generator = _ShadowBranchGenerator(
                     {name for name, (_, shadow) in self._types.variables() if shadow == '*'},
                     self._types)
                 shadow_branch_generator.visit(shadow_branch)
                 if_index = self._parents[n].block_items.index(n)
                 self._parents[n].block_items.insert(if_index + 1, shadow_branch)
-                self._inserted.add(shadow_branch)
 
-                # insert assume functions before the shadow branch
+                # insert assume functions at the beginning of the scope
                 for query_node in exp_checker.visit(shadow_cond):
                     assume_functions = self._assume_query(query_node)
-                    index = self._parents[n].block_items.index(n) + 1
-                    self._parents[n].block_items[index:index] = assume_functions
-                    for assume_function in assume_functions:
-                        self._inserted.add(assume_function)
+                    block_item = self._parents[n].block_items
+                    start_index = self._start_index(block_item)
+                    block_item[start_index:start_index] = assume_functions
 
             # create else branch if doesn't exist
             n.iffalse = n.iffalse if n.iffalse else c_ast.Compound(block_items=[])
 
             # insert assert and assume functions to corresponding branch
             for aligned_cond in (aligned_true_cond, aligned_false_cond):
-                block_node = n.iftrue if aligned_cond is aligned_true_cond else n.iffalse
+                block_items = n.iftrue.block_items if aligned_cond is aligned_true_cond else n.iffalse.block_items
                 # insert the assertion
                 assert_body = c_ast.ExprList(exprs=[aligned_cond]) if aligned_cond is aligned_true_cond else \
                     c_ast.UnaryOp(op='!', expr=c_ast.ExprList(exprs=[aligned_cond]))
 
-                block_node.block_items.insert(0, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
-                                                                args=assert_body))
+                start_index = self._start_index(block_items)
+                block_items.insert(start_index, c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
+                                                               args=assert_body))
                 # if the expression contains `query` variable,
                 # add assume functions on __SHADOWDP_ALIGNED_DISTANCE_query and __SHADOWDP_SHADOW_DISTANCE_query
                 inserted = true_assumes if aligned_cond is aligned_true_cond else false_assumes
                 self._inserted_query_assumes.append(inserted)
                 for query_node in exp_checker.visit(aligned_cond):
                     assume_functions = self._assume_query(query_node)
-                    block_node.block_items[0:0] = assume_functions
+                    start_index = self._start_index(block_items)
+                    block_items[start_index:start_index] = assume_functions
                 self._inserted_query_assumes.pop()
 
             # instrument statements for updating aligned or shadow distance variables (Instrumentation rule)
             for types in (true_types, false_types):
-                block_node = n.iftrue if types is true_types else n.iffalse
+                block_items = n.iftrue.block_items if types is true_types else n.iffalse.block_items
                 inserted = true_assumes if types is true_types else false_assumes
                 self._inserted_query_assumes.append(inserted)
-                instruments = self._instrument(types, self._types, self._pc)
-                block_node.block_items.extend(instruments)
-                for instrument in instruments:
-                    self._inserted.add(instrument)
+                assumes, inserts = self._instrument(types, self._types, self._pc)
+                start_index = self._start_index(block_items)
+                block_items[start_index:start_index] = assumes
+                block_items.extend(inserts)
                 self._inserted_query_assumes.pop()
 
         self._pc = before_pc
@@ -871,7 +887,7 @@ class ShadowDPTransformer(NodeVisitor):
                 copy.deepcopy(node.cond))
             assertion = c_ast.FuncCall(name=c_ast.ID(self._func_map['assert']),
                                        args=c_ast.ExprList(exprs=[aligned_cond]))
-            self._inserted.add(assertion)
+
             node.stmt.block_items.insert(0, assertion)
             self.generic_visit(node)
             after_visit = self._types.copy()
@@ -879,18 +895,19 @@ class ShadowDPTransformer(NodeVisitor):
             self._types.merge(fixed_types)
 
             # instrument c_s part
-            c_s = self._instrument(before_types, self._types, self._pc)
-            while_index = self._parents[node].block_items.index(node)
-            self._parents[node].block_items[while_index:while_index] = c_s
-            for statement in c_s:
-                self._inserted.add(statement)
-            self._inserted.add(node)
+            assumes, c_s = self._instrument(before_types, self._types, self._pc)
+            block_items = self._parents[node].block_items
+            start_index = self._start_index(block_items)
+            block_items[start_index:start_index] = assumes
+            while_index = block_items.index(node)
+            block_items[while_index:while_index] = c_s
 
             # instrument c'' part
-            update_statements = self._instrument(after_visit, self._types, self._pc)
-            node.stmt.block_items.extend(update_statements)
-            for statement in update_statements:
-                self._inserted.add(statement)
+            assumes, update_statements = self._instrument(after_visit, self._types, self._pc)
+            block_items = node.stmt.block_items
+            start_index = self._start_index(block_items)
+            block_items[start_index:start_index] = assumes
+            block_items.extend(update_statements)
 
             # TODO: while shadow branch
             if self._pc and not before_pc:
@@ -923,7 +940,3 @@ class ShadowDPTransformer(NodeVisitor):
                                          args=c_ast.ExprList([c_ast.BinaryOp('<=', c_ast.ID('__SHADOWDP_v_epsilon'),
                                                                              epsilon_node)]))
         self._parents[node].block_items.insert(self._parents[node].block_items.index(node), assert_node)
-        self._inserted.add(assert_node)
-        # because we have inserted a statement before Return statement while iterating, it will be a forever loop
-        # add the current node to the set to not visit this same node again
-        self._inserted.add(node)

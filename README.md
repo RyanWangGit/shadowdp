@@ -35,7 +35,7 @@ sudo apt-get install python3 wget openjdk-8-jdk
 ```
 
 **Download CPA-Checker.** 
-As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this artifact, you'll have to download them yourself. CPA-Checker v1.7 was used at the time of submission and it can be downloaded [here](https://cpachecker.sosy-lab.org/download-oldversions.php). Download the tarball, untar the file and rename the folder to `cpachecker`. Or run `scripts/get_cpachecker.sh` to take care of the download for you.
+As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this artifact, you'll have to download them yourself. CPA-Checker v1.8 was used at the time of submission and it can be downloaded [here](https://cpachecker.sosy-lab.org/download-oldversions.php). Download the tarball, untar the file and rename the folder to `cpachecker`. Or run `scripts/get_cpachecker.sh` to take care of the download for you.
 
 **Install ShadowDP.**
 `venv` is highly recommended in order not to interfere with your system packages (or if you prefer Anaconda, conda environments setup is similar).
@@ -51,12 +51,12 @@ python3 setup.py install
 
 We provide a helper script at `scripts/benchmark.sh`, simply run `bash scripts/benchmark.sh` and it will run ShadowDP on all the case-studied algorithms in our paper.
 
-To verify individual programs, for example in order to verify `noisymax.c`, simply run `shadowdp noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
+To verify individual programs, for example in order to verify `noisymax.c`, simply run `shadowdp check noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
 
 All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `partiasum.c` / `smartsum.c` / `diffsparsevector.c`.
 
 ### Non-linear rewrite
-Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Difference Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we also include the rewrite version of transformed code in `examples/transformed`, you can run `python3 scripts/check.py examples/transformed` to verify them all at once.
+Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Gap Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we also include the rewrite version of transformed code in `examples/transformed`, you can run `python3 scripts/check.py examples/transformed` to verify them all at once.
 
 
 ## License

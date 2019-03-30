@@ -47,3 +47,10 @@ class ReturnDistanceNotZero(ShadowDPError):
 
 class SamplingCommandMisplaceError(ShadowDPError):
     pass
+
+
+class SamplingCommandInjectivityError(ShadowDPError):
+    def __init__(self, coord, eta, annotation):
+        super().__init__(coord)
+        self.eta = eta
+        self.annotation = annotation
