@@ -65,10 +65,10 @@ class _Z3ExpressionGenerator(NodeVisitor):
             align, shadow = '*', '*'
         else:
             align, shadow = self._types.get_raw_distance(node.name)
-        variable_name = self._replaces[node.name] if self._replaces and node.name in self._replaces else node.name
+        variable = self._replaces[node.name] if self._replaces and node.name in self._replaces else z3.Real(node.name)
         align_distance = self.visit(align)[0] if align != '*' else z3.IntVal('0')
         shadow_distance = self.visit(shadow)[0] if shadow != '*' else z3.IntVal('0')
-        return z3.Real(variable_name), z3.Real(variable_name) + align_distance, z3.Real(variable_name) + shadow_distance
+        return variable, variable + align_distance, variable + shadow_distance
 
     def visit_ArrayRef(self, node):
         assert isinstance(node, c_ast.ArrayRef)
@@ -78,7 +78,8 @@ class _Z3ExpressionGenerator(NodeVisitor):
             align, shadow = self._types.get_raw_distance(node.name.name)
         align_distance = self.visit(align)[0] if align != '*' else z3.IntVal('0')
         shadow_distance = self.visit(shadow)[0] if shadow != '*' else z3.IntVal('0')
-        array = z3.Array(node.name.name, z3.RealSort(), z3.RealSort())
+        array = self._replaces[node.name.name] if node.name.name in self._replaces else \
+            z3.Array(node.name.name, z3.RealSort(), z3.RealSort())
         subscript = self.visit(node.subscript)[0]
         return array[subscript], array[subscript] + align_distance, array[subscript] + shadow_distance
 
@@ -305,9 +306,8 @@ class ShadowDPTransformer(NodeVisitor):
                            types.get_distance(node.name)[1] == '*')))
         if len(star_variable_finder.visit(condition)) != 0:
             return True
-        precondition = self._z3_precondition()
-        z3_generator = _Z3ExpressionGenerator(types)
-        original, align, shadow = z3_generator.visit(condition)
+        precondition, replaces = self._z3_precondition()
+        original, align, shadow = _Z3ExpressionGenerator(types, replaces).visit(condition)
         solver = z3.Solver()
         solver.add(z3.Not(z3.Implies(precondition, original == shadow)))
         return solver.check() != z3.unsat
@@ -666,12 +666,15 @@ class ShadowDPTransformer(NodeVisitor):
 
                 # do injectivity check
                 distance_node = convert_to_ast(distance_eta)
+                precondition, replaces = self._z3_precondition()
+                eta1, eta2 = z3.Reals('__SHADOWDP_Z3_eta_1 __SHADOWDP_Z3_eta_2')
                 (z3_distance_1, *_), (z3_distance_2, *_) = \
-                    _Z3ExpressionGenerator(self._types, {node.name: '__SHADOWDP_eta_1'}).visit(distance_node), \
-                    _Z3ExpressionGenerator(self._types, {node.name: '__SHADOWDP_eta_2'}).visit(distance_node)
-                eta1, eta2 = z3.Reals('__SHADOWDP_eta_1 __SHADOWDP_eta_2')
+                    _Z3ExpressionGenerator(self._types, {node.name: eta1, **replaces}).visit(distance_node), \
+                    _Z3ExpressionGenerator(self._types, {node.name: eta2, **replaces}).visit(distance_node)
                 solver = z3.Solver()
-                solver.add(z3.Not(z3.Implies(eta1 + z3_distance_1 == eta2 + z3_distance_2, eta1 == eta2)))
+                solver.add(z3.Not(
+                    z3.Implies(precondition, z3.Implies(eta1 + z3_distance_1 == eta2 + z3_distance_2, eta1 == eta2))
+                ))
                 if solver.check() != z3.unsat:
                     raise SamplingCommandInjectivityError(node.coord, node.name, distance_eta)
 
