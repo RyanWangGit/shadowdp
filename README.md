@@ -10,32 +10,74 @@ As described in Section 6 of our paper, ShadowDP consists of two components: (1)
 
 ### Using Docker
 
-Using docker is the easiest way to set everything up and running (You don't need the extra files we provided if you use Docker)
-
-From anywhere in the terminal, with the Docker engine running, run
+Using docker is the easiest way to set everything up and running. From anywhere in the terminal, with the Docker engine running, run
 
 ```bash
 docker pull cmlapsu/shadowdp
-docker run -it cmlapsu/shadowdp bash
+docker run -it --rm cmlapsu/shadowdp bash
 ```
 
 Then you'll be in a shell inside a docker container with ShadowDP ready to use.
 
-### Install Manually
+## Usage
+```bash
+shadwodp [-h] [-o OUT] [-c CHECKER] [-f FUNCTION] [-e EPSILON] [-g GOAL] OPTION FILE
+
+positional arguments:
+  OPTION                check - transform and verify. 
+                        transform - only transform the source code. 
+                        verify - only verify the tranformed code.
+  FILE                  The source code
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUT, --out OUT     The output file name.
+  -c CHECKER, --checker CHECKER
+                        The checker path.
+  -f FUNCTION, --function FUNCTION
+                        The function to verify.
+  -e EPSILON, --epsilon EPSILON
+                        Set epsilon to a specific value to solve the non-
+                        linear issues.
+  -g GOAL, --goal GOAL  The goal of the algorithm, default is epsilon-
+                        differential privacy, specifythis value to set
+                        different goal. e.g., specify 2 to check for 2 *
+                        epsilon-differential privacy
+```
+
+For example, you can use `shadowdp transform examples/original/noisymax.c` to *only transform* `noisymax.c` to `noisymax_t.c` (by default we add `_t` suffix to the original filename, `-o` could be specified for different output name). Or you can use `shadowdp check examples/original/noisymax.c` to *transform and verify* the transformed code of `noisymax.c`.
+
+We also provide a helper script at `scripts/benchmark.sh`, run `bash scripts/benchmark.sh` and it will run ShadowDP on all the case-studied algorithms in our paper.
+
+To verify individual programs, for example in order to verify `noisymax.c`, run `shadowdp check noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
+
+All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `sparsevectorN.c` / `numsparsevector.c` / `numsparsevectorN.c` / `gapsparsevector.c` / `partiasum.c` / `prefixsum.c` / `smartsum.c`.
+
+### Non-linear rewrite
+Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Gap Sparse Vector` / `Partial Sum` / `Prefix Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. 
+
+In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we also include the rewrite version of transformed code in `examples/transformed`, you can run `shadowdp verify examples/transformed/smartsum.c` to verify the transformed code of `Smart Sum`.
+
+## Install Manually
 
 If Docker isn't an available option for you, you can install ShadowDP manually following the steps below.
 
 **System Requirements**.
-Python 3.5 / 3.6 / 3.7 on Linux is required, Ubuntu 16.04 LTS is tested and recommended, though other Linux distributions should also work. This is due to the requirements from the verification tool we use (i.e., [CPA-Checker](https://cpachecker.sosy-lab.org/)), which lacks many pre-compiled solver backends on other operating systems (e.g. MathSAT5 and z3 on macOS). 
+Python 3.5 / 3.6 / 3.7 on Linux is required, Ubuntu 18.04 LTS is tested and recommended, though Ubuntu 16.04 LTS and other Linux distributions should also work. This is due to the requirements from the verification tool we use (i.e., [CPA-Checker](https://cpachecker.sosy-lab.org/)), which lacks many pre-compiled solver backends on other operating systems (e.g. MathSAT5 and z3 on macOS). 
 
-In addition, `wget` package and JAVA 1.8 (exact version, CPA-Checker v1.7 won't work properly with JAVA 10 or 11) are required. Install them via
+In addition, `wget` package and JAVA 8 / 11 are required. Install them via
 ```bash
 sudo apt-get update -y
-sudo apt-get install python3 wget openjdk-8-jdk
+sudo apt-get install python3 wget openjdk-11-jre
+# under Ubuntu 16.04, either install JAVA 8
+sudo apt-get install python3 wget openjdk-8-jre
+# or add apt repository
+add-apt-repository ppa:openjdk-r/ppa
+apt-get install -y openjdk-11-jre
 ```
 
 **Download CPA-Checker.** 
-As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this artifact, you'll have to download them yourself. CPA-Checker v1.8 was used at the time of submission and it can be downloaded [here](https://cpachecker.sosy-lab.org/download-oldversions.php). Download the tarball, untar the file and rename the folder to `cpachecker`. Or run `scripts/get_cpachecker.sh` to take care of the download for you.
+As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this artifact, you'll have to download them yourself. CPA-Checker v1.8 was used and it can be downloaded [here](https://cpachecker.sosy-lab.org/download.php). Download the tarball, untar the file and rename the folder to `cpachecker`. Or run `scripts/get_cpachecker.sh` to take care of the download for you.
 
 **Install ShadowDP.**
 `venv` is highly recommended in order not to interfere with your system packages (or if you prefer Anaconda, conda environments setup is similar).
@@ -46,18 +88,6 @@ source venv/bin/acitvate
 # now we're in virtual environment
 python3 setup.py install
 ```
-
-## Usage
-
-We provide a helper script at `scripts/benchmark.sh`, simply run `bash scripts/benchmark.sh` and it will run ShadowDP on all the case-studied algorithms in our paper.
-
-To verify individual programs, for example in order to verify `noisymax.c`, simply run `shadowdp check noisymax.c`, and ShadowDP will type check and transform the source code, then invoke CPA-Checker to verify the transformed code. Argument `-c <dir> / --checker <dir>` can be used to specify the folder of pre-compiled CPA-Checker, by default it uses `./cpachecker` (You don't have to use it if followed the instructions).
-
-All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `partiasum.c` / `smartsum.c` / `diffsparsevector.c`.
-
-### Non-linear rewrite
-Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Gap Sparse Vector` / `Partial Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we also include the rewrite version of transformed code in `examples/transformed`, you can run `python3 scripts/check.py examples/transformed` to verify them all at once.
-
 
 ## License
 [MIT](https://github.com/RyanWangGit/shadowdp/blob/master/LICENSE).
