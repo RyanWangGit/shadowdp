@@ -348,18 +348,20 @@ class ShadowDPTransformer(NodeVisitor):
 
     def _z3_precondition(self):
         _, _, q, *_ = self._parameters
-        aligned_distance_query = z3.Array('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(q), z3.IntSort(), z3.RealSort())
-        shadow_distance_query = z3.Array('__SHADOWDP_SHADOW_DISTANCE_{}'.format(q), z3.IntSort(), z3.RealSort())
-        i, j = z3.Ints('i j')
+        aligned_distance_query = z3.Array('__SHADOWDP_ALIGNED_DISTANCE_{}'.format(q), z3.RealSort(), z3.RealSort())
+        shadow_distance_query = z3.Array('__SHADOWDP_SHADOW_DISTANCE_{}'.format(q), z3.RealSort(), z3.RealSort())
+        i, j = z3.Reals('__SHADOWDP_Z3_i __SHADOWDP_Z3_j')
+        replaces = {str(aligned_distance_query): aligned_distance_query,
+                    str(shadow_distance_query): shadow_distance_query}
         if self._one_differ:
             return z3.ForAll(i, z3.And(z3.And(-1 <= aligned_distance_query[i], aligned_distance_query[i] <= 1),
                                        shadow_distance_query[i] == aligned_distance_query[i],
                                        z3.Implies(aligned_distance_query[i] != 0,
                                                   z3.ForAll(j, z3.And(j > i, aligned_distance_query[j] == 0)))
-                                       ))
+                                       )), replaces
         else:
             return z3.ForAll(i, z3.And(z3.And(-1 <= aligned_distance_query[i], aligned_distance_query[i] <= 1),
-                                       shadow_distance_query[i] == aligned_distance_query[i]))
+                                       shadow_distance_query[i] == aligned_distance_query[i])), replaces
 
     def _assume_query(self, query_node):
         """ instrument assume functions of query input (sensitivity guarantee) """
