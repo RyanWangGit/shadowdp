@@ -20,22 +20,42 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #!/bin/sh
-shadowdp check examples/original/noisymax.c
-echo ''
-shadowdp check examples/original/sparsevector.c
-echo ''
-shadowdp check examples/original/sparsevectorN.c -e NN
-echo ''
+passed=()
+errored=()
+
+check()
+{
+    shadowdp check $1;
+    if [[ $? == 0 ]]; then
+        passed+=("$1")
+    else
+        error+=("$1")
+    fi
+    echo ''
+}
+
+check "examples/original/noisymax.c"
+check "examples/original/sparsevector.c"
+check "examples/original/sparsevectorN.c -e NN"
 # apply setting epsilon technique to solve non-linearity
-shadowdp check examples/original/gapsparsevector.c -e NN
-echo ''
-shadowdp check examples/original/numsparsevector.c -e 1
-echo ''
-shadowdp check examples/original/numsparsevectorN.c -e NN
-echo ''
-shadowdp check examples/original/partialsum.c -e 1
-echo ''
-shadowdp check examples/original/prefixsum.c -e 1
-echo ''
-# use goal=2 for checking 2 * epsilon-differential privacy
-shadowdp check examples/original/smartsum.c -e 1 -g 2
+check "examples/original/gapsparsevector.c -e NN"
+check "examples/original/numsparsevector.c -e 1"
+check "examples/original/numsparsevectorN.c -e NN"
+check "examples/original/partialsum.c -e 1"
+check "examples/original/prefixsum.c -e 1"
+check "examples/original/smartsum.c -e 1 -g 2"
+
+return_val=0
+echo -e "Report: \e[32m ${#passed[@]} files passed. \e[0m\e[31m${#errored[@]} files failed.\e[0m"
+
+if [[ ${#errored[@]} != 0 ]]; then
+    return_val=1
+    echo -e "\e[31mFailed commands:"
+    for error in "${errored[@]}"
+    do
+
+        echo ${error}
+    done
+fi
+
+exit ${return_val}
