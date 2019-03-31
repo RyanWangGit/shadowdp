@@ -32,7 +32,7 @@ RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setup
 RUN apt-get install -y --no-install-recommends vim
 
 # install openjdk8
-RUN apt-get install -y --no-install-recommends openjdk-8-jdk
+RUN apt-get install -y --no-install-recommends openjdk-11-jre
 
 # cleanup apt-get lists to
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
