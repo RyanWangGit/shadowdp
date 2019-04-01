@@ -58,6 +58,18 @@ Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our pap
 
 In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we also include the rewrite version of transformed code in `examples/transformed`, you can run `shadowdp verify examples/transformed/smartsum.c` to verify the transformed code of `Smart Sum`.
 
+### Writing your own algorithm
+Our tool has several assumptions of your source code:
+
+* The first two lines of the function must be annotations, the first one being sensitivity definition and user-defined assumptions over variables, and second one being the types for the parameters.
+
+* Use `Lap` as a function that draws laplace noise. It takes 2 parameters, first being the scale factor and second being the annotation for this random variable (as we discussed in the paper). 
+
+
+Otherwise it will raise exceptions.
+
+See `examples/original/noisymax.c` as an example for the annotations.
+
 ## Install Manually
 
 If Docker isn't an available option for you, you can install ShadowDP manually following the steps below.
