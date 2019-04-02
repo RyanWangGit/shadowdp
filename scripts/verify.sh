@@ -39,3 +39,6 @@ echo ''
 shadowdp verify examples/transformed/prefixsum.c
 echo ''
 shadowdp verify examples/transformed/smartsum.c
+echo ''
+shadowdp verify examples/transformed/smartsum_rewrite.c
+echo ''
