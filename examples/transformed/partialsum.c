@@ -15,17 +15,12 @@ int partialsum(float epsilon, int size, float q[], int __SHADOWDP_index, float _
   __VERIFIER_assume(__SHADOWDP_index >= 0);
   __VERIFIER_assume(__SHADOWDP_index < size);
   float __SHADOWDP_ALIGNED_DISTANCE_sum = 0;
-  float __SHADOWDP_SHADOW_DISTANCE_sum = 0;
   float out = 0;
   float sum = 0;
   int i = 0;
   __SHADOWDP_ALIGNED_DISTANCE_sum = 0;
-  __SHADOWDP_SHADOW_DISTANCE_sum = 0;
   while (i < size)
   {
-    __VERIFIER_assert(i < size);
-    sum = sum + q[i];
-    i = i + 1;
     if (i == __SHADOWDP_index)
     {
       __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
@@ -38,8 +33,10 @@ int partialsum(float epsilon, int size, float q[], int __SHADOWDP_index, float _
       __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] == 0);
     }
 
+    __VERIFIER_assert(i < size);
+    sum = sum + q[i];
     __SHADOWDP_ALIGNED_DISTANCE_sum = __SHADOWDP_ALIGNED_DISTANCE_q[i] + __SHADOWDP_ALIGNED_DISTANCE_sum;
-    __SHADOWDP_SHADOW_DISTANCE_sum = __SHADOWDP_SHADOW_DISTANCE_q[i] + __SHADOWDP_SHADOW_DISTANCE_sum;
+    i = i + 1;
   }
 
   float eta = __VERIFIER_nondet_float();

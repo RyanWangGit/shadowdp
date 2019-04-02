@@ -14,26 +14,19 @@ void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP
   float __SHADOWDP_v_epsilon = 0;
   __VERIFIER_assume(__SHADOWDP_index >= 0);
   __VERIFIER_assume(__SHADOWDP_index < size);
-  float __SHADOWDP_SHADOW_DISTANCE_out = 0;
-  float __SHADOWDP_SHADOW_DISTANCE_next = 0;
   float __SHADOWDP_ALIGNED_DISTANCE_sum = 0;
-  float __SHADOWDP_SHADOW_DISTANCE_sum = 0;
   float __SHADOWDP_ALIGNED_DISTANCE_eta_1 = 0;
   float out = 0;
   float next = 0;
   int i = 0;
   float sum = 0;
-  __SHADOWDP_SHADOW_DISTANCE_out = 0;
-  __SHADOWDP_SHADOW_DISTANCE_next = 0;
   __SHADOWDP_ALIGNED_DISTANCE_sum = 0;
-  __SHADOWDP_SHADOW_DISTANCE_sum = 0;
   while ((i <= T) && (i < size))
   {
     __VERIFIER_assert((i <= T) && (i < size));
     if (((i + 1) % M) == 0)
     {
       __VERIFIER_assert(((i + 1) % M) == 0);
-      float eta_1 = __VERIFIER_nondet_float();
       if (i == __SHADOWDP_index)
       {
         __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
@@ -46,20 +39,17 @@ void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP
         __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] == 0);
       }
 
+      float eta_1 = __VERIFIER_nondet_float();
       __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + (1.0 * Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i] + __SHADOWDP_ALIGNED_DISTANCE_sum));
       next = ((next + sum) + q[i]) + eta_1;
       sum = 0;
       out = next;
-      __SHADOWDP_SHADOW_DISTANCE_out = (__SHADOWDP_SHADOW_DISTANCE_next + __SHADOWDP_SHADOW_DISTANCE_q[i]) + __SHADOWDP_SHADOW_DISTANCE_sum;
-      __SHADOWDP_SHADOW_DISTANCE_next = (__SHADOWDP_SHADOW_DISTANCE_next + __SHADOWDP_SHADOW_DISTANCE_q[i]) + __SHADOWDP_SHADOW_DISTANCE_sum;
       __SHADOWDP_ALIGNED_DISTANCE_sum = 0;
-      __SHADOWDP_SHADOW_DISTANCE_sum = 0;
       __SHADOWDP_ALIGNED_DISTANCE_eta_1 = (-__SHADOWDP_ALIGNED_DISTANCE_q[i]) - __SHADOWDP_ALIGNED_DISTANCE_sum;
     }
     else
     {
       __VERIFIER_assert(!((((i + 1) % M) == 0)));
-      float eta_2 = __VERIFIER_nondet_float();
       if (i == __SHADOWDP_index)
       {
         __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] <= 1);
@@ -72,14 +62,12 @@ void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP
         __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] == 0);
       }
 
+      float eta_2 = __VERIFIER_nondet_float();
       __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + (1.0 * Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i]));
       next = (next + q[i]) + eta_2;
       sum = sum + q[i];
       out = next;
-      __SHADOWDP_SHADOW_DISTANCE_out = __SHADOWDP_SHADOW_DISTANCE_next + __SHADOWDP_SHADOW_DISTANCE_q[i];
-      __SHADOWDP_SHADOW_DISTANCE_next = __SHADOWDP_SHADOW_DISTANCE_next + __SHADOWDP_SHADOW_DISTANCE_q[i];
       __SHADOWDP_ALIGNED_DISTANCE_sum = __SHADOWDP_ALIGNED_DISTANCE_q[i] + __SHADOWDP_ALIGNED_DISTANCE_sum;
-      __SHADOWDP_SHADOW_DISTANCE_sum = __SHADOWDP_SHADOW_DISTANCE_q[i] + __SHADOWDP_SHADOW_DISTANCE_sum;
     }
 
     i = i + 1;
