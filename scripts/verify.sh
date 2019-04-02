@@ -34,6 +34,8 @@ shadowdp verify examples/transformed/numsparsevectorN.c
 echo ''
 shadowdp verify examples/transformed/partialsum.c
 echo ''
+shadowdp verify examples/transformed/partialsum_rewrite.c
+echo ''
 shadowdp verify examples/transformed/prefixsum.c
 echo ''
 shadowdp verify examples/transformed/smartsum.c
