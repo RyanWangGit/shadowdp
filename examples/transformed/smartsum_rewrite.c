@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define Abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
+void smartsum_rewrite(float epsilon, int size, float q[], float T, int M, int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
 {
   __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(size > 0);
@@ -37,10 +37,14 @@ void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP
       {
         __VERIFIER_assume(__SHADOWDP_SHADOW_DISTANCE_q[i] == __SHADOWDP_ALIGNED_DISTANCE_q[i]);
         __VERIFIER_assume(__SHADOWDP_ALIGNED_DISTANCE_q[i] == 0);
+        __VERIFIER_assert(__SHADOWDP_ALIGNED_DISTANCE_sum <= 1);
       }
-
       float eta_1 = __VERIFIER_nondet_float();
-      __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + (1.0 * Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i] + __SHADOWDP_ALIGNED_DISTANCE_sum));
+      if (Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i] + __SHADOWDP_ALIGNED_DISTANCE_sum) > 0)
+      {
+        __VERIFIER_assert(Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i] + __SHADOWDP_ALIGNED_DISTANCE_sum) <= 1);
+        __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + epsilon;
+      }
       next = ((next + sum) + q[i]) + eta_1;
       sum = 0;
       out = next;
@@ -63,7 +67,11 @@ void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP
       }
 
       float eta_2 = __VERIFIER_nondet_float();
-      __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + (1.0 * Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i]));
+      if (Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i]) > 0)
+      {
+        __VERIFIER_assert(Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i]) <= 1);
+        __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + epsilon;
+      }
       next = (next + q[i]) + eta_2;
       sum = sum + q[i];
       out = next;
@@ -73,7 +81,7 @@ void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP
     i = i + 1;
   }
 
-  __VERIFIER_assert(__SHADOWDP_v_epsilon <= (1 * 2));
+  __VERIFIER_assert(__SHADOWDP_v_epsilon <= (epsilon * 2));
   return out;
 }
 

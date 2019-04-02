@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define Abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-void prefixsum(float epsilon, int size, float q[], float T, int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
+void prefixsum_rewrite(float epsilon, int size, float q[], float T, int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
 {
   __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(size > 0);
@@ -37,7 +37,11 @@ void prefixsum(float epsilon, int size, float q[], float T, int __SHADOWDP_index
 
     __VERIFIER_assert((i <= T) && (i < size));
     float eta_1 = __VERIFIER_nondet_float();
-    __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + (1.0 * Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i]));
+    if (Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i]) > 0)
+    {
+      __VERIFIER_assert(Abs(__SHADOWDP_ALIGNED_DISTANCE_q[i]) <= 1);
+      __SHADOWDP_v_epsilon = __SHADOWDP_v_epsilon + epsilon;
+    }
     next = (next + q[i]) + eta_1;
     sum = sum + q[i];
     out = next;
@@ -45,7 +49,7 @@ void prefixsum(float epsilon, int size, float q[], float T, int __SHADOWDP_index
     i = i + 1;
   }
 
-  __VERIFIER_assert(__SHADOWDP_v_epsilon <= 1);
+  __VERIFIER_assert(__SHADOWDP_v_epsilon <= epsilon);
   return out;
 }
 

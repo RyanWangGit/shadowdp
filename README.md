@@ -60,9 +60,11 @@ To verify individual programs, for example in order to verify `noisymax.c`, run 
 All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `sparsevectorN.c` / `numsparsevector.c` / `numsparsevectorN.c` / `gapsparsevector.c` / `partiasum.c` / `prefixsum.c` / `smartsum.c`.
 
 ### Non-linear rewrite
-Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Gap Sparse Vector` / `Partial Sum` / `Prefix Sum` / `Smart Sum`. Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. 
+Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Gap Sparse Vector` / `Partial Sum` / `Prefix Sum` / `Smart Sum`. 
 
-In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we also include the rewrite version of transformed code in `examples/transformed`, you can run `shadowdp verify examples/transformed/smartsum.c` to verify the transformed code of `Smart Sum`.
+Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. 
+
+In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we include all transformed code including the rewrite version (with suffix `_rewrite`) in `examples/transformed` folder for references. Run `bash scripts/verify.sh` to verify them all.
 
 ### Writing your own algorithm
 Our tool has several assumptions of your source code:
