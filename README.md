@@ -45,7 +45,13 @@ optional arguments:
                         epsilon-differential privacy
 ```
 
-For example, you can use `shadowdp transform examples/original/noisymax.c` to *only transform* `noisymax.c` to `noisymax_t.c` (by default we add `_t` suffix to the original filename, `-o` could be specified for different output name). Or you can use `shadowdp check examples/original/noisymax.c` to *transform and verify* the transformed code of `noisymax.c`.
+For example, you can use 
+
+`shadowdp transform examples/original/noisymax.c` to *only transform* `noisymax.c` to `noisymax_t.c` (by default we add `_t` suffix to the original filename, `-o` could be specified for different output name). 
+
+`shadowdp verify examples/transformed/noisymax.c` to *only verify* the transformed code.
+
+`shadowdp check examples/original/noisymax.c` to *transform and verify* `noisymax.c`.
 
 We also provide a helper script at `scripts/benchmark.sh`, run `bash scripts/benchmark.sh` and it will run ShadowDP on all the case-studied algorithms in our paper.
 
