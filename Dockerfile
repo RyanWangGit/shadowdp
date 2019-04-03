@@ -23,7 +23,7 @@ FROM ubuntu:18.04
 
 # install essential stuff
 RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends wget bzip2 gcc
+RUN apt-get install -y --no-install-recommends wget bzip2 gcc software-properties-common
 
 # install python
 RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
@@ -31,7 +31,9 @@ RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setup
 # install vim for debugging purposes
 RUN apt-get install -y --no-install-recommends vim
 
-# install openjdk8
+# install openjdk11
+RUN add-apt-repository ppa:openjdk-r/ppa
+RUN apt-get update
 RUN apt-get install -y --no-install-recommends openjdk-11-jre
 
 # cleanup apt-get lists to
