@@ -59,13 +59,6 @@ To verify individual programs, for example in order to verify `noisymax.c`, run 
 
 All the case-studied algorithms are implemented in plain C in `examples/original` folder with names `noisymax.c` / `sparsevector.c` / `sparsevectorN.c` / `numsparsevector.c` / `numsparsevectorN.c` / `gapsparsevector.c` / `partiasum.c` / `prefixsum.c` / `smartsum.c`.
 
-### Non-linear rewrite
-Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Gap Sparse Vector` / `Partial Sum` / `Prefix Sum` / `Smart Sum`. 
-
-Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. 
-
-In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we include all transformed code including the rewrite version (with suffix `_rewrite`) in `examples/transformed` folder for references. Run `bash scripts/verify.sh` to verify them all.
-
 ### Writing your own algorithm
 Our tool has several assumptions of your source code:
 
@@ -73,10 +66,18 @@ Our tool has several assumptions of your source code:
 
 * Use `Lap` as a function that draws laplace noise. It takes 2 parameters, first being the scale factor and second being the annotation for this random variable (as we discussed in the paper). 
 
+* The first 3 function parameters must be `float epsilon`, `int size`, `float q[]` (order must be preserved but names can vary) which means the privacy budget, the size of input queries, and the query variable, respectively.
 
 Otherwise it will raise exceptions.
 
 See `examples/original/noisymax.c` as an example for the annotations.
+
+### Non-linear rewrite
+Due to the non-linear issues of CPA-Checker (discussed in Section 6.1 of our paper), CPA-Checker cannot directly verify the transformed code of `Gap Sparse Vector` / `Partial Sum` / `Prefix Sum` / `Smart Sum`. 
+
+Thus we took 2 different approaches (rewrite assertions and setting epsilon to 1) to work around this issue, discussed in Section 6.1 and 6.2 in our paper. 
+
+In our benchmark we used `epsilon = 1` approach to automatically verify the algorithms, we include all transformed code including the rewrite version (with suffix `_rewrite`) in `examples/transformed` folder for references. Run `bash scripts/verify.sh` to verify them all.
 
 ## Install Manually
 
