@@ -1,7 +1,5 @@
 language: python
 dist: xenial
-services:
-  - docker
 
 python:
   - "3.5"
@@ -32,6 +30,8 @@ after_success:
 jobs:
   include:
     - stage: deploy
+      services:
+        - docker
       script:
         # test docker build
         - docker build . -t cmlapsu/shadowdp
