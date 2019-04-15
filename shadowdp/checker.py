@@ -44,7 +44,7 @@ def _thread_wait_for(results, name, process):
 
 def check(checkerpath, path, args=None):
     funcname = os.path.splitext(os.path.basename(path))[0]
-    args = args if args else ''
+    args = args.split(' ') if args else ''
 
     logger.info('Start checking {} with multiple solvers(MathSat, Z3, SMT-Interpol)...'.format(path))
     processes = OrderedDict()
@@ -53,7 +53,7 @@ def check(checkerpath, path, args=None):
          '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'cpa.predicate.encodeBitvectorAs=INTEGER',
          '-setprop', 'solver.nonLinearArithmetic=USE', '-setprop', 'output.path=output-{}-MathSat'.format(funcname),
          '-setprop', 'solver.solver=MATHSAT5',
-         args],
+         *args],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
@@ -62,7 +62,7 @@ def check(checkerpath, path, args=None):
          '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'cpa.predicate.encodeBitvectorAs=INTEGER',
          '-setprop', 'solver.nonLinearArithmetic=USE', '-setprop', 'output.path=output-{}-Z3'.format(funcname),
          '-setprop', 'solver.solver=Z3',
-         args],
+         *args],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
