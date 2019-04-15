@@ -66,9 +66,9 @@ def main(argv=sys.argv[1:]):
     arg_parser.add_argument('-c', '--checker',
                             action='store', dest='checker', type=str, default='./cpachecker',
                             help='The checker path.', required=False)
-    arg_parser.add_argument('-f', '--function',
-                            action='store', dest='function', type=str, default=None,
-                            help='The function to verify.', required=False)
+    arg_parser.add_argument('-a', '--arguments',
+                            action='store', dest='arguments', type=str, default=None,
+                            help='The extra arguments for the checker.', required=False)
     arg_parser.add_argument('-e', '--epsilon',
                             action='store', dest='epsilon', default=None,
                             help='Set epsilon to a specific value to solve the non-linear issues.', required=False)
@@ -80,7 +80,6 @@ def main(argv=sys.argv[1:]):
     results = arg_parser.parse_args(argv)
     results.file = results.file[0]
     results.out = results.file[0:results.file.rfind('.')] + '_t.c' if results.out is None else results.out
-    results.function = results.function if results.function else os.path.splitext(os.path.basename(results.file))[0]
 
     if results.option[0] not in ('check', 'transform', 'verify'):
         logger.error('Option should be check / transform / verify')
@@ -126,9 +125,9 @@ def main(argv=sys.argv[1:]):
 
     is_verified = False
     if results.option[0] == 'check':
-        is_verified = check(results.checker, results.out, results.function)
+        is_verified = check(results.checker, results.out, results.arguments)
     elif results.option[0] == 'verify':
-        is_verified = check(results.checker, results.file, results.function)
+        is_verified = check(results.checker, results.file, results.arguments)
 
     # shell code 0 means SUCCESS
     return 0 if is_verified else 1

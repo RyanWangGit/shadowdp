@@ -7,7 +7,7 @@ extern void __assert_fail();
 #define Abs(x) ((x) < 0 ? -(x) : (x))
 typedef enum { false = 0, true = 1 } bool;
     
-void smartsum_rewrite(float epsilon, int size, float q[], float T, int M, int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
+void smartsum(float epsilon, int size, float q[], float T, int M, int __SHADOWDP_index, float __SHADOWDP_ALIGNED_DISTANCE_q[], float __SHADOWDP_SHADOW_DISTANCE_q[])
 {
   __VERIFIER_assume(epsilon > 0);
   __VERIFIER_assume(size > 0);

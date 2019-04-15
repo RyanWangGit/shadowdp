@@ -42,20 +42,21 @@ def _thread_wait_for(results, name, process):
         results.put((False, '30 seconds Timeout', '', ''))
 
 
-def check(checkerpath, path, funcname=None):
-    funcname = os.path.splitext(os.path.basename(path))[0] if funcname is None else funcname
+def check(checkerpath, path, args=None):
+    funcname = os.path.splitext(os.path.basename(path))[0]
+    args = args if args else ''
 
     logger.info('Start checking {} with multiple solvers(MathSat, Z3, SMT-Interpol)...'.format(path))
     processes = OrderedDict()
     processes['MathSat'] = subprocess.Popen(
-        [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
+        [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess',
          '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'solver.nonLinearArithmetic=USE',
-         '-setprop', 'output.path=output-{}-MathSat'.format(funcname)],
+         '-setprop', 'output.path=output-{}-MathSat'.format(funcname), args],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
     processes['Z3'] = subprocess.Popen(
-        [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess', '-entryfunction', funcname,
+        [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess',
          '-setprop', 'solver.solver=z3', '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL',
          '-setprop', 'solver.nonLinearArithmetic=USE',
          '-setprop', 'output.path=output-{}-Z3'.format(funcname)],
@@ -63,7 +64,7 @@ def check(checkerpath, path, funcname=None):
         stderr=subprocess.PIPE
     )
     processes['SMTInterpol'] = subprocess.Popen(
-        [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis-linear', path, '-preprocess', '-entryfunction', funcname,
+        [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis-linear', path, '-preprocess',
          '-setprop', 'solver.solver=smtinterpol', '-setprop', 'output.path=output-{}-SMTInterpol'.format(funcname)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
