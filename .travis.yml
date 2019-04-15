@@ -8,12 +8,14 @@ python:
 
 cache: pip
 
+before_install:
+  - sudo apt-get update
+
 install:
-  - sudo apt-get update && sudo apt-get install ant
+  - sudo apt-get install ant
   - pip install tox-travis
-  - travis_retry bash ./scripts/get_cpachecker.sh
+  - bash ./scripts/get_cpachecker.sh
   - python setup.py install
-  - pip install tox-travis
 
 script:
   - java -version
