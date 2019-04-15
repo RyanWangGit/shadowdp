@@ -36,8 +36,8 @@ check()
 
 check "examples/original/noisymax.c"
 check "examples/original/sparsevector.c"
-check "examples/original/sparsevectorN.c -e NN"
 # apply setting epsilon technique to solve non-linearity
+check "examples/original/sparsevectorN.c -e NN"
 check "examples/original/gapsparsevector.c -e NN"
 check "examples/original/numsparsevector.c -e 1"
 check "examples/original/numsparsevectorN.c -e NN"
