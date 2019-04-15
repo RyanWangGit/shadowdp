@@ -23,7 +23,7 @@ FROM ubuntu:18.04
 
 # install essential stuff
 RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends gcc software-properties-common git ant
+RUN apt-get install -y --no-install-recommends gcc software-properties-common git ant zip
 
 # install python
 RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
@@ -44,7 +44,7 @@ WORKDIR /shadowdp
 RUN bash ./scripts/get_cpachecker.sh
 
 # remove build tools
-RUN apt-get remove -y openjdk-11-jdk git ant
+RUN apt-get remove -y openjdk-11-jdk git ant zip
 RUN apt-get autoremove -y
 RUN apt-get install -y --no-install-recommends openjdk-11-jre
 
