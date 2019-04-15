@@ -27,5 +27,5 @@
 git clone https://github.com/sosy-lab/cpachecker.git
 cd cpachecker
 git reset --hard 57e456aad032bcb2e42911202976423b785797cb
-ant clean dist
+ant dist
 cd ..
