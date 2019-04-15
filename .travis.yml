@@ -34,7 +34,7 @@ jobs:
         - docker
       script:
         # test docker build
-        - docker build . -t cmlapsu/shadowdp
+        - travis_wait 30 docker build . -t cmlapsu/shadowdp
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
 
       after_success:
