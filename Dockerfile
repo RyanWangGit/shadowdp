@@ -57,5 +57,8 @@ RUN pip3 install --upgrade pip
 # install packages
 RUN python3 setup.py install
 
+# remove intermediate files
+RUN rm -rf ShadowDP.egg-info dist build
+
 # test run
 CMD python3 -m shadowdp
