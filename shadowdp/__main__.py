@@ -58,7 +58,7 @@ def main(argv=sys.argv[1:]):
     arg_parser.add_argument('option', metavar='OPTION', type=str, nargs=1,
                             help='check - transform and verify.\n'
                                  'transform - only transform the source code.\n'
-                                 'verify - only verify the tranformed code.')
+                                 'verify - only verify the transformed code.')
     arg_parser.add_argument('file', metavar='FILE', type=str, nargs=1)
     arg_parser.add_argument('-o', '--out',
                             action='store', dest='out', type=str,
