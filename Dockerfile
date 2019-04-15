@@ -23,7 +23,7 @@ FROM ubuntu:18.04
 
 # install essential stuff
 RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends wget bzip2 gcc software-properties-common
+RUN apt-get install -y --no-install-recommends gcc software-properties-common git ant
 
 # install python
 RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
@@ -33,11 +33,8 @@ RUN apt-get install -y --no-install-recommends vim
 
 # install openjdk11
 RUN add-apt-repository ppa:openjdk-r/ppa
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends openjdk-11-jre
-
-# cleanup apt-get lists to
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y
+RUN apt-get install -y --no-install-recommends openjdk-11-jdk
 
 # copy ShadowDP into the image
 COPY . /shadowdp
@@ -45,6 +42,14 @@ WORKDIR /shadowdp
 
 # install CPA-Checker
 RUN bash ./scripts/get_cpachecker.sh
+
+# remove build tools
+RUN apt-get remove -y openjdk-11-jdk git ant
+RUN apt-get autoremove -y
+RUN apt-get install -y --no-install-recommends openjdk-11-jre
+
+# cleanup apt-get lists to make size smaller
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # update pip
 RUN pip3 install --upgrade pip
