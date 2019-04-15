@@ -50,16 +50,19 @@ def check(checkerpath, path, args=None):
     processes = OrderedDict()
     processes['MathSat'] = subprocess.Popen(
         [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess',
-         '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'solver.nonLinearArithmetic=USE',
-         '-setprop', 'output.path=output-{}-MathSat'.format(funcname), args],
+         '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'cpa.predicate.encodeBitvectorAs=INTEGER',
+         '-setprop', 'solver.nonLinearArithmetic=USE', '-setprop', 'output.path=output-{}-MathSat'.format(funcname),
+         '-setprop', 'solver.solver=MATHSAT5',
+         args],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
     processes['Z3'] = subprocess.Popen(
         [checkerpath + '/scripts/cpa.sh', '-predicateAnalysis', path, '-preprocess',
-         '-setprop', 'solver.solver=z3', '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL',
-         '-setprop', 'solver.nonLinearArithmetic=USE',
-         '-setprop', 'output.path=output-{}-Z3'.format(funcname)],
+         '-setprop', 'cpa.predicate.encodeFloatAs=RATIONAL', '-setprop', 'cpa.predicate.encodeBitvectorAs=INTEGER',
+         '-setprop', 'solver.nonLinearArithmetic=USE', '-setprop', 'output.path=output-{}-Z3'.format(funcname),
+         '-setprop', 'solver.solver=Z3',
+         args],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
