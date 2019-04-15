@@ -24,8 +24,13 @@
 #tar xvjf CPAchecker-1.8-unix.tar.bz2
 #mv CPAchecker-1.8-unix cpachecker
 #rm CPAchecker-1.8-unix.tar.bz2
-git clone https://github.com/sosy-lab/cpachecker.git
-cd cpachecker
+git clone https://github.com/sosy-lab/cpachecker.git cpachecker-build
+cd cpachecker-build
 git reset --hard 57e456aad032bcb2e42911202976423b785797cb
-ant dist
+ant dist-unix-zip
+mv CPAchecker-1.8-svn\ 57e456aad0-unix.zip ../
 cd ..
+rm -rf cpachecker-build
+unzip CPAchecker-1.8-svn\ 57e456aad0-unix.zip
+mv CPAchecker-1.8-svn\ 57e456aad0-unix cpachecker
+rm CPAchecker-1.8-svn\ 57e456aad0-unix.zip
