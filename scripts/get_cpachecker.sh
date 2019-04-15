@@ -20,7 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #!/bin/sh
-wget https://cpachecker.sosy-lab.org/CPAchecker-1.8-unix.tar.bz2
-tar xvjf CPAchecker-1.8-unix.tar.bz2
-mv CPAchecker-1.8-unix cpachecker
-rm CPAchecker-1.8-unix.tar.bz2
+#wget https://cpachecker.sosy-lab.org/CPAchecker-1.8-unix.tar.bz2
+#tar xvjf CPAchecker-1.8-unix.tar.bz2
+#mv CPAchecker-1.8-unix cpachecker
+#rm CPAchecker-1.8-unix.tar.bz2
+git clone https://github.com/sosy-lab/cpachecker.git
+cd cpachecker
+git reset --hard 57e456aad032bcb2e42911202976423b785797cb
+ant
+cd ..
