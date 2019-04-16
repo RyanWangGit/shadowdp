@@ -30,8 +30,11 @@ def test_check():
     assert check('./cpachecker', './examples/transformed/numsparsevectorN.c')
     assert check('./cpachecker', './examples/transformed/gapsparsevector.c')
     assert check('./cpachecker', './examples/transformed/partialsum.c')
+    assert check('./cpachecker', './examples/transformed/partialsum_rewrite.c')
     assert check('./cpachecker', './examples/transformed/prefixsum.c')
+    assert check('./cpachecker', './examples/transformed/prefixsum_rewrite.c')
     assert check('./cpachecker', './examples/transformed/smartsum.c')
+    assert check('./cpachecker', './examples/transformed/smartsum_rewrite.c')
     assert check('./cpachecker', './examples/transformed/sparsevectorN_rewrite.c',
                  '-setprop cpa.predicate.abstraction.initialPredicates='
                  './examples/transformed/sparsevectorN_predmap.txt')
