@@ -36,6 +36,7 @@ jobs:
         # test docker build
         - travis_wait 30 docker build . -t cmlapsu/shadowdp
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
+        - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/verify.sh
 
       after_success:
         # only deploy on stable master branch
