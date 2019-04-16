@@ -21,21 +21,23 @@ Then you'll be in a shell inside a docker container with ShadowDP ready to use.
 
 ## Usage
 ```bash
-shadwodp [-h] [-o OUT] [-c CHECKER] [-f FUNCTION] [-e EPSILON] [-g GOAL] OPTION FILE
+usage: __main__.py [-h] [-o OUT] [-c CHECKER] [-a ARGUMENTS] [-e EPSILON]
+                   [-g GOAL]
+                   OPTION FILE
 
 positional arguments:
-  OPTION                check - transform and verify. 
-                        transform - only transform the source code. 
-                        verify - only verify the tranformed code.
-  FILE                  The source code
+  OPTION                check - transform and verify. transform - only
+                        transform the source code. verify - only verify the
+                        transformed code.
+  FILE
 
 optional arguments:
   -h, --help            show this help message and exit
   -o OUT, --out OUT     The output file name.
   -c CHECKER, --checker CHECKER
                         The checker path.
-  -f FUNCTION, --function FUNCTION
-                        The function to verify.
+  -a ARGUMENTS, --arguments ARGUMENTS
+                        The extra arguments for the checker.
   -e EPSILON, --epsilon EPSILON
                         Set epsilon to a specific value to solve the non-
                         linear issues.
