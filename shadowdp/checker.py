@@ -84,6 +84,7 @@ def check(checkerpath, path, args=None):
     # get the results
     errors = set()
     is_verified = False
+    verified_solver = ''
     for _ in range(len(processes)):
         verified, name, out, err = results.get()
         if verified:
@@ -94,10 +95,7 @@ def check(checkerpath, path, args=None):
                 time = re.search(r'Total time for CPAchecker[:\s<>/a-zA-Z]*([0-9]+\.[0-9]+s)', all_report).groups()
                 logger.info('Verification finished in {}'.format(time[0]))
             logger.info('CPA-Checker reports can be found at ./output-{}-{}'.format(funcname, name))
-            # remove failed solver output
-            for solver in ('MathSat', 'Z3', 'SMTInterpol'):
-                if solver != name:
-                    shutil.rmtree('./output-{}-{}'.format(funcname, solver), ignore_errors=True)
+            verified_solver = name
             is_verified = True
             break
         else:
@@ -110,6 +108,11 @@ def check(checkerpath, path, args=None):
         proc.wait()
     for thread in threads:
         thread.join()
+
+    # remove failed solver output
+    for solver in ('MathSat', 'Z3', 'SMTInterpol'):
+        if solver != verified_solver:
+            shutil.rmtree('./output-{}-{}'.format(funcname, solver))
 
     # if no solvers can verify the program
     if not is_verified:
