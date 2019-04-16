@@ -38,7 +38,7 @@ def test_check():
     assert check('./cpachecker', './examples/transformed/sparsevectorN_rewrite.c',
                  '-setprop cpa.predicate.abstraction.initialPredicates='
                  './examples/transformed/sparsevectorN_predmap.txt')
-    assert check('./cpachecker', './examples/transformed/sparsevectorN_rewrite.c',
+    assert check('./cpachecker', './examples/transformed/gapsparsevector_rewrite.c',
                  '-setprop cpa.predicate.abstraction.initialPredicates='
                  './examples/transformed/gapsparsevector_predmap.txt')
 
