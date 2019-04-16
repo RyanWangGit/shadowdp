@@ -26,7 +26,11 @@ shadowdp verify examples/transformed/sparsevector.c
 echo ''
 shadowdp verify examples/transformed/sparsevectorN.c
 echo ''
+shadowdp verify examples/transformed/sparsevectorN_rewrite.c -a '-setprop cpa.predicate.abstraction.initialPredicates=examples/transformed/sparsevectorN_predmap.txt'
+echo ''
 shadowdp verify examples/transformed/gapsparsevector.c
+echo ''
+shadowdp verify examples/transformed/gapsparsevector_rewrite.c -a '-setprop cpa.predicate.abstraction.initialPredicates=examples/transformed/gapsparsevector_predmap.txt'
 echo ''
 shadowdp verify examples/transformed/numsparsevector.c
 echo ''
