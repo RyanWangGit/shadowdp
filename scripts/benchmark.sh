@@ -29,7 +29,7 @@ check()
     if [[ $? == 0 ]]; then
         passed+=("$1")
     else
-        error+=("$1")
+        errored+=("$1")
     fi
     echo ''
 }
@@ -53,9 +53,9 @@ if [[ ${#errored[@]} != 0 ]]; then
     echo -e "\e[31mFailed commands:"
     for error in "${errored[@]}"
     do
-
         echo ${error}
     done
+    echo -e "\e[0m"
 fi
 
 exit ${return_val}
