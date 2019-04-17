@@ -5,7 +5,7 @@ with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='ShadowDP',
+    name='shadowdp',
     version='0.1',
     description='Verification Tool for Differential Privacy. '
                 'Code for [PLDI\'19] "Proving Differential Privacy with Shadow Execution".',
