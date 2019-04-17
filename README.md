@@ -100,16 +100,16 @@ apt-get install -y openjdk-11-jre
 ```
 
 **Download CPA-Checker.** 
-As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this artifact, you'll have to download them yourself. CPA-Checker v1.8 was used and it can be downloaded [here](https://cpachecker.sosy-lab.org/download.php). Download the tarball, untar the file and rename the folder to `cpachecker`. Or run `scripts/get_cpachecker.sh` to take care of the download for you.
+As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this project, you'll have to download them yourself. Run `scripts/get_cpachecker.sh` to take care of the download for you.
 
 **Install ShadowDP.**
 `venv` is highly recommended in order not to interfere with your system packages (or if you prefer Anaconda, conda environments setup is similar).
 
 ```bash
-python3 -m venv venv
+python -m venv venv
 source venv/bin/acitvate
 # now we're in virtual environment
-python3 setup.py install
+pip install .
 ```
 
 ## License
