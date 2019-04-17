@@ -15,7 +15,7 @@ install:
   - sudo apt-get install ant
   - pip install tox-travis
   - bash ./scripts/get_cpachecker.sh
-  - python setup.py install
+  - pip install .
 
 script:
   - java -version
