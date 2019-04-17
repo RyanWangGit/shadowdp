@@ -55,10 +55,7 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --upgrade pip
 
 # install packages
-RUN python3 setup.py install
-
-# remove intermediate files
-RUN rm -rf ShadowDP.egg-info dist build
+RUN pip3 install .
 
 # test run
-CMD python3 -m shadowdp
+CMD shadowdp -h
