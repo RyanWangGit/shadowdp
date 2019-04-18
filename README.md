@@ -103,13 +103,24 @@ apt-get install -y openjdk-11-jre
 As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this project, you'll have to download them yourself. Run `scripts/get_cpachecker.sh` to take care of the download for you.
 
 **Install ShadowDP.**
-`venv` is highly recommended in order not to interfere with your system packages (or if you prefer Anaconda, conda environments setup is similar).
+`venv` is highly recommended in order not to interfere with your system packages (or if you prefer `virtualenv` or Anaconda, the setup is similar).
 
 ```bash
 python -m venv venv
 source venv/bin/acitvate
 # now we're in virtual environment
 pip install .
+```
+
+## Citing this work
+Please consider citing the following [paper](https://arxiv.org/pdf/1903.12254.pdf) if you use this tool for academic research.
+```tex
+@article{wang2019proving,
+  title={Proving Differential Privacy with Shadow Execution},
+  author={Wang, Yuxin and Ding, Zeyu and Wang, Guanhong and Kifer, Daniel and Zhang, Danfeng},
+  journal={arXiv preprint arXiv:1903.12254},
+  year={2019}
+}
 ```
 
 ## License
