@@ -53,6 +53,5 @@ jobs:
         - git remote add origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git
         - git push -u --force origin master
 
-
 notifications:
   email: false
