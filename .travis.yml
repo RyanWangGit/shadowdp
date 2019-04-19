@@ -18,8 +18,6 @@ install:
   - pip install .
 
 script:
-  - java -version
-  - javac -version
   - tox
   - bash ./scripts/benchmark.sh
 
@@ -29,7 +27,8 @@ after_success:
 
 jobs:
   include:
-    - stage: deploy
+    - stage: "Docker Hub Deploy"
+      if: branch = master AND type != pull_request
       services:
         - docker
       script:
@@ -37,21 +36,23 @@ jobs:
         - travis_wait 30 docker build . -t cmlapsu/shadowdp
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
         - docker run -it cmlapsu/shadowdp bash /shadowdp/scripts/verify.sh
-
       after_success:
-        # only deploy on stable master branch
-        - if [[ "$TRAVIS_BRANCH" = "master" && $TRAVIS_PULL_REQUEST = "false" ]]; then
-            echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin;
-            docker push cmlapsu/shadowdp:latest;
-            rm -rf .git;
-            git init;
-            git config user.name "Yuxin (Ryan) Wang";
-            git config user.email "ryanwang.cs@gmail.com";
-            git add .;
-            git commit -m "Release of ShadowDP.";
-            git remote add origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git;
-            git push -u --force origin master;
-          fi
+        - echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin
+        - docker push cmlapsu/shadowdp:latest
+
+    - stage: "Github Deploy"
+      if: branch = master AND type != pull_request
+      # cannot use deploy: pages since it does not support custom commit message yet
+      script:
+        - rm -rf .git
+        - git init
+        - git config user.name "Yuxin (Ryan) Wang"
+        - git config user.email "ryanwang.cs@gmail.com"
+        - git add .
+        - git commit -m "Release of ShadowDP."
+        - git remote add origin https://ryanwanggit:$GITHUB_TOKEN@github.com/cmla-psu/shadowdp.git
+        - git push -u --force origin master
+
 
 notifications:
   email: false
