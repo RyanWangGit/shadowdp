@@ -27,7 +27,7 @@ after_success:
 
 jobs:
   include:
-    - stage: "Docker Hub Deploy"
+    - stage: "Deploy - Docker Hub"
       if: branch = master AND type != pull_request
       services:
         - docker
@@ -40,7 +40,7 @@ jobs:
         - echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin
         - docker push cmlapsu/shadowdp:latest
 
-    - stage: "Github Deploy"
+    - stage: "Deploy - Github"
       if: branch = master AND type != pull_request
       # cannot use deploy: pages since it does not support custom commit message yet
       script:
