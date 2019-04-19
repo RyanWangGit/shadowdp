@@ -28,6 +28,7 @@ after_success:
 jobs:
   include:
     - stage: "Deploy - Docker Hub"
+      language: generic
       if: branch = master AND type != pull_request
       services:
         - docker
@@ -41,6 +42,7 @@ jobs:
         - docker push cmlapsu/shadowdp:latest
 
     - stage: "Deploy - Github"
+      language: generic
       if: branch = master AND type != pull_request
       # cannot use deploy: pages since it does not support custom commit message yet
       script:
