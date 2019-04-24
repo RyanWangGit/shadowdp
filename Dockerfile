@@ -34,7 +34,7 @@ RUN apt-get install -y --no-install-recommends vim
 # install openjdk11
 RUN add-apt-repository ppa:openjdk-r/ppa
 RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends openjdk-11-jdk
+RUN apt-get install -y --no-install-recommends openjdk-11-jdk-headless
 
 # copy ShadowDP into the image
 COPY . /shadowdp
@@ -44,9 +44,9 @@ WORKDIR /shadowdp
 RUN bash ./scripts/get_cpachecker.sh
 
 # remove build tools
-RUN apt-get remove -y openjdk-11-jdk git ant unzip
+RUN apt-get remove -y openjdk-11-jdk-headless git ant unzip
 RUN apt-get autoremove -y
-RUN apt-get install -y --no-install-recommends openjdk-11-jre
+RUN apt-get install -y --no-install-recommends openjdk-11-jre-headless
 
 # cleanup apt-get lists to make size smaller
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
