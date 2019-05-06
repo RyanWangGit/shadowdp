@@ -14,7 +14,7 @@ Using docker is the easiest way to set everything up and running. From anywhere 
 
 ```bash
 docker pull cmlapsu/shadowdp
-docker run -it --rm cmlapsu/shadowdp bash
+docker run -it --rm cmlapsu/shadowdp
 ```
 
 Then you'll be in a shell inside a docker container with ShadowDP ready to use.
