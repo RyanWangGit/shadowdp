@@ -1,6 +1,6 @@
 # ShadowDP
 
-[![Build Status](https://travis-ci.com/RyanWangGit/shadowdp.svg?token=6D8zTzZr7SPui6PzhT2a&branch=master)](https://travis-ci.com/RyanWangGit/shadowdp) [![codecov](https://codecov.io/gh/RyanWangGit/shadowdp/branch/master/graph/badge.svg?token=ZrKPNQCjub)](https://codecov.io/gh/RyanWangGit/shadowdp)
+[![Build Status](https://travis-ci.com/yxwangcs/shadowdp.svg?token=6D8zTzZr7SPui6PzhT2a&branch=master)](https://travis-ci.com/yxwangcs/shadowdp) [![codecov](https://codecov.io/gh/yxwangcs/shadowdp/branch/master/graph/badge.svg?token=ZrKPNQCjub)](https://codecov.io/gh/yxwangcs/shadowdp)
 
 A verification tool for differentially private algorithms based on a new proving technique "Shadow Execution".
 
@@ -124,4 +124,4 @@ Please consider citing the following [paper](https://arxiv.org/pdf/1903.12254.pd
 ```
 
 ## License
-[MIT](https://github.com/RyanWangGit/shadowdp/blob/master/LICENSE).
+[MIT](https://github.com/yxwangcs/shadowdp/blob/master/LICENSE).
