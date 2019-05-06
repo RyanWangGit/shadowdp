@@ -58,4 +58,5 @@ RUN pip3 install --upgrade pip
 RUN pip3 install .
 
 # test run
-CMD shadowdp -h
+CMD ["shadowdp", "-h"]
+CMD ["bash"]
