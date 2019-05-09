@@ -31,7 +31,7 @@ RUN apt-get update -y && \
     unzip \
     python3 \
     python3-pip \
-    python3-setuptools \
+    python3-setuptools
 
 # copy ShadowDP into the image
 COPY . /shadowdp
