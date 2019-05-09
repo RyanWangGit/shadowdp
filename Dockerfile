@@ -19,44 +19,42 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-FROM ubuntu:18.04
+FROM openjdk:11-jdk-slim AS builder
 
-# install essential stuff
-RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends gcc software-properties-common git ant unzip
-
-# install python
-RUN apt-get install -y --no-install-recommends python3 python3-pip python3-setuptools
-
-# install vim for debugging purposes
-RUN apt-get install -y --no-install-recommends vim
-
-# install openjdk11
-RUN add-apt-repository ppa:openjdk-r/ppa
-RUN apt-get update -y
-RUN apt-get install -y --no-install-recommends openjdk-11-jdk-headless
+# install build dependencies
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    software-properties-common \
+    git \
+    ant \
+    unzip
 
 # copy ShadowDP into the image
 COPY . /shadowdp
 WORKDIR /shadowdp
 
 # install CPA-Checker
-RUN bash ./scripts/get_cpachecker.sh
+COPY scripts/get_cpachecker.sh /get_cpachecker.sh
+RUN bash /get_cpachecker.sh
 
-# remove build tools
-RUN apt-get remove -y openjdk-11-jdk-headless git ant unzip
-RUN apt-get autoremove -y
-RUN apt-get install -y --no-install-recommends openjdk-11-jre-headless
+# another stage for deployment
+FROM openjdk:11-jre-slim
 
-# cleanup apt-get lists to make size smaller
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /shadowdp /shadowdp
+COPY --from=builder /cpachecker /shadowdp/cpachecker
 
-# update pip
-RUN pip3 install --upgrade pip
+# install the runtime dependencies
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-setuptools && \
+    rm -rf /var/lib/apt/lists/*
 
-# install packages
+WORKDIR /shadowdp 
+
+# install shadowdp
 RUN pip3 install .
 
-# test run
-CMD ["shadowdp", "-h"]
 CMD ["bash"]
