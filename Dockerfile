@@ -42,7 +42,6 @@ RUN bash /get_cpachecker.sh
 FROM openjdk:11-jre-slim
 
 COPY --from=builder /shadowdp /shadowdp
-COPY --from=builder /cpachecker /shadowdp/cpachecker
 
 # install the runtime dependencies
 RUN apt-get update -y && \
