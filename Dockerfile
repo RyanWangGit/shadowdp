@@ -29,6 +29,7 @@ RUN apt-get update -y && \
     software-properties-common \
     git \
     ant \
+    make \
     unzip \
     python3 \
     python3-pip \
