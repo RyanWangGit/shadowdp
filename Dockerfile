@@ -50,7 +50,9 @@ FROM openjdk:11-jre-slim
 # install the runtime dependencies
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
-    python3 && \
+    python3 \
+    python3-pip \
+    python3-setuptools && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /shadowdp /shadowdp
