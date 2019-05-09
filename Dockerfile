@@ -28,7 +28,10 @@ RUN apt-get update -y && \
     software-properties-common \
     git \
     ant \
-    unzip
+    unzip \
+    python3 \
+    python3-pip \
+    python3-setuptools \
 
 # copy ShadowDP into the image
 COPY . /shadowdp
@@ -38,11 +41,10 @@ WORKDIR /shadowdp
 COPY scripts/get_cpachecker.sh /get_cpachecker.sh
 RUN bash /get_cpachecker.sh
 
-# another stage for deployment
-FROM openjdk:11-jre-slim
+# install shadowdp
+RUN pip3 install --install-option="--prefix=/install" .
 
-COPY --from=builder /shadowdp /shadowdp
-
+FROM openjdk:11-jre-slim 
 # install the runtime dependencies
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
@@ -51,9 +53,9 @@ RUN apt-get update -y && \
     python3-setuptools && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /shadowdp 
+COPY --from=builder /shadowdp /shadowdp
+COPY --from=builder /install /usr/local
 
-# install shadowdp
-RUN pip3 install .
+WORKDIR /shadowdp 
 
 CMD ["bash"]
