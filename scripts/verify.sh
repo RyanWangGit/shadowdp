@@ -20,6 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #!/bin/sh
+
+# handles ctrl-c
+trap ctrl_c INT
+
+function ctrl_c() {
+    exit 1
+}
+
 shadowdp verify examples/transformed/noisymax.c
 echo ''
 shadowdp verify examples/transformed/sparsevector.c

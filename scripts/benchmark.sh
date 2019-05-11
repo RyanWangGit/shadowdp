@@ -23,6 +23,13 @@
 passed=()
 errored=()
 
+# handles ctrl-c
+trap ctrl_c INT
+
+function ctrl_c() {
+    exit 1
+}
+
 check()
 {
     shadowdp check $1;
