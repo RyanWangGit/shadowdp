@@ -21,43 +21,34 @@
 # SOFTWARE.
 FROM openjdk:11-jdk-slim AS builder
 
-# install build dependencies
+# build cpachecker
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
     software-properties-common \
     git \
     ant \
-    make \
-    unzip \
-    python3 \
-    python3-pip \
-    python3-setuptools
+    unzip
 
-# copy ShadowDP into the image
-COPY . /shadowdp
-WORKDIR /shadowdp
-
-# install CPA-Checker
 COPY scripts/get_cpachecker.sh /get_cpachecker.sh
 RUN bash /get_cpachecker.sh
 
-# install shadowdp
-RUN pip3 install --install-option="--prefix=/install" .
-
+# use clean image to install shadowdp
 FROM openjdk:11-jre-slim 
-# install the runtime dependencies
+
+COPY . /shadowdp
+COPY --from=builder /cpachecker /shadowdp/cpachecker
+WORKDIR /shadowdp 
+
+# install shadowdp
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
-    python3-setuptools && \
+    python3-setuptools \
+    gcc \
+    libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /shadowdp /shadowdp
-COPY --from=builder /install /usr/local
-
-WORKDIR /shadowdp 
-
+RUN pip3 install --no-cache-dir .
+    
 CMD ["bash"]
