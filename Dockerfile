@@ -24,7 +24,7 @@ FROM openjdk:11-jdk-slim AS builder
 # build cpachecker
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
-    software-properties-common \
+    python3-minimal \
     git \
     ant \
     unzip
