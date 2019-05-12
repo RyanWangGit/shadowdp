@@ -10,10 +10,9 @@ As described in Section 6 of our paper, ShadowDP consists of two components: (1)
 
 ### Using Docker
 
-Using docker is the easiest way to set everything up and running. From anywhere in the terminal, with the Docker engine running, run
+Using docker is the easiest way to set everything up and running. Run
 
 ```bash
-docker pull cmlapsu/shadowdp
 docker run -it --rm cmlapsu/shadowdp
 ```
 
@@ -42,7 +41,7 @@ optional arguments:
                         Set epsilon to a specific value to solve the non-
                         linear issues.
   -g GOAL, --goal GOAL  The goal of the algorithm, default is epsilon-
-                        differential privacy, specifythis value to set
+                        differential privacy, specify this value to set
                         different goal. e.g., specify 2 to check for 2 *
                         epsilon-differential privacy
 ```
@@ -92,7 +91,7 @@ In addition, `wget` package and JAVA 8 / 11 are required. Install them via
 ```bash
 sudo apt-get update -y
 sudo apt-get install python3 wget openjdk-11-jre
-# under Ubuntu 16.04, either install JAVA 8
+# `openjdk-11-jre` is not available under Ubuntu 16.04, you can either install JAVA 8 by
 sudo apt-get install python3 wget openjdk-8-jre
 # or add apt repository
 add-apt-repository ppa:openjdk-r/ppa
@@ -103,7 +102,7 @@ apt-get install -y openjdk-11-jre
 As pre-compiled CPA-Checker binaries are relatively large, we don't include them as part of this project, you'll have to download them yourself. Run `scripts/get_cpachecker.sh` to take care of the download for you.
 
 **Install ShadowDP.**
-`venv` is highly recommended in order not to interfere with your system packages (or if you prefer `virtualenv` or Anaconda, the setup is similar).
+`venv` is highly recommended in order not to interfere with your system packages (or if you prefer `virtualenv` / `Anaconda`, the setup is similar).
 
 ```bash
 python -m venv venv
