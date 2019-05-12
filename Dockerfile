@@ -46,9 +46,17 @@ RUN apt-get update -y && \
     python3-pip \
     python3-setuptools \
     gcc \
-    libgomp1 && \
+    libgomp1 \
+    curl && \
+    # and tini
+    TINI_VERSION=`curl https://github.com/krallin/tini/releases/latest | grep -o "/v.*\"" | sed 's:^..\(.*\).$:\1:'` && \
+    curl -L "https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini_${TINI_VERSION}.deb" > tini.deb && \
+    dpkg -i tini.deb && \
+    rm tini.deb && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir .
-    
-CMD ["bash"]
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+CMD ["/bin/bash"]
