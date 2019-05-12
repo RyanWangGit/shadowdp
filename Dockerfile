@@ -53,6 +53,8 @@ RUN apt-get update -y && \
     curl -L "https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini_${TINI_VERSION}.deb" > tini.deb && \
     dpkg -i tini.deb && \
     rm tini.deb && \
+    apt-get remove -y curl && \
+    apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir .
