@@ -24,4 +24,5 @@ set e
 wget https://vcloud.sosy-lab.org/cpachecker/webclient/tool/ -O cpachecker.zip
 mkdir cpachecker
 unzip cpachecker.zip -d cpachecker
+chmod +x cpachecker/scripts/cpa.sh
 rm cpachecker.zip
