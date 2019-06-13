@@ -21,13 +21,7 @@
 # SOFTWARE.
 #!/bin/bash
 set e
-git clone https://github.com/sosy-lab/cpachecker.git cpachecker-build
-cd cpachecker-build
-git reset --hard 57e456aad032bcb2e42911202976423b785797cb
-ant dist-unix-zip
-mv CPAchecker-1.8-svn\ 57e456aad0-unix.zip ../
-cd ..
-rm -rf cpachecker-build
-unzip CPAchecker-1.8-svn\ 57e456aad0-unix.zip
-mv CPAchecker-1.8-svn\ 57e456aad0-unix cpachecker
-rm CPAchecker-1.8-svn\ 57e456aad0-unix.zip
+wget https://vcloud.sosy-lab.org/cpachecker/webclient/tool/ -O cpachecker.zip
+mkdir cpachecker
+unzip cpachecker.zip -d cpachecker
+rm cpachecker.zip

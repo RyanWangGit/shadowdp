@@ -19,24 +19,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-FROM openjdk:11-jdk-slim AS builder
-
-# build cpachecker
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends \
-    python3-minimal \
-    git \
-    ant \
-    unzip
-
-COPY scripts/get_cpachecker.sh /get_cpachecker.sh
-RUN bash /get_cpachecker.sh
-
 # use clean image to install shadowdp
 FROM openjdk:11-jre-slim 
 
 COPY . /shadowdp
-COPY --from=builder /cpachecker /shadowdp/cpachecker
 WORKDIR /shadowdp 
 
 # install shadowdp
@@ -46,6 +32,8 @@ RUN apt-get update -y && \
     python3-pip \
     python3-setuptools \
     gcc \
+    wget \
+    unzip \
     libgomp1 \
     curl && \
     # and tini
@@ -58,6 +46,8 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --no-cache-dir .
+
+RUN bash scripts/get_cpachecker.sh
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
