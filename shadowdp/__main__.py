@@ -89,6 +89,17 @@ def main(argv=sys.argv[1:]):
         logger.error('File {} doesn\'t exists'.format(results.file))
         return 1
 
+    if results.option[0] != 'transform':
+        if not os.path.isdir(results.checker):
+            logger.error('Path for cpachecker must be the root directory, got {}'.format(results.checker))
+            logger.error('Please run scripts/get_cpachecker.sh to get a precompiled version of cpachecker')
+            return 1
+        script_folder = os.path.join(results.checker, 'script')
+        if not (os.path.exists(script_folder) and os.path.exists(os.path.join(script_folder, 'cpa.sh'))):
+            logger.error('{} doesn\'t exist, cpachecker might be broken')
+            logger.error('Please run scripts/get_cpachecker.sh to get a precompiled version of cpachecker')
+            return 1
+
     if results.option[0] == 'check' or results.option[0] == 'transform':
         # parse the source code
         logger.info('Parsing {}'.format(results.file))
