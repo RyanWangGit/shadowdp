@@ -94,7 +94,7 @@ def main(argv=sys.argv[1:]):
             logger.error('Path for cpachecker must be the root directory, got {}'.format(results.checker))
             logger.error('Please run scripts/get_cpachecker.sh to get a precompiled version of cpachecker')
             return 1
-        script_folder = os.path.join(results.checker, 'script')
+        script_folder = os.path.join(results.checker, 'scripts')
         if not (os.path.exists(script_folder) and os.path.exists(os.path.join(script_folder, 'cpa.sh'))):
             logger.error('{} doesn\'t exist, cpachecker might be broken')
             logger.error('Please run scripts/get_cpachecker.sh to get a precompiled version of cpachecker')
