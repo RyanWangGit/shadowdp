@@ -114,12 +114,23 @@ pip install .
 ## Citing this work
 Please consider citing the following [paper](https://arxiv.org/pdf/1903.12254.pdf) if you use this tool for academic research.
 ```tex
-@article{wang2019proving,
-  title={Proving Differential Privacy with Shadow Execution},
-  author={Wang, Yuxin and Ding, Zeyu and Wang, Guanhong and Kifer, Daniel and Zhang, Danfeng},
-  journal={arXiv preprint arXiv:1903.12254},
-  year={2019}
-}
+@inproceedings{wang2019shadowexecution,
+ author = {Wang, Yuxin and Ding, Zeyu and Wang, Guanhong and Kifer, Daniel and Zhang, Danfeng},
+ title = {Proving Differential Privacy with Shadow Execution},
+ booktitle = {Proceedings of the 40th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+ series = {PLDI 2019},
+ year = {2019},
+ isbn = {978-1-4503-6712-7},
+ location = {Phoenix, AZ, USA},
+ pages = {655--669},
+ numpages = {15},
+ url = {http://doi.acm.org/10.1145/3314221.3314619},
+ doi = {10.1145/3314221.3314619},
+ acmid = {3314619},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {Differential privacy, dependent types},
+} 
 ```
 
 ## License
