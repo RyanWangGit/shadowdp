@@ -20,14 +20,15 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Report JDK version
-      run: |
-        java -version
-        javac -version
+    - name: Setup java
+      run: sudo apt-get install openjdk-11-jdk-headless
     - name: Install dependencies
       run: sudo apt-get install ant 
     - name: Install CPAChecker
-      run: bash scripts/get_cpachecker.sh
+      run: |
+        java -version
+        javac -version
+        bash scripts/get_cpachecker.sh
     - name: Update pip
       run: python -m pip install --upgrade pip
     - name: Lint with flake8
