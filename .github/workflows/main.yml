@@ -20,8 +20,9 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Setup java
-      run: sudo apt-get install openjdk-11-jdk-headless
+    - uses: actions/setup-java@latest
+      with:
+        java-version: '11.0.2'
     - name: Install dependencies
       run: sudo apt-get install ant 
     - name: Install CPAChecker
