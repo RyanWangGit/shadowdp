@@ -19,6 +19,22 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+# build cpachecker 
+FROM debian:stable-slim AS builder
+RUN apt-get update -y && \
+    # Fixes error creating symbolic link issue
+    mkdir -p /usr/share/man/man1 && \
+    apt-get install -y --no-install-recommends \
+    unzip \
+    git \
+    ant \
+    openjdk-11-jdk-headless
+
+COPY ./scripts/get_cpachecker.sh /get_cpachecker.sh
+WORKDIR /
+RUN bash /get_cpachecker.sh
+
 # use clean image to install shadowdp
 FROM openjdk:11-jre-slim 
 
@@ -35,6 +51,7 @@ RUN apt-get update -y && \
     wget \
     unzip \
     libgomp1 \
+    libfreetype6 \
     curl && \
     # and tini
     TINI_VERSION=`curl https://github.com/krallin/tini/releases/latest | grep -o "/v.*\"" | sed 's:^..\(.*\).$:\1:'` && \
@@ -45,9 +62,9 @@ RUN apt-get update -y && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir .
+COPY --from=builder /cpachecker /shadowdp/cpachecker
 
-RUN bash scripts/get_cpachecker.sh
+RUN pip3 install --no-cache-dir .
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
