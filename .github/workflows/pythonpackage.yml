@@ -1,0 +1,80 @@
+name: Python package
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7]
+    env:
+      # TODO: remove this when github actions support "if" in expressions
+      PYTHON_VERSION: ${{ matrix.python-version }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: sudo apt-get install ant 
+    - name: Install CPAChecker
+      run: bash scripts/get_cpachecker.sh
+    - name: Update pip
+      run: python -m pip install --upgrade pip
+    - name: Lint with flake8
+      run: |
+        pip install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with tox
+      run: |
+        pip install tox
+        # remove the "." in the python version
+        tox -e "py${PYTHON_VERSION//.}"
+        
+  deploy_docker:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@master
+      - name: Docker build
+        run: docker build . -t cmlapsu/shadowdp
+      - name: Test docker build
+        run: |
+          docker run cmlapsu/shadowdp bash /shadowdp/scripts/benchmark.sh
+          docker run cmlapsu/shadowdp bash /shadowdp/scripts/verify.sh
+      - name: Upload to Docker Hub
+        if: success()
+        run: | 
+          echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USERNAME --password-stdin
+          docker push cmlapsu/shadowdp:latest
+  
+  deploy_github:
+    needs: [build, deploy_docker]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    env:
+      CMLAPSU_DEPLOY_TOKEN: ${{ secrets.CMLAPSU_DEPLOY_TOKEN }}
+    steps:
+      - uses: actions/checkout@master
+      - name: Upload to cmla-psu github repository
+        run: |
+          rm -rf .git
+          git init
+          git config user.name "Yuxin Wang"
+          git config user.email "ryanwang.cs@gmail.com"
+          git add .
+          git commit -m "Release of Shadowdp."
+          git remote add origin https://yxwangcs:$CMLAPSU_DEPLOY_TOKEN@github.com/cmla-psu/shadowdp.git
+          git push -u --force origin master
