@@ -1,6 +1,6 @@
 # ShadowDP
 
-[![Github Actions](https://github.com/yxwangcs/shadowdp/workflows/build/badge.svg)](https://github.com/yxwangcs/shadowdp/actions?workflow=build) [![codecov](https://codecov.io/gh/yxwangcs/statdp/branch/master/graph/badge.svg)] [![codecov](https://codecov.io/gh/yxwangcs/shadowdp/branch/master/graph/badge.svg?token=ZrKPNQCjub)](https://codecov.io/gh/yxwangcs/shadowdp)
+[![Github Actions](https://github.com/yxwangcs/shadowdp/workflows/build/badge.svg)](https://github.com/yxwangcs/shadowdp/actions?workflow=build) [![codecov](https://codecov.io/gh/yxwangcs/shadowdp/branch/master/graph/badge.svg)](https://codecov.io/gh/yxwangcs/shadowdp)
 
 A verification tool for differentially private algorithms based on a new proving technique "Shadow Execution".
 
