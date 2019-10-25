@@ -90,7 +90,7 @@ def check(checkerpath, path, args=None):
         if verified:
             logger.info('{} verified with {}.'.format(path, name))
             # open and read report to find
-            with open('./output-{}-{}/Report.html'.format(funcname, name)) as report:
+            with open('./output-{}-{}/Statistics.txt'.format(funcname, name)) as report:
                 all_report = report.read()
                 time = re.search(r'Total time for CPAchecker[:\s<>/a-zA-Z]*([0-9]+\.[0-9]+s)', all_report).groups()
                 logger.info('Verification finished in {}'.format(time[0]))

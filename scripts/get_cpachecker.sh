@@ -21,8 +21,18 @@
 # SOFTWARE.
 #!/bin/bash
 set e
-wget https://vcloud.sosy-lab.org/cpachecker/webclient/tool/ -O cpachecker.zip
-mkdir cpachecker
-unzip cpachecker.zip -d cpachecker
+#wget https://vcloud.sosy-lab.org/cpachecker/webclient/tool/ -O cpachecker.zip
+#mkdir cpachecker
+#unzip cpachecker.zip -d cpachecker
+# compile cpachecker on our own
+git clone https://github.com/sosy-lab/cpachecker.git cpachecker-build
+cd cpachecker-build 
+# switch to revision 30894 since it strenthens the type conversion from int to float
+# which is required by shadowdp
+# see https://groups.google.com/d/msg/cpachecker-users/LK4DzRhR7Xc/T-VgOIf3BgAJ
+git reset --hard 57e456aad032bcb2e42911202976423b785797cb
+ant dist-unix-zip -Dnamez=cpachecker
+unzip ./cpachecker.zip -d ../
+cd ..
 chmod +x cpachecker/scripts/cpa.sh
-rm cpachecker.zip
+rm -rf cpachecker-build
