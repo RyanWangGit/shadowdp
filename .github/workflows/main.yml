@@ -22,7 +22,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - uses: actions/setup-java@v1.0.1
       with:
-        java-version: '11.0.2'
+        java-version: 11
     - name: Install dependencies
       run: sudo apt-get install ant 
     - name: Install CPAChecker
