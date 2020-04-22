@@ -12,7 +12,6 @@ jobs:
     env:
       # TODO: remove this when github actions support "if" in expressions
       PYTHON_VERSION: ${{ matrix.python-version }}
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
     - uses: actions/checkout@v1
