@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@master
       - name: Upload to cmla-psu github repository
         run: |
-          # remove .github folder about workflow configurations
+          # remove github workflow configurations
           rm -rf .github
           rm -rf .git
           git init
